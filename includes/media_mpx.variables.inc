@@ -119,10 +119,10 @@ function media_mpx_variable_default($name = NULL) {
       'wmode' => 'transparent',
       'chromeless' => FALSE,
       'preview_uri' => 'mpx://v/-jubiv7QUco',
-      'hostname' => 'www.vmdev.sbs.com.au',
-      'basepath' => 'api',
-      'mpxid' => 'dYtmxB',
-      'allfeed' => 'e16qKzBBHt4R',
+      'hostname' => 'feed.theplatform.com',
+      'basepath' => 'f/',
+      'mpxid' => '',
+      'allfeed' => '',
     );
   }
 

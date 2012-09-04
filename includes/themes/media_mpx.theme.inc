@@ -27,7 +27,7 @@ function media_mpx_preprocess_media_mpx_video(&$variables) {
     $variables[$option] = isset($variables[$option]) ? $variables[$option] : (isset($variables['options'][$option]) ? $variables['options'][$option] : media_mpx_variable_get($option));
   }
 
-  drupal_add_js('http://resources.vmdev.sbs.com.au/PATH/TO/tpPdk.js', 'external');
+  drupal_add_js('http://resources.vmdev.sbs.com.au/vod/theplatform/core/current/tpPdk.js', 'external');
 
 
   // We have to set fullscreen in the url query and as a parameter to the flash.
@@ -57,17 +57,25 @@ function media_mpx_preprocess_media_mpx_video(&$variables) {
     'bgcolor'                   => '#2a2a2a',
     //'playerURL'                 => "http://{$_SERVER['HTTP_HOST']}{$this->view->baseUrl}/video/{$this->videoId}/{title}",
     //'endCard'                   => 'tpShareCard',
-    'emailServiceURL'           => "http://{$_SERVER['HTTP_HOST']}/PATH/TO/mail.php",
+    'emailServiceURL'           => "http://{$_SERVER['HTTP_HOST']}/vod/theplatform/mail.php",
     //'embeddedPlayerHTML'        => '<iframe src="http://'.$_SERVER['HTTP_HOST'].$this->view->baseUrl.'/video/single/'.$this->videoId.'/{title}" width="640" height="396" type="application/x-shockwave-flash" allowFullScreen="true" bgcolor="#131313" />',
     'sharingSiteIds'            => 'facebook,twitter,reddit,digg',
     'previewImageBlurThreshold' => 0, // disables the blurring applied to images with a less dimension to the video player...
     'videoScalingMethod'        => 'resize',
-    'layoutUrl' => "http://{$_SERVER['HTTP_HOST']}/PATH/TO/defaultLayout.xml",
+    'layoutUrl' => "http://{$_SERVER['HTTP_HOST']}/vod/theplatform/data/sbs/defaultLayout.xml",
 
     //'logLevel' => 'debug'
   );
   $pdkCore = "http://{$_SERVER['HTTP_HOST']}/vod/theplatform/";
-
+  /*
+  $params['plugins'] = array(
+    'type=adcomponent|URL=' . $pdkCore . 'swf/vast.swf|priority=2|hosts=ad.au.doubleclick.net|mimeTypes=video/x-mp4,video/x-flv', // doubleclick ads...
+    'type=adcomponent|URL=' . $pdkCore . 'js/plugins/vast.js|priority=3|hosts=ad.doubleclick.net',
+    'type=adcomponent|URL=' . $pdkCore . 'swf/inStream.swf|priority=1|host=ad.au.doubleclick.net',
+    'type=player|URL='.$pdkCore.'swf/akamaiHD.swf|priority=1|hosts=sbsauvod-f.akamaihd.net',
+    'type=text|URL=' . $pdkCore . 'swf/advancedText.swf|priority=1'
+  );
+  */
 
   $variables['flashplayerProperties'] = _media_mpx_setFlashPlayerProperties($params);
   $variables['behaviourProperties']  = _media_mpx_setBehaviourProperties($params);
@@ -91,6 +99,66 @@ function media_mpx_preprocess_media_mpx_video(&$variables) {
     ),
   );
 
+
+  /*
+    // Set the version of the mpx api player.
+    if ($variables['version']) {
+      $variables['query']['version'] = $variables['version'];
+      // Note that the fs variable defaults to 1 with the AS3 player.
+      if (!$variables['fs']) {
+        $variables['query']['fs'] = 0;
+      }
+    }
+    else if ($variables['fs']) {
+      // Note that the fs variable defaults to 0 with the AS2 player.
+      $variables['query']['fs'] = 1;
+    }
+
+    // These options default to 0.
+    foreach (array('autoplay', 'hd') as $variable) {
+      if ($variables[$variable]) {
+        $variables['query'][$variable] = 1;
+      }
+    }
+
+    if (!$variables['related']) {
+      $variables['query']['rel'] = 0;
+    }
+
+
+    // Ensure that we pass the required query variables to the Iframe settings.
+    if (!empty($variables['query'])) {
+      $settings['media_mpx'][$variables['wrapper_id']]['options'] = $variables['query'];
+    }
+
+    drupal_add_js($settings, 'setting');
+    drupal_add_js(drupal_get_path('module', 'media_mpx') . '/js/media_mpx.js');
+    drupal_add_css(drupal_get_path('module', 'media_mpx') . '/css/media_mpx.css');
+    drupal_add_js(drupal_get_path('module', 'media_mpx') . '/js/flash_detect_min.js');
+
+    // The chromeless player requires a different url.
+    if ($variables['chromeless']) {
+      $variables['url_api'] = 'apiplayer';
+      $variables['query']['video_id'] = $variables['video_id'];
+    }
+    else {
+      $variables['url_api'] = 'v/' . $variables['video_id'];
+    }
+
+    $variables['url'] = url('http://www.youtube.com/' . $variables['url_api'], array('query' => $variables['query'], 'external' => TRUE, 'https' => TRUE));
+
+    // For users with JavaScript, these object and embed tags will be replaced
+    // by an iframe, so that we can support users without Flash.
+
+    $variables['output'] = <<<OUTPUT
+      <object width="{$variables['width']}" height="{$variables['height']}">
+        <param name="movie" value="{$variables['url']}"></param>
+        <param name="allowFullScreen" value="{$variables['fullscreen']}"></param>
+        <param name="wmode" value="{$variables['wmode']}" />
+        <embed src="{$variables['url']}" type="application/x-shockwave-flash" width="{$variables['width']}" height="{$variables['height']}" allowfullscreen="{$variables['fullscreen']}" wmode="{$variables['wmode']}"></embed>
+      </object>
+  OUTPUT;
+  */
 
 }
 
