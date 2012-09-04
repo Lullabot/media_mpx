@@ -1,0 +1,353 @@
+<?php
+
+/**
+ * @file media_mpx/media_mpx.module
+ *
+ * Media: YouTube provides a stream wrapper and formatters for videos provided
+ * by YouTube, available at http://youtube.com/.
+ *
+ * @TODO:
+ * Tie in YouTube API.
+ * Allow editors to put in a youtube username to display on the browser.
+ * Allow editors to log in w/ their credentials.
+ * Allow editors to upload videos to YouTube.
+ */
+
+// A registry of variable_get defaults.
+include_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'media_mpx') . '/includes/media_mpx.variables.inc';
+
+// Hooks and callbacks for integrating with Styles module for display.
+// @todo Can save a little overhead for people without Styles module by wrapping
+//   this inside a module_exists('styles'). However, is that safe to do in
+//   global context? If not, is there any down side to doing it in hook_init()?
+include_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'media_mpx') . '/includes/media_mpx.styles.inc';
+
+// Hooks and callbacks for integrating with File Entity module for display.
+include_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'media_mpx') . '/includes/media_mpx.formatters.inc';
+
+/**
+ * Implements hook_media_internet_providers().
+ */
+function media_mpx_media_internet_providers() {
+  $info['MediaInternetMPXHandler'] = array(
+    'title' => t('MPX'),
+    'image' => drupal_get_path('module', 'media_mpx') . '/images/stream-youtube.png',
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_stream_wrappers().
+ */
+function media_mpx_stream_wrappers() {
+  return array(
+    'mpx' => array(
+      'name' => t('MPX videos'),
+      'class' => 'MediaMPXStreamWrapper',
+      'description' => t('Videos provided by MPX.'),
+      'type' => STREAM_WRAPPERS_READ_VISIBLE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function media_mpx_theme($existing, $type, $theme, $path) {
+  return array(
+    'media_mpx_preview_style' => array(
+      'variables' => array('style_name' => NULL),
+      'file' => 'media_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+    ),
+    'media_mpx_field_formatter_styles' => array(
+      'variables' => array('element' => NULL, 'style' => NULL),
+      'file' => 'media_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+    ),
+    // Note that all the variables after options are now deprecated.
+    'media_mpx_video' => array(
+      'variables' => array('uri' => NULL, 'options' => array(), 'width' => NULL, 'height' => NULL, 'autoplay' => NULL, 'fullscreen' => NULL, 'related' => NULL),
+      'file' => 'media_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+      'template' => 'media-mpx-video',
+    ),
+    'media_mpx_embed' => array(
+      'variables' => array('style_name' => NULL, 'uri' => NULL, 'alt' => NULL, 'title' => NULL),
+      'file' => 'media_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+    ),
+    'media_mpx_styles' => array(
+      'variables' => array('element' => NULL, 'style' => NULL),
+      'file' => 'media_mpx.theme.inc',
+      'path' => $path . '/includes/themes',
+    ),
+  );
+}
+
+/**
+ * Implements hook_media_parse().
+ *
+ * @todo This hook should be deprecated. Refactor Media module to not call it
+ *   any more, since media_internet should be able to automatically route to the
+ *   appropriate handler.
+ */
+function media_mpx_media_parse($embed_code) {
+  $handler = new MediaInternetMPXHandler($embed_code);
+  return $handler->parse($embed_code);
+}
+
+/**
+ * Implements hook_media_format_form_prepare_alter().
+ */
+function media_mpx_media_format_form_prepare_alter(&$form, &$form_state, $media) {
+  $settings = array('autosubmit' => ($media->type == "video"));
+  drupal_add_js(array('media_format_form' => $settings), 'setting');
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function media_mpx_ctools_plugin_api($owner, $api) {
+  static $api_versions = array(
+    'file_entity' => array(
+      'file_default_displays' => 1,
+    ),
+  );
+  if (isset($api_versions[$owner][$api])) {
+    return array('version' => $api_versions[$owner][$api]);
+  }
+}
+
+/**
+ * Implements hook_media_browser_plugin_info().
+ */
+function media_mpx_media_browser_plugin_info() {
+  $info['mpx'] = array(
+    'title' => t('MPX'),
+    'class' => 'MediaMPXBrowser',
+  );
+
+  return $info;
+}
+
+
+/**
+ * Provides a form for adding media items from MPX search.
+ */
+function media_mpx_add($form, &$form_state = array()) {
+  module_load_include('inc', 'media', 'includes/media.browser');
+
+  // Our search term can come from the form, or from the pager.
+  $term = isset($form_state['input']['search']) ? $form_state['input']['search'] : (isset($_GET['search']) ? $_GET['search'] : '');
+
+  $form['search'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Search'),
+    '#description' => t('Input a phrase or tags to search.'),
+    '#default_value' => $term,
+  );
+  $form['apply'] = array(
+    '#type' => 'button',
+    '#value' => t('Apply'),
+  );
+
+  // This is our ghetto pager.
+  $page = isset($_GET['page-yt']) ? $_GET['page-yt'] : 0;
+  if (isset($form_state['input']['search'])) {
+    // Reset the pager when we press apply.
+    $page = 0;
+  }
+
+  $videos = mpx_api_factory()->searchVideos(array('q' => $term, 'range' => ($page * 12 + 1).'-'.($page * 12 + 12)));
+  $form['videos']['#prefix'] = '<div id="container"><div id="scrollbox"><ul id="media-browser-library-list" class="media-list-thumbnails">';
+  $form['videos']['#suffix'] = '</ul><div id="status"></div></div></div>';
+
+
+  $empty = FALSE;
+  $files = array();
+
+  if (empty($videos)) {
+    $empty = TRUE;
+  }
+  else {
+    foreach ($videos as $video) {
+      try {
+        $uri = media_parse_to_uri($video->id);
+      }
+      catch (Exception $e) {
+        // Ignore invalid videos.
+        continue;
+      }
+      // Create a temporary file object for our retrieved video.
+      $file = file_uri_to_object($uri);
+      $file->type = 'video';
+      if (!isset($file->fid)) {
+        $file->fid = 0;
+      }
+      media_browser_build_media_item($file);
+      $file->preview = l($file->preview, 'media/browser', array(
+        'html' => TRUE,
+        'attributes' => array(
+          'data-uri' => $uri,
+        ),
+        'query' => array('render' => 'media-popup', 'uri' => $uri),
+      ));
+      $form['videos'][$uri] = array(
+        '#markup' => $file->preview,
+        '#prefix' => '<li>',
+        '#suffix' => '</li>',
+      );
+      $files[$uri] = $file;
+    }
+  }
+
+  if (!count($files)) {
+    $empty= TRUE;
+  }
+  if ($empty) {
+    $form['empty'] = array(
+      '#markup' => '<div class="empty-message">' . t('No videos match your search criteria. Please try again.') . '</div>',
+    );
+  }
+
+  $query = $_GET;
+  if ($term !== '') {
+    $query['search'] = $term;
+  }
+
+  $dest = $query['q'];
+  unset($query['q']);
+  $prev = $next = '';
+  if ($page) {
+    $query['page-yt'] = $page - 1;
+    $prev = l(t('previous'), $dest, array('query' => $query));
+  }
+  $query['page-yt'] = $page + 1;
+  if (!$empty) {
+    $next = l(t('next'), $dest, array('query' => $query));
+  }
+
+  $form['pager']= array(
+    '#markup' => $prev . ' ' . $next,
+  );
+
+  $form['sumitted-video'] = array(
+    '#type' => 'hidden',
+    '#default_value' => FALSE,
+  );
+
+  // Add the files to JS so that they are accessible inside the browser
+  drupal_add_js(array('media' => array('files' => $files)), 'setting');
+
+    // Add media browser javascript and CSS.
+  drupal_add_js(drupal_get_path('module', 'media_mpx') . '/js/media-mpx.browser.js');
+  // We need to see if we can deprecate this
+  drupal_add_js(drupal_get_path('module', 'media') . '/js/plugins/media.library.js');
+  // We should abstract this into a standard css file so all implementers have
+  // it by default
+  drupal_add_css(drupal_get_path('module', 'media') . '/js/plugins/media.library.css');
+
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  return $form;
+}
+
+
+/**
+ * Allow stream wrappers to have their chance at validation.
+ *
+ * Any module that implements hook_media_parse will have an
+ * opportunity to validate this.
+ *
+ * @see media_parse_to_uri()
+ */
+function media_mpx_add_validate($form, &$form_state) {
+  if ($form_state['values']['op'] == t('Apply')) {
+    return;
+  }
+  $uri = $form_state['values']['sumitted-video'];
+  try {
+    $file = file_uri_to_object($uri, TRUE);
+  }
+  catch (Exception $e) {
+    form_set_error('url', $e->getMessage());
+    return;
+  }
+
+  if (!$file->uri) {
+    form_set_error('url', t('Please select a video.'));
+    return;
+  }
+
+/*
+  $validators = $form['#validators'];
+  if ($validators) {
+    // Check for errors. @see media_add_upload_validate calls file_save_upload().
+    // this code is ripped from file_save_upload because we just want the validation part.
+    // Call the validation functions specified by this function's caller.
+    $errors = file_validate($file, $validators);
+
+    if (!empty($errors)) {
+      $message = t('%uri could not be added.', array('%uri' => $uri));
+      if (count($errors) > 1) {
+        $message .= theme('item_list', array('items' => $errors));
+      }
+      else {
+        $message .= ' ' . array_pop($errors);
+      }
+      form_set_error('url', $message);
+      return FALSE;
+    }
+  }
+*/
+  // @TODO: Validate that if we have no $uri that this is a valid file to
+  // save. For instance, we may only be interested in images, and it would
+  // be helpful to let the user know they passed the HTML page containing
+  // the image accidentally. That would also save us from saving the file
+  // in the submit step.
+
+  // This is kinda a hack of the same.
+
+  // This should use the file_validate routines that the upload form users.
+  // We need to fix the media_parse_to_file routine to allow for a validation.
+}
+
+function media_mpx_add_submit($form, &$form_state) {
+  $uri = $form_state['values']['sumitted-video'];
+  try {
+    // Save the remote file
+    $file = file_uri_to_object($uri, TRUE);
+    file_save($file);
+  }
+  catch (Exception $e) {
+    form_set_error('url', $e->getMessage());
+    return;
+  }
+
+  if (!$file->fid) {
+    form_set_error('url', t('The file %file could not be saved. An unknown error has occurred.', array('%file' => $uri)));
+    return;
+  }
+  else {
+    $form_state['file'] = $file;
+  }
+
+  // Redirect to the file edit page after submission.
+  if (media_access('edit')) {
+    $destination = array('destination' => 'admin/content/file');
+    if (isset($_GET['destination'])) {
+      $destination = drupal_get_destination();
+      unset($_GET['destination']);
+    }
+    $form_state['redirect'] = array('file/' . $file->fid . '/edit', array('query' => $destination));
+  }
+  else {
+    $form_state['redirect'] = 'admin/content/file';
+  }
+}
