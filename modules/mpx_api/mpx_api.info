@@ -1,6 +1,0 @@
-name = "MPX API"
-description = "The Platform MPX API"
-core = 7.x
-package = "SBS"
-
-files[] = mpx_api.class.inc
