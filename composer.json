@@ -13,5 +13,15 @@
   "require": {
     "lullabot/mpx-php": "dev-master",
     "symfony/property-info": "^3.4"
+  },
+  "require-dev": {
+    "cweagans/composer-patches": "dev-master",
+    "behat/mink-selenium2-driver": "^1.3@dev",
+    "behat/mink-extension": "v2.2",
+    "drupal/coder": "^8.2",
+    "drupal/drupal-extension": "master-dev",
+    "bex/behat-screenshot": "dev-master",
+    "phpmd/phpmd": "dev-master",
+    "phpmetrics/phpmetrics": "dev-master"
   }
 }
