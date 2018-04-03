@@ -21,7 +21,7 @@ class UserForm extends EntityForm {
     // @todo html5 placeholder
     $form['username'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('MPX user name'),
+      '#title' => $this->t('mpx user name'),
       '#maxlength' => 255,
       '#default_value' => $media_mpx_user->label(),
       '#description' => $this->t("The MPX user name."),
@@ -40,8 +40,8 @@ class UserForm extends EntityForm {
 
     $form['password'] = [
       '#type' => 'password',
-      '#title' => $this->t('MPX password'),
-      '#description' => $this->t('The MPX user password.'),
+      '#title' => $this->t('mpx password'),
+      '#description' => $this->t('The mpx user password.'),
     ];
 
     return $form;
@@ -56,13 +56,13 @@ class UserForm extends EntityForm {
 
     switch ($status) {
       case SAVED_NEW:
-        drupal_set_message($this->t('Created the %label MPX User.', [
+        drupal_set_message($this->t('Created the %label mpx User.', [
           '%label' => $media_mpx_user->label(),
         ]));
         break;
 
       default:
-        drupal_set_message($this->t('Saved the %label MPX User.', [
+        drupal_set_message($this->t('Saved the %label mpx User.', [
           '%label' => $media_mpx_user->label(),
         ]));
     }

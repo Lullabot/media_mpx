@@ -1,6 +1,6 @@
 entity.media_mpx_user.add_form:
   route_name: entity.media_mpx_user.add_form
-  title: 'Add MPX User'
+  title: 'Add mpx User'
   appears_on:
     - entity.media_mpx_user.collection
 

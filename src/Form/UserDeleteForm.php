@@ -7,7 +7,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 
 /**
- * Builds the form to delete MPX User entities.
+ * Builds the form to delete mpx User entities.
  */
 class UserDeleteForm extends EntityConfirmFormBase {
 

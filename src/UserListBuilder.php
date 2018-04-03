@@ -14,7 +14,7 @@ class UserListBuilder extends ConfigEntityListBuilder {
    * {@inheritdoc}
    */
   public function buildHeader() {
-    $header['label'] = $this->t('MPX User');
+    $header['label'] = $this->t('mpx User');
     $header['id'] = $this->t('Machine name');
     return $header + parent::buildHeader();
   }
