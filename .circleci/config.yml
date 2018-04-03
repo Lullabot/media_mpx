@@ -181,3 +181,27 @@ workflows:
           requires:
             - update-dependencies
             - run-unit-kernel-tests
+  weekly:
+    jobs:
+      - update-dependencies
+      - run-unit-kernel-tests:
+          requires:
+            - update-dependencies
+      - run-behat-tests:
+          requires:
+            - update-dependencies
+      - run-code-sniffer:
+          requires:
+            - update-dependencies
+      - run-code-coverage:
+          requires:
+            - update-dependencies
+            - run-unit-kernel-tests
+    triggers:
+      - schedule:
+          # Run jobs every Monday morning at 12AM
+          cron: "0 0 * * 1"
+          filters:
+            branches:
+              only:
+                - master
