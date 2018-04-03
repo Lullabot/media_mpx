@@ -158,8 +158,6 @@ jobs:
      <<: *behat_tests
   run-code-sniffer:
      <<: *code_sniffer
-  run-code-coverage:
-     <<: *code_coverage
 
 workflows:
   version: 2
@@ -177,10 +175,7 @@ workflows:
       - run-code-sniffer:
           requires:
             - update-dependencies
-      - run-code-coverage:
-          requires:
-            - update-dependencies
-            - run-unit-kernel-tests
+
   weekly:
     jobs:
       - update-dependencies
@@ -193,10 +188,6 @@ workflows:
       - run-code-sniffer:
           requires:
             - update-dependencies
-      - run-code-coverage:
-          requires:
-            - update-dependencies
-            - run-unit-kernel-tests
     triggers:
       - schedule:
           # Run jobs every Monday morning at 12AM
