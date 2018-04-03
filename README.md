@@ -1,4 +1,4 @@
-# Media MPX for Drupal 8
+# Media MPX for Drupal 8.
 
 This module integrates [MPX for PHP](https://github.com/Lullabot/mpx-php) with
 Drupal 8's Media API.
