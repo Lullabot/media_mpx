@@ -1,0 +1,4 @@
+services:
+  media_mpx.authenticated_client:
+    class: \Lullabot\Mpx\AuthenticatedClient
+    factory: media_mpx.authenticated_client_factory

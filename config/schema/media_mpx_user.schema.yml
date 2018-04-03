@@ -1,0 +1,12 @@
+media_mpx.media_mpx_user.*:
+  type: config_entity
+  label: 'MPX User config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    username:
+      type: string
+      label: 'Username'
+    uuid:
+      type: string

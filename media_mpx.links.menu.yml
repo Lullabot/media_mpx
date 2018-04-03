@@ -1,0 +1,8 @@
+# MPX User menu items definition
+entity.media_mpx_user.collection:
+  title: 'MPX User'
+  route_name: entity.media_mpx_user.collection
+  description: 'List MPX User (bundles)'
+  parent: system.admin_structure
+  weight: 99
+
