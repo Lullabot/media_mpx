@@ -4,6 +4,7 @@ namespace Drupal\media_mpx\Form;
 
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 
 /**
  * Mpx Account form.
@@ -35,6 +36,26 @@ class AccountForm extends EntityForm {
         'exists' => '\Drupal\media_mpx\Entity\MpxAccount::load',
       ],
       '#disabled' => !$this->entity->isNew(),
+    ];
+
+    $users = array_map(function ($entity) {
+      /** @var \Drupal\media_mpx\Entity\UserInterface $entity */
+      return $entity->label();
+    }, $this->entityTypeManager->getStorage('media_mpx_user')->loadMultiple());
+
+    if (empty($users)) {
+      $url = Url::fromRoute('entity.media_mpx_user.add_form')->toString() . '?destination=' . \Drupal::service('path.current')->getPath();
+      $this->messenger()->addError($this->t('<a href="@add-user">Create at least one mpx user</a> before creating accounts.', [
+        '@add-user' => $url,
+      ]));
+      return [];
+    }
+
+    $form['user'] = [
+      '#type' => 'select',
+      '#title' => $this->t('mpx user'),
+      '#description' => $this->t('Select an mpx user to see what accounts are available.'),
+      '#options' => $users,
     ];
 
     $form['status'] = [
