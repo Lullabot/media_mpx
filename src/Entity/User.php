@@ -31,11 +31,11 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   },
  *   label_collection = @Translation("mpx Users"),
  *   links = {
- *     "canonical" = "/admin/config/media/media_mpx_user/{media_mpx_user}",
- *     "add-form" = "/admin/config/media/media_mpx_user/add",
- *     "edit-form" = "/admin/config/media/media_mpx_user/{media_mpx_user}/edit",
- *     "delete-form" = "/admin/config/media/media_mpx_user/{media_mpx_user}/delete",
- *     "collection" = "/admin/config/media/media_mpx_user"
+ *     "canonical" = "/admin/config/media/mpx/user/{media_mpx_user}",
+ *     "add-form" = "/admin/config/media/mpx/user/add",
+ *     "edit-form" = "/admin/config/media/mpx/user/{media_mpx_user}/edit",
+ *     "delete-form" = "/admin/config/media/mpx/user/{media_mpx_user}/delete",
+ *     "collection" = "/admin/config/media/mpx/user"
  *   }
  * )
  */

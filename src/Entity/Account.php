@@ -23,10 +23,10 @@ use Drupal\media_mpx\AccountInterface;
  *   admin_permission = "administer media_mpx_account",
  *   label_collection = @Translation("mpx Users"),
  *   links = {
- *     "collection" = "/admin/structure/media-mpx-account",
- *     "add-form" = "/admin/structure/media-mpx-account/add",
- *     "edit-form" = "/admin/structure/media-mpx-account/{media_mpx_account}",
- *     "delete-form" = "/admin/structure/media-mpx-account/{media_mpx_account}/delete"
+ *     "collection" = "/admin/config/media/mpx/account",
+ *     "add-form" = "/admin/config/media/mpx/account/add",
+ *     "edit-form" = "/admin/config/media/mpx/account/{media_mpx_account}",
+ *     "delete-form" = "/admin/config/media/mpx/account/{media_mpx_account}/delete"
  *   },
  *   entity_keys = {
  *     "id" = "id",

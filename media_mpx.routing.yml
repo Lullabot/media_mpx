@@ -1,5 +1,5 @@
 entity.media_mpx_account.collection:
-  path: '/admin/structure/media-mpx-account'
+  path: '/admin/config/media/mpx/account'
   defaults:
     _entity_list: 'media_mpx_account'
     _title: 'mpx Account configuration'
@@ -7,7 +7,7 @@ entity.media_mpx_account.collection:
     _permission: 'administer media_mpx_account'
 
 entity.media_mpx_account.add_form:
-  path: '/admin/structure/media_mpx_account/add'
+  path: '/admin/config/media/mpx/account/add'
   defaults:
     _entity_form: 'media_mpx_account.add'
     _title: 'Add a mpx account'
@@ -15,7 +15,7 @@ entity.media_mpx_account.add_form:
     _permission: 'administer media_mpx_account'
 
 entity.media_mpx_account.edit_form:
-  path: '/admin/structure/media-mpx-account/{media_mpx_account}'
+  path: '/admin/config/media/mpx/account/{media_mpx_account}'
   defaults:
     _entity_form: 'media_mpx_account.edit'
     _title: 'Edit a mpx account'
@@ -23,9 +23,17 @@ entity.media_mpx_account.edit_form:
     _permission: 'administer media_mpx_account'
 
 entity.media_mpx_account.delete_form:
-  path: '/admin/structure/media-mpx-account/{media_mpx_account}/delete'
+  path: '/admin/config/media/mpx/account/{media_mpx_account}/delete'
   defaults:
     _entity_form: 'media_mpx_account.delete'
     _title: 'Delete a mpx account'
   requirements:
     _permission: 'administer media_mpx_account'
+
+media_mpx.settings:
+  path: '/admin/config/media/mpx'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'mpx settings'
+  requirements:
+    _permission: 'administer site configuration'

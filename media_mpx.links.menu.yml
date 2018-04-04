@@ -1,12 +1,19 @@
+media_mpx.settings:
+  title: 'mpx'
+  description: 'Configure thePlatform mpx integration.'
+  route_name: 'media_mpx.settings'
+  parent: system.admin_config_media
+
 # MPX User menu items definition
 entity.media_mpx_user.collection:
   title: 'mpx Users'
   route_name: entity.media_mpx_user.collection
-  description: 'Manage mpx user accounts.'
-  parent: system.admin_config_media
+  description: 'Manage mpx users.'
+  parent: media_mpx.settings
   weight: 99
 entity.media_mpx_account.overview:
-  title: mpx Accounts
-  parent: system.admin_structure
-  description: 'List of mpx accounts to extend site functionality.'
+  title: 'mpx Accounts'
+  parent: media_mpx.settings
+  description: 'Manage mpx accounts associated with users.'
   route_name: entity.media_mpx_account.collection
+
