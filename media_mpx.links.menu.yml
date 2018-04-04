@@ -5,4 +5,3 @@ entity.media_mpx_user.collection:
   description: 'Manage mpx user accounts.'
   parent: system.admin_config_media
   weight: 99
-

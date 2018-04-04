@@ -24,4 +24,5 @@ interface UserInterface extends ConfigEntityInterface {
    *   The mpx password.
    */
   public function getPassword(): string;
+
 }
