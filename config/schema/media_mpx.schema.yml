@@ -21,5 +21,8 @@ media_mpx.media_mpx_user.*:
     username:
       type: string
       label: 'Username'
+    password:
+      type: string
+      label: 'Password'
     uuid:
       type: string
