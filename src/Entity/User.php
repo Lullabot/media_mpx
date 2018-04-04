@@ -61,4 +61,18 @@ class User extends ConfigEntityBase implements UserInterface {
    */
   protected $password;
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getUsername(): string {
+    return $this->username;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPassword(): string {
+    return $this->password;
+  }
+
 }
