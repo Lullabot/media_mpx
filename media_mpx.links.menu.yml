@@ -16,4 +16,3 @@ entity.media_mpx_account.overview:
   parent: media_mpx.settings
   description: 'Manage mpx accounts associated with users.'
   route_name: entity.media_mpx_account.collection
-

@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * Module hooks for the media_mpx module.
+ */
+
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
 
