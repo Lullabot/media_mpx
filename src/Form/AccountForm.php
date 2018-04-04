@@ -43,13 +43,6 @@ class AccountForm extends EntityForm {
       '#default_value' => $this->entity->status(),
     ];
 
-    $form['description'] = [
-      '#type' => 'textarea',
-      '#title' => $this->t('Description'),
-      '#default_value' => $this->entity->get('description'),
-      '#description' => $this->t('Description of the mpx account.'),
-    ];
-
     return $form;
   }
 
@@ -62,7 +55,7 @@ class AccountForm extends EntityForm {
     $message = $result == SAVED_NEW
       ? $this->t('Created new mpx account %label.', $message_args)
       : $this->t('Updated mpx account %label.', $message_args);
-    drupal_set_message($message);
+    $this->messenger()->addStatus($message);
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $result;
   }

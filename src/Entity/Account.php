@@ -58,11 +58,4 @@ class Account extends ConfigEntityBase implements AccountInterface {
    */
   protected $status;
 
-  /**
-   * The media_mpx_account description.
-   *
-   * @var string
-   */
-  protected $description;
-
 }

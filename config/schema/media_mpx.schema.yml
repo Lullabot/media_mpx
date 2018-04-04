@@ -10,8 +10,6 @@ media_mpx.media_mpx_account.*:
       label: Label
     uuid:
       type: string
-    description:
-      type: string
 
 media_mpx.media_mpx_user.*:
   type: config_entity
