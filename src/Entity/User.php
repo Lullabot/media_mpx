@@ -29,6 +29,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "label" = "username",
  *     "uuid" = "uuid"
  *   },
+ *   label_collection = @Translation("mpx Users"),
  *   links = {
  *     "canonical" = "/admin/config/media/media_mpx_user/{media_mpx_user}",
  *     "add-form" = "/admin/config/media/media_mpx_user/add",
