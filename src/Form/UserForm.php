@@ -56,13 +56,13 @@ class UserForm extends EntityForm {
 
     switch ($status) {
       case SAVED_NEW:
-        drupal_set_message($this->t('Created the %label mpx User.', [
+        $this->messenger->addStatus($this->t('Created the %label mpx User.', [
           '%label' => $media_mpx_user->label(),
         ]));
         break;
 
       default:
-        drupal_set_message($this->t('Saved the %label mpx User.', [
+        $this->messenger->addStatus($this->t('Saved the %label mpx User.', [
           '%label' => $media_mpx_user->label(),
         ]));
     }
