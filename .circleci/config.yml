@@ -16,7 +16,7 @@
 defaults: &defaults
   docker:
     # specify the version you desire here (avoid latest except for testing)
-    - image: andrewberry/drupal_tests:0.3.3
+    - image: andrewberry/drupal_tests:0.3.4
 
     # Use our fork until https://github.com/wernight/docker-phantomjs/pull/3 is
     # merged.
@@ -158,23 +158,12 @@ jobs:
      <<: *behat_tests
   run-code-sniffer:
      <<: *code_sniffer
-  run-code-coverage:
-     <<: *code_coverage
 
 workflows:
   version: 2
 
   # Declare a workflow that runs all of our jobs in parallel.
   test_and_lint:
-    nightly:
-      triggers:
-        - schedule:
-            # Run jobs every Monday morning at 12AM
-            cron: "0 0 * * 1"
-            filters:
-              branches:
-                only:
-                  - 8.x-1.x
     jobs:
       - update-dependencies
       - run-unit-kernel-tests:
@@ -186,7 +175,24 @@ workflows:
       - run-code-sniffer:
           requires:
             - update-dependencies
-      - run-code-coverage:
+
+  weekly:
+    jobs:
+      - update-dependencies
+      - run-unit-kernel-tests:
           requires:
             - update-dependencies
-            - run-unit-kernel-tests
+      - run-behat-tests:
+          requires:
+            - update-dependencies
+      - run-code-sniffer:
+          requires:
+            - update-dependencies
+    triggers:
+      - schedule:
+          # Run jobs every Monday morning at 12AM
+          cron: "0 0 * * 1"
+          filters:
+            branches:
+              only:
+                - master
