@@ -4,7 +4,11 @@ namespace Drupal\media_mpx\Form;
 
 use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\Url;
+use Drupal\media_mpx\DataObjectFactory;
+use Lullabot\Mpx\DataService\ByFields;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Mpx Account form.
@@ -12,6 +16,43 @@ use Drupal\Core\Url;
  * @property \Drupal\media_mpx\AccountInterface $entity
  */
 class AccountForm extends EntityForm {
+
+  /**
+   * The current path service.
+   *
+   * @var \Drupal\Core\Path\CurrentPathStack
+   */
+  protected $currentPathStack;
+
+  /**
+   * The factory used to load mpx objects.
+   *
+   * @var \Drupal\media_mpx\DataObjectFactory
+   */
+  protected $dataObjectFactory;
+
+  /**
+   * AccountForm constructor.
+   *
+   * @param \Drupal\Core\Path\CurrentPathStack $currentPathStack
+   *   The current path service.
+   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   *   The factory used to load mpx objects.
+   */
+  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactory $dataObjectFactory) {
+    $this->currentPathStack = $currentPathStack;
+    $this->dataObjectFactory = $dataObjectFactory;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('path.current'),
+      $container->get('media_mpx.data_object_factory')
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -57,6 +98,7 @@ class AccountForm extends EntityForm {
       '#title' => $this->t('mpx user'),
       '#description' => $this->t('Select an mpx user to see what accounts are available.'),
       '#options' => $users,
+      '#default_value' => $this->entity->get('user'),
       '#ajax' => [
         'callback' => [$this, 'fetchAccounts'],
         'event' => 'change',
@@ -67,14 +109,21 @@ class AccountForm extends EntityForm {
         ],
       ],
     ];
-    $form_state->setValue('user', reset(array_keys($users)));
 
-//    $form['accounts_wrapper'] = [
-//      '#prefix' => '<div id="media-mpx-accounts">',
-//      '#suffix' => '</div>',
-//    ];
+    $form['accounts_container'] = [
+      '#type' => 'container',
+      '#attributes' => [
+        'id' => 'media-mpx-accounts',
+      ],
+    ];
 
-    $form['account'] = $this->fetchAccounts($form, $form_state);
+    // Set the currently selected user on the initial load.
+    if (!$form_state->hasValue('user')) {
+      reset($users);
+      $form_state->setValue('user', key($users));
+    }
+
+    $this->fetchAccounts($form, $form_state);
 
     $form['status'] = [
       '#type' => 'checkbox',
@@ -85,11 +134,26 @@ class AccountForm extends EntityForm {
     return $form;
   }
 
+  /**
+   * Ajax callback to fetch the list of mpx accounts.
+   *
+   * @param array &$form
+   *   The form being rendered.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
+   * @return array
+   *   The accounts form item.
+   */
   public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
     $user_entity_id = $form_state->getValue('user');
+
+    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
     $user = $this->entityTypeManager->getStorage('media_mpx_user')->load($user_entity_id);
 
-    list($account, $accounts) = $this->ignoreThisForNow($user);
+    $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
+    $fields = new ByFields();
+    $accounts = $accountFactory->select($fields);
 
     $options = [];
     foreach ($accounts as $account) {
@@ -98,18 +162,15 @@ class AccountForm extends EntityForm {
         '@id' => end(explode('/', $account->getId()->getPath())),
       ]);
     }
-    return [
-      'accounts_wrapper' => [
-        '#prefix' => '<div id="media-mpx-accounts">',
-        'accounts' => [
-          // If I change this to 'select' everything works.
-          '#type' => 'radios',
-          '#title' => $this->t('mpx account'),
-          '#options' => $options,
-        ],
-        '#suffix' => '</div>',
-      ],
+    $form['accounts_container']['account'] = [
+      // @todo Change to radios when
+      // https://www.drupal.org/project/drupal/issues/2758631 is fixed.
+      '#type' => 'select',
+      '#title' => $this->t('mpx account'),
+      '#options' => $options,
+      '#default_value' => $this->entity->get('account'),
     ];
+    return $form['accounts_container']['account'];
   }
 
   /**
@@ -124,33 +185,6 @@ class AccountForm extends EntityForm {
     $this->messenger()->addStatus($message);
     $form_state->setRedirectUrl($this->entity->toUrl('collection'));
     return $result;
-  }
-
-  /**
-   * @param $user
-   *
-   * @return array
-   */
-  private function ignoreThisForNow($user): array {
-    $manager = \Lullabot\Mpx\DataService\DataServiceManager::basicDiscovery();
-    $client = new \Lullabot\Mpx\Client(\Drupal::httpClient());
-    $store = new \Lullabot\DrupalSymfonyLock\DrupalStore(\Drupal::lock());
-    $p = new \HighWire\DrupalPSR16\Cache(\Drupal::cache('default'));
-    $p = new \Symfony\Component\Cache\Adapter\SimpleCacheAdapter($p);
-    $tokenCachePool = new \Lullabot\Mpx\TokenCachePool($p);
-    $mpx_user = new \Lullabot\Mpx\Service\IdentityManagement\User($user->getUsername(), $user->getPassword());
-    $session = new \Lullabot\Mpx\Service\IdentityManagement\UserSession($mpx_user, $client, $store, $tokenCachePool);
-    $client = new \Lullabot\Mpx\AuthenticatedClient($client, $session);
-    $data_service = $manager->getDataService('Access Data Service', 'Account', '1.0');
-    $dof = new \Lullabot\Mpx\DataService\DataObjectFactory($data_service, $client);
-
-    $fields = new \Lullabot\Mpx\DataService\ByFields();
-
-    $account = new \Lullabot\Mpx\DataService\Access\Account();
-    $account->setId($session->acquireToken()->getUserId());
-    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
-    $accounts = $dof->select($fields, $account);
-    return [$account, $accounts];
   }
 
 }
