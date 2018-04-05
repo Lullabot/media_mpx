@@ -11,7 +11,10 @@
     "source": "http://cgit.drupalcode.org/media_mpx"
   },
   "require": {
+    "symfony/cache": "^3.4",
+    "highwire/drupal-psr-16": "^1.0",
     "lullabot/mpx-php": "dev-master",
+    "lullabot/drupal-symfony-lock": "dev-master",
     "symfony/property-info": "^3.4"
   },
   "require-dev": {
