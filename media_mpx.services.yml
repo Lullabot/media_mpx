@@ -1,4 +1,48 @@
 services:
-  media_mpx.authenticated_client:
-    class: \Lullabot\Mpx\AuthenticatedClient
-    factory: media_mpx.authenticated_client_factory
+  # This is the service used to make authenticated requests to mpx.
+  media_mpx.authenticated_client_factory:
+    class: Drupal\media_mpx\AuthenticatedClientFactory
+    arguments: ['@media_mpx.client', '@media_mpx.user_session_factory']
+
+  media_mpx.data_object_factory:
+    class: Drupal\media_mpx\DataObjectFactory
+    arguments: ['@media_mpx.data_service_manager', '@media_mpx.authenticated_client_factory']
+
+  media_mpx.data_service_manager:
+    class: Lullabot\Mpx\DataService\DataServiceManager
+    public: false
+    factory: ['Lullabot\Mpx\DataService\DataServiceManager', basicDiscovery]
+
+  media_mpx.user_session_factory:
+    class: Drupal\media_mpx\UserSessionFactory
+    arguments: ['@media_mpx.client', '@media_mpx.session_lock', '@media_mpx.token_cache_pool']
+
+  # This service is a generic client handling both authenticated and anonymous
+  # requests. Most code will want to use media_mpx.authenticated_client_factory
+  # instead.
+  media_mpx.client:
+    class: Lullabot\Mpx\Client
+    arguments: ['@http_client']
+
+  # These services are "internal" and generally not needed by custom code.
+  media_mpx.session_lock:
+    class: Lullabot\DrupalSymfonyLock\DrupalStore
+    public: false
+    arguments: ['@lock']
+
+  # The mpx-php library implements PSR-6, but there is only a PSR-16 cache
+  # adapter for Drupal. We use Symfony to bridge PSR-16 to PSR-6.
+  media_mpx.simple_cache_backend:
+    class: HighWire\DrupalPSR16\Cache
+    public: false
+    arguments: ['@cache.default']
+
+  media_mpx.token_cache_pool_adapter:
+    class: Symfony\Component\Cache\Adapter\SimpleCacheAdapter
+    public: false
+    arguments: ['@media_mpx.simple_cache_backend', 'media_mpx_token']
+
+  media_mpx.token_cache_pool:
+    class: Lullabot\Mpx\TokenCachePool
+    public: false
+    arguments: ['@media_mpx.token_cache_pool_adapter']
