@@ -155,7 +155,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadata(MediaInterface $media, $attribute_name) {
-    $properties = $this->extractMediaProperties();
+    list(, $properties) = $this->extractMediaProperties();
 
     if (in_array($attribute_name, $properties)) {
       $user = $this->getAccount()->getUserEntity();
@@ -219,7 +219,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     // @todo This should probably be discovered and not hardcoded.
     $class = MpxMedia::class;
-    return $propertyInfo->getProperties($class);
+    return [$propertyInfo, $propertyInfo->getProperties($class)];
   }
 
 }
