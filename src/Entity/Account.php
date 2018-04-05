@@ -58,4 +58,18 @@ class Account extends ConfigEntityBase implements AccountInterface {
    */
   protected $status;
 
+  /**
+   * The entity id of the User configuration entity.
+   *
+   * @var string
+   */
+  protected $user;
+
+  /**
+   * The URI of the account.
+   *
+   * @var mixed
+   */
+  protected $account;
+
 }
