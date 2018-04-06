@@ -1,0 +1,10 @@
+entity.media_mpx_user.add_form:
+  route_name: entity.media_mpx_user.add_form
+  title: 'Add mpx user'
+  appears_on:
+    - entity.media_mpx_user.collection
+entity.media_mpx_account.add_form:
+  route_name: 'entity.media_mpx_account.add_form'
+  title: 'Add mpx account'
+  appears_on:
+    - entity.media_mpx_account.collection

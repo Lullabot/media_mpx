@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ * Module hooks for the media_mpx module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_help().
+ */
+function media_mpx_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'media_mpx.settings':
+      return [
+        '#prefix' => '<p>',
+        '#markup' => t('Setting up mpx for the first time? Make sure you have an mpx username and password. With that username and password, <a href="@create-user">create a user</a>, and then <a href="@create-account">create one or more accounts</a> to import content from.', [
+          '@create-user' => Url::fromRoute('entity.media_mpx_user.add_form')->toString(),
+          '@create-account' => Url::fromRoute('entity.media_mpx_account.add_form')->toString(),
+        ]),
+        '#suffix' => '</p>',
+      ];
+  }
+
+  return NULL;
+}

@@ -1,0 +1,25 @@
+media_mpx.media_mpx_account.*:
+  type: config_entity
+  label: mpx Account
+  mapping:
+    id:
+      type: string
+      label: ID
+    label:
+      type: label
+      label: Label
+    uuid:
+      type: string
+
+media_mpx.media_mpx_user.*:
+  type: config_entity
+  label: 'mpx User'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    username:
+      type: string
+      label: 'Username'
+    uuid:
+      type: string

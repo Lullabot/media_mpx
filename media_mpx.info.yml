@@ -1,7 +1,9 @@
-name: 'Media thePlatform mpx'
+name: Media mpx
 type: module
-description: 'Provides ThePlatform mpx integration.'
+description: 'Provides thePlatform mpx integration.'
+package: Media
 core: 8.x
 package: 'Media'
 dependencies:
   - drupal:media (>=8.5.0)
+configure: entity.media_mpx_account.collection
