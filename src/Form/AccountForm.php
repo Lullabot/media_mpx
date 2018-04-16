@@ -62,7 +62,7 @@ class AccountForm extends EntityForm {
 
     $form = $this->idLabelForm($form);
 
-    $users = $this->loadMpxUsers();
+    $users = $this->loadMpxUsers($form_state);
     if (empty($users)) {
       $url = Url::fromRoute('entity.media_mpx_user.add_form')->toString() . '?destination=' . \Drupal::service('path.current')->getPath();
       $this->messenger()->addError($this->t('<a href="@add-user">Create at least one mpx user</a> before creating accounts.', [
@@ -173,12 +173,6 @@ class AccountForm extends EntityForm {
       ],
     ];
 
-    // Set the currently selected user on the initial load.
-    if (!$form_state->hasValue('user')) {
-      reset($users);
-      $form_state->setValue('user', key($users));
-    }
-
     $this->fetchAccounts($form, $form_state);
     return $form;
   }
@@ -216,14 +210,24 @@ class AccountForm extends EntityForm {
   /**
    * Return all configured mpx user names, keyed by their config entity ID.
    *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
    * @return array
    *   An array of user names, keyed by the config entity ID.
    */
-  private function loadMpxUsers(): array {
+  private function loadMpxUsers(FormStateInterface $form_state): array {
     $users = array_map(function ($entity) {
       /** @var \Drupal\media_mpx\Entity\UserInterface $entity */
       return $entity->label();
     }, $this->entityTypeManager->getStorage('media_mpx_user')->loadMultiple());
+
+    // Set the currently selected user on the initial load.
+    if (!$form_state->hasValue('user')) {
+      reset($users);
+      $form_state->setValue('user', key($users));
+    }
+
     return $users;
   }
 
