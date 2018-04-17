@@ -7,6 +7,8 @@
 
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
+use Drupal\media\MediaInterface;
+use Drupal\media_mpx\Exception\SourceObjectNotFoundException;
 
 /**
  * Implements hook_help().
@@ -25,4 +27,22 @@ function media_mpx_help($route_name, RouteMatchInterface $route_match) {
   }
 
   return NULL;
+}
+
+/**
+ * Implements hook_entity_keyvalue_info().
+ */
+function media_mpx_entity_keyvalue_info() {
+  return [
+    'media' => [
+      'keys' => [
+        'source_object' => [
+          'default_value' => function (MediaInterface $media) {
+            throw new SourceObjectNotFoundException();
+          },
+          'type' => 'object',
+        ],
+      ],
+    ],
+  ];
 }
