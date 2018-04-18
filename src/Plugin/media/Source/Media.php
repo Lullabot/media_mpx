@@ -167,18 +167,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     list(, $properties) = $this->extractMediaProperties();
 
     if (in_array($attribute_name, $properties)) {
-      $store = $this->entityKeyValueStore->getEntityStore('media');
-      try {
-        $mpx_media = $store->loadValue($media, 'source_object');
-      }
-      catch (SourceObjectNotFoundException $e) {
-        $user = $this->getAccount()->getUserEntity();
-        $mediaFactory = $this->dataObjectFactory->forObjectType($user, 'Media Data Service', 'Media', '1.10');
-
-        $id = $media->get($this->configuration['source_field'])->getString();
-        $mpx_media = $mediaFactory->load($id)->wait();
-        $store->setValue($media, 'source_object', $mpx_media);
-      }
+      $mpx_media = $this->getMpxMedia($media);
 
       $method = 'get' . ucfirst($attribute_name);
       // @todo At the least this should be a static cache tied to $media.
@@ -194,6 +183,30 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
 
     return parent::getMetadata($media, $attribute_name);
+  }
+
+  /**
+   * Get the complete mpx Media object associated with a media entity.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity.
+   *
+   * @return \Lullabot\Mpx\DataService\Media\Media
+   *   The media object.
+   */
+  public function getMpxMedia(MediaInterface $media): MpxMedia {
+    $store = $this->entityKeyValueStore->getEntityStore('media');
+    try {
+      $mpx_media = $store->loadValue($media, 'source_object');
+    } catch (SourceObjectNotFoundException $e) {
+      $user = $this->getAccount()->getUserEntity();
+      $mediaFactory = $this->dataObjectFactory->forObjectType($user, 'Media Data Service', 'Media', '1.10');
+
+      $id = $media->get($this->configuration['source_field'])->getString();
+      $mpx_media = $mediaFactory->load($id)->wait();
+      $store->setValue($media, 'source_object', $mpx_media);
+    }
+    return $mpx_media;
   }
 
   /**
