@@ -41,11 +41,23 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   use MessengerTrait;
 
   /**
+   * @todo Move these to the MediaSource annotation if possible?
+   */
+  const SERVICE_NAME = 'Media Data Service';
+  const OBJECT_TYPE = 'Media';
+  const SCHEMA_VERSION = '1.10';
+
+  /**
    * The service to load mpx data.
    *
    * @var \Drupal\media_mpx\DataObjectFactory
    */
-  private $dataObjectFactory;
+  protected $dataObjectFactory;
+
+  /**
+   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
+   */
+  protected $keyValueFactory;
 
   /**
    * Media constructor.
@@ -67,17 +79,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
    *   The service to load mpx data.
    */
-  const SERVICE_NAME = 'Media Data Service';
-
-  const OBJECT_TYPE = 'Media';
-
-  const SCHEMA_VERSION = '1.10';
-
-  /**
-   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
-   */
-  private $keyValueFactory;
-
   public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactory $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactory = $dataObjectFactory;
