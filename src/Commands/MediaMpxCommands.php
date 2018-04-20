@@ -4,18 +4,23 @@ namespace Drupal\media_mpx\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
-use Drupal\media\MediaSourceInterface;
 use Drupal\media\MediaTypeInterface;
+use Drupal\media_mpx\AuthenticatedClientFactory;
 use Drupal\media_mpx\DataObjectFactory;
-use Drupal\media_mpx\Plugin\media\Source\Media;
+use Drupal\media_mpx\DataObjectImporter;
+use Drupal\media_mpx\Notification;
 use Drush\Commands\DrushCommands;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\Access\Account;
 use Lullabot\Mpx\DataService\ByFields;
-use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Lullabot\Mpx\DataService\DataServiceManager;
+use Lullabot\Mpx\DataService\NotificationListener;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 
 /**
- * A Drush commandfile.
+ * Drush commands for mpx.
  *
  * In addition to this file, you need a drush.services.yml
  * in root of your module, and a composer.json file that provides the name
@@ -49,16 +54,30 @@ class MediaMpxCommands extends DrushCommands {
   private $keyValueFactory;
 
   /**
+   * @var \Drupal\media_mpx\AuthenticatedClientFactory
+   */
+  protected $authenticatedClientFactory;
+
+  /**
+   * @var \Lullabot\Mpx\DataService\DataServiceManager
+   */
+  private $dataServiceManager;
+
+  /**
    * MediaMpxCommands constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
+   * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticatedClientFactory
+   * @param \Lullabot\Mpx\DataService\DataServiceManager $dataServiceManager
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactory $dataObjectFactory, KeyValueFactoryInterface $keyValueFactory) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactory $dataObjectFactory, KeyValueFactoryInterface $keyValueFactory, AuthenticatedClientFactory $authenticatedClientFactory, DataServiceManager $dataServiceManager) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dataObjectFactory = $dataObjectFactory;
     $this->keyValueFactory = $keyValueFactory;
+    $this->authenticatedClientFactory = $authenticatedClientFactory;
+    $this->dataServiceManager = $dataServiceManager;
   }
 
   /**
@@ -78,31 +97,14 @@ class MediaMpxCommands extends DrushCommands {
 
     $results = $this->selectAll($media_type);
 
-    // Store an array of media items we touched, so we can clear out their
-    // static cache.
-    $reset_ids = [];
-
     // @todo Support fetching the total results via ObjectList.
     $this->io()->title(dt('Importing @type media', ['@type' => $media_type_id]));
     $this->io()->progressStart();
 
+    $importer = new DataObjectImporter($this->keyValueFactory, $this->entityTypeManager);
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
     foreach ($results as $index => $mpx_media) {
-      // @todo start a transaction.
-
-      // Find any existing media items, or return a new one.
-      $results = $this->loadMediaEntities($media_type, $mpx_media);
-
-      // Save the mpx Media item so it's available in getMetadata() in the
-      // source plugin.
-      $this->keyValueFactory->get('media_mpx_media')->set($mpx_media->getId(), $mpx_media);
-
-      foreach ($results as $media) {
-        $media->save();
-        $reset_ids[] = $media->id();
-      }
-
-      $this->entityTypeManager->getStorage('media')->resetCache($reset_ids);
+      $importer->importItem($mpx_media, $media_type);
 
       $this->io()->progressAdvance();
       $this->logger()->info('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]);
@@ -110,6 +112,88 @@ class MediaMpxCommands extends DrushCommands {
 
     $this->io()->progressFinish();
 
+  }
+
+  /**
+   * Listen for mpx notifications for a given media type.
+   *
+   * @param string $media_type_id
+   *   The media type ID to import for.
+   *
+   * @usage media_mpx-listen mpx_video
+   *   Listen for notifications for the mpx_video media type.
+   *
+   * @command media_mpx:listen
+   * @aliases mpxl
+   */
+  public function listen(string $media_type_id) {
+    $media_type = $this->loadMediaType($media_type_id);
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
+    $account = $media_source->getAccount();
+
+    $client = $this->authenticatedClientFactory->fromUser($account->getUserEntity());
+    $service = $this->dataServiceManager->getDataService($media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
+    $listener = new NotificationListener($client, $service, 'drush-drupal8-mpx');
+
+    // @todo should this really be state?
+    $state = \Drupal::state();
+    if (!$notification_id = $state->get('media_mpx_media_notification_id')) {
+      // @todo Should we throw a warning?
+      $notification_id = -1;
+    }
+
+    // @todo Support overriding the default 30 second timeout.
+    $promise = $listener->listen($notification_id);
+    /** @var \Lullabot\Mpx\DataService\Notification[] $notifications */
+    $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
+
+    try {
+      $notifications = $promise->wait();
+    }
+    catch (ConnectException $e) {
+      // This may be a timeout if no notifications are available. However, there
+      // is no good method from the exception to determine if a timeout
+      // occurred.
+      if (strpos($e->getMessage(), 'cURL error 28') !== FALSE) {
+        $this->logger()->info('A timeout occurred while waiting for notifications. This is expected when no content is changing in mpx. No action is required.');
+        return;
+      }
+
+      // Some other connection exception occurred, so throw that up.
+      throw $e;
+    }
+
+    // @todo format_plural().
+    $this->io()->note(dt('Processing @count notifications', ['@count' => count($notifications)]));
+    $this->io()->progressStart(count($notifications));
+    $seen_ids = [];
+    $notifications = array_filter($notifications, function ($notification) use (&$seen_ids) {
+      /** @var \Lullabot\Mpx\DataService\Notification $notification */
+      $id = (string) $notification->getEntry()->getId();
+      if (isset($seen_ids[$id])) {
+        return FALSE;
+      }
+
+      $this->logger()->info(dt('Queuing @method notification for object @id', ['@method' => $notification->getMethod(), '@id' => $id]));
+      $seen_ids[$id] = TRUE;
+      return TRUE;
+    });
+
+    $chunks = array_chunk($notifications, 10);
+    $q = \Drupal::queue('media_mpx_notification');
+    foreach ($chunks as $chunk) {
+      $items = [];
+      foreach ($chunk as $notification) {
+        $items[] = new Notification($notification, $media_type);
+      }
+      $q->createItem($items);
+      //      $this->importItem($media_type, $mpx_media);
+      $this->io()->progressAdvance();
+    }
+    $state->set('media_mpx_media_notification_id', end($notifications)->getId());
+
+    $this->io()->progressFinish();
+//    $this->listen($media_type_id);
   }
 
   /**
@@ -135,54 +219,6 @@ class MediaMpxCommands extends DrushCommands {
   }
 
   /**
-   * Return the media source plugin for a given media type.
-   *
-   * @param \Drupal\media\MediaTypeInterface $media_type
-   *   The media type object to load the source plugin for.
-   *
-   * @return \Drupal\media_mpx\Plugin\media\Source\Media
-   *   The source plugin.
-   */
-  private function loadMediaSource(MediaTypeInterface $media_type): Media {
-    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $media_source */
-    $media_source = $media_type->getSource();
-    if (!($media_source instanceof Media)) {
-      throw new \RuntimeException(dt('@type is not configured as a mpx Media source.', ['@type' => $media_type->id()]));
-    }
-    return $media_source;
-  }
-
-  /**
-   * Load all media entities for a given mpx Media item, or return a new stub.
-   *
-   * @param \Drupal\media\MediaTypeInterface $media_type
-   *   The media type to load all entities for.
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The mpx Media item to load the associated entities for.
-   *
-   * @return \Drupal\media\Entity\Media[]
-   *   An array of existing media entities or a new media entity.
-   */
-  private function loadMediaEntities(MediaTypeInterface $media_type, MpxMedia $mpx_media): array {
-    $media_source = $this->loadMediaSource($media_type);
-    $source_field = $media_source->getSourceFieldDefinition($media_type);
-    $media_storage = $this->entityTypeManager->getStorage('media');
-    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_media->getId()]);
-
-    if (empty($results)) {
-      /** @var \Drupal\media\Entity\Media $new_media_entity */
-      $new_media_entity = $media_storage->create([
-        $this->entityTypeManager->getDefinition('media')
-          ->getKey('bundle') => $media_type->id(),
-      ]);
-      $new_media_entity->set($source_field->getName(), $mpx_media->getId());
-      $results = [$new_media_entity];
-    }
-
-    return $results;
-  }
-
-  /**
    * Fetch all mpx items for a given media type.
    *
    * @param \Drupal\media\MediaTypeInterface $media_type
@@ -192,7 +228,7 @@ class MediaMpxCommands extends DrushCommands {
    *   An iterator over all retrieved media items.
    */
   private function selectAll(MediaTypeInterface $media_type): ObjectListIterator {
-    $media_source = $this->loadMediaSource($media_type);
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
     $account = $media_source->getAccount();
 
     $mpx_account = new Account();

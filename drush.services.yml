@@ -1,6 +1,6 @@
 services:
   media_mpx.commands:
     class: \Drupal\media_mpx\Commands\MediaMpxCommands
-    arguments: ['@entity_type.manager', '@media_mpx.data_object_factory', '@keyvalue']
+    arguments: ['@entity_type.manager', '@media_mpx.data_object_factory', '@keyvalue', '@media_mpx.authenticated_client_factory', '@media_mpx.data_service_manager']
     tags:
       - { name: drush.command }
