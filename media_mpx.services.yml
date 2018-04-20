@@ -17,12 +17,29 @@ services:
     class: Drupal\media_mpx\UserSessionFactory
     arguments: ['@media_mpx.client', '@media_mpx.session_lock', '@media_mpx.token_cache_pool']
 
+  # We need to define our own handler stack instance separate from Drupal
+  # core's. Otherwise, when we add the mpx_errors handler, it gets applied to
+  # all HTTP requests, and not just those sent to mpx.
+  media_mpx.http_handler_stack:
+    class: GuzzleHttp\HandlerStack
+    public: false
+    factory: GuzzleHttp\HandlerStack::create
+    configurator: ['@http_handler_stack_configurator', configure]
+  media_mpx.http_handler_stack_configurator:
+    class: Drupal\Core\Http\HandlerStackConfigurator
+    public: false
+    arguments: ['@service_container']
+
   # This service is a generic client handling both authenticated and anonymous
   # requests. Most code will want to use media_mpx.authenticated_client_factory
   # instead.
   media_mpx.client:
     class: Lullabot\Mpx\Client
-    arguments: ['@http_client']
+    factory: media_mpx.client_factory:fromOptions
+
+  media_mpx.client_factory:
+    class: Drupal\media_mpx\ClientFactory
+    arguments: ['@media_mpx.http_handler_stack', '@http_client_factory']
 
   # These services are "internal" and generally not needed by custom code.
   media_mpx.session_lock:
