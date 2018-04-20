@@ -2,7 +2,9 @@
   "name": "drupal/media_mpx",
   "type": "drupal-module",
   "description": "Provides 'ThePlatform mpx' integration.",
-  "keywords": ["Drupal"],
+  "keywords": [
+    "Drupal"
+  ],
   "license": "GPL-2.0+",
   "homepage": "https://www.drupal.org/project/media_mpx",
   "minimum-stability": "dev",
@@ -12,7 +14,6 @@
     "source": "http://cgit.drupalcode.org/media_mpx"
   },
   "require": {
-    "drupal/entity_keyvalue": "^1.0",
     "symfony/cache": "^3.4",
     "highwire/drupal-psr-16": "^1.0",
     "lullabot/mpx-php": "dev-master",
