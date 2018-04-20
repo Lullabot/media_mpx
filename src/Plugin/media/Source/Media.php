@@ -184,7 +184,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
         $method = 'get' . ucfirst($attribute_name);
         // @todo At the least this should be a static cache tied to $media.
-        $value = $mpx_media->$method();
+        try {
+          $value = $mpx_media->$method();
+        }
+        catch (\TypeError $e) {
+          // @todo The optional value was not set.
+          // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+          // fixed.
+          return parent::getMetadata($media, $attribute_name);
+        }
 
         // @todo Is this the best way to handle complex values like dates and
         // sub-objects?
