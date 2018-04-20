@@ -17,6 +17,10 @@ services:
     class: Drupal\media_mpx\UserSessionFactory
     arguments: ['@media_mpx.client', '@media_mpx.session_lock', '@media_mpx.token_cache_pool']
 
+  media_mpx.data_object_importer:
+    class: Drupal\media_mpx\DataObjectImporter
+    arguments: ['@keyvalue', '@entity_type.manager']
+
   # We need to define our own handler stack instance separate from Drupal
   # core's. Otherwise, when we add the mpx_errors handler, it gets applied to
   # all HTTP requests, and not just those sent to mpx.
