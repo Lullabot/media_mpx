@@ -7,6 +7,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\entity_keyvalue\EntityKeyValueStoreProvider;
@@ -47,11 +48,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   private $dataObjectFactory;
 
   /**
-   * @var \Drupal\entity_keyvalue\EntityKeyValueStoreProvider
-   */
-  private $entityKeyValueStore;
-
-  /**
    * Media constructor.
    *
    * @param array $configuration
@@ -71,10 +67,21 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
    *   The service to load mpx data.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, EntityKeyValueStoreProvider $entity_keyvalue_store, DataObjectFactory $dataObjectFactory) {
+  const SERVICE_NAME = 'Media Data Service';
+
+  const OBJECT_TYPE = 'Media';
+
+  const SCHEMA_VERSION = '1.10';
+
+  /**
+   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
+   */
+  private $keyValueFactory;
+
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactory $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
-    $this->entityKeyValueStore = $entity_keyvalue_store;
     $this->dataObjectFactory = $dataObjectFactory;
+    $this->keyValueFactory = $keyValueFactory;
   }
 
   /**
@@ -89,7 +96,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $container->get('entity_field.manager'),
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
-      $container->get('entity_keyvalue_store_provider'),
+      $container->get('keyvalue'),
       $container->get('media_mpx.data_object_factory')
     );
   }
@@ -164,23 +171,29 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadata(MediaInterface $media, $attribute_name) {
-    list(, $properties) = $this->extractMediaProperties();
+    // Load the media type.
+    /** @var \Drupal\media\MediaTypeInterface $media_type */
+    $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
+    $source_field = $this->getSourceFieldDefinition($media_type);
+    if (!$media->get($source_field->getName())->isEmpty()) {
+      list(, $properties) = $this->extractMediaProperties();
 
-    if (in_array($attribute_name, $properties)) {
-      $mpx_media = $this->getMpxMedia($media);
+      if (in_array($attribute_name, $properties)) {
+        $mpx_media = $this->getMpxMedia($media);
 
-      $method = 'get' . ucfirst($attribute_name);
-      // @todo At the least this should be a static cache tied to $media.
-      $value = $mpx_media->$method();
+        $method = 'get' . ucfirst($attribute_name);
+        // @todo At the least this should be a static cache tied to $media.
+        $value = $mpx_media->$method();
 
-      // @todo Is this the best way to handle complex values like dates and
-      // sub-objects?
-      if ($value instanceof \DateTime) {
-        $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+        // @todo Is this the best way to handle complex values like dates and
+        // sub-objects?
+        if ($value instanceof \DateTime) {
+          $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+        }
+
+        return $value;
       }
-
-      return $value;
-    }
+    };
 
     return parent::getMetadata($media, $attribute_name);
   }
@@ -195,16 +208,14 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The media object.
    */
   public function getMpxMedia(MediaInterface $media): MpxMedia {
-    $store = $this->entityKeyValueStore->getEntityStore('media');
-    try {
-      $mpx_media = $store->loadValue($media, 'source_object');
-    } catch (SourceObjectNotFoundException $e) {
+    $id = $media->get($this->configuration['source_field'])->getString();
+    $store = $this->keyValueFactory->get('media_mpx_media');
+    if (!$mpx_media = $store->get($id)) {
       $user = $this->getAccount()->getUserEntity();
-      $mediaFactory = $this->dataObjectFactory->forObjectType($user, 'Media Data Service', 'Media', '1.10');
+      $mediaFactory = $this->dataObjectFactory->forObjectType($user, self::SERVICE_NAME, self::OBJECT_TYPE, self::SCHEMA_VERSION);
 
-      $id = $media->get($this->configuration['source_field'])->getString();
       $mpx_media = $mediaFactory->load($id)->wait();
-      $store->setValue($media, 'source_object', $mpx_media);
+      $store->set($id, $mpx_media);
     }
     return $mpx_media;
   }
@@ -215,7 +226,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @return \Drupal\media_mpx\Entity\Account
    *   The mpx account.
    */
-  protected function getAccount(): Account {
+  public function getAccount(): Account {
     $id = $this->getConfiguration()['account'];
     /** @var \Drupal\media_mpx\Entity\Account $account */
     $account = $this->entityTypeManager->getStorage('media_mpx_account')->load($id);
