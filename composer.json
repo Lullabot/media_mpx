@@ -29,5 +29,12 @@
     "bex/behat-screenshot": "^1.2",
     "phpmd/phpmd": "^2.6",
     "phpmetrics/phpmetrics": "^2.3"
+  },
+  "extra": {
+    "drush": {
+      "services": {
+        "drush.services.yml": "^9"
+      }
+    }
   }
 }
