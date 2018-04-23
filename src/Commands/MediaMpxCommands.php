@@ -194,7 +194,6 @@ class MediaMpxCommands extends DrushCommands {
     $state->set($notification_id, end($notifications)->getId());
 
     $this->io()->progressFinish();
-//    $this->listen($media_type_id);
   }
 
   /**
