@@ -107,7 +107,7 @@ class MediaMpxCommands extends DrushCommands {
       $this->entityTypeManager->getStorage('media')->resetCache($reset_ids);
 
       $this->io()->progressAdvance();
-      $this->logger()->info('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]);
+      $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
     }
 
     $this->io()->progressFinish();
