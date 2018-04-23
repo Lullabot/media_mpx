@@ -11,8 +11,6 @@ use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
 use Drush\Commands\DrushCommands;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\Access\Account;
 use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\DataService\DataServiceManager;
@@ -132,12 +130,15 @@ class MediaMpxCommands extends DrushCommands {
     $account = $media_source->getAccount();
 
     $client = $this->authenticatedClientFactory->fromUser($account->getUserEntity());
-    $service = $this->dataServiceManager->getDataService($media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
+    $definition = $media_source->getPluginDefinition()['media_mpx'];
+    $service = $this->dataServiceManager->getDataService($definition['service_name'], $definition['object_type'], $definition['schema_version']);
+    // @todo Fixup clientid
     $listener = new NotificationListener($client, $service, 'drush-drupal8-mpx');
 
     // @todo should this really be state?
     $state = \Drupal::state();
-    if (!$notification_id = $state->get('media_mpx_media_notification_id')) {
+    $notification_key = $media_source->getPluginId() . '_notification_id';
+    if (!$notification_id = $state->get($notification_key)) {
       // @todo Should we throw a warning?
       $notification_id = -1;
     }
@@ -190,7 +191,7 @@ class MediaMpxCommands extends DrushCommands {
       //      $this->importItem($media_type, $mpx_media);
       $this->io()->progressAdvance();
     }
-    $state->set('media_mpx_media_notification_id', end($notifications)->getId());
+    $state->set($notification_id, end($notifications)->getId());
 
     $this->io()->progressFinish();
 //    $this->listen($media_type_id);
@@ -234,7 +235,7 @@ class MediaMpxCommands extends DrushCommands {
     $mpx_account = new Account();
     $mpx_account->setId($account->get('account'));
 
-    $factory = $this->dataObjectFactory->forObjectType($account->getUserEntity(), $media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
+    $factory = $this->dataObjectFactory->fromMediaSource($media_source);
     // @todo Remove this when it's made optional upstream.
     // @see https://github.com/Lullabot/mpx-php/issues/78
     $fields = new ByFields();

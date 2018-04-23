@@ -97,8 +97,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $mpx_media = $notification->getNotification()->getEntry();
 
       $media_source = $this->importer::loadMediaSource($notification->getMediaType());
-      // @todo Add a forObjectType($media_source) wrapper.
-      $factory = $this->dataObjectFactory->forObjectType($media_source->getAccount()->getUserEntity(), $media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
+      $factory = $this->dataObjectFactory->fromMediaSource($media_source);
       $promises[] = $factory->load($mpx_media->getId());
       $media_types[] = $notification->getMediaType();
     }
@@ -106,7 +105,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     // Process each request concurrently.
     // @todo Handle individual request rejections by requeuing them to the
     // bottom of the queue.
-    each_limit($promises, 10, function(Media $mpx_media, $index) use ($media_types) {
+    each_limit($promises, 10, function($mpx_media, $index) use ($media_types) {
       $this->importer->importItem($mpx_media, $media_types[$index]);
     })->wait();
   }

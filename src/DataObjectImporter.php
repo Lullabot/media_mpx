@@ -5,8 +5,8 @@ namespace Drupal\media_mpx;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\media\MediaTypeInterface;
-use Drupal\media_mpx\Plugin\media\Source\Media;
-use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
+use Lullabot\Mpx\DataService\ObjectInterface;
 
 /**
  * Import an mpx item into a media entity.
@@ -43,12 +43,12 @@ class DataObjectImporter {
   /**
    * Import an mpx object into a media entity of the given type.
    *
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The mpx media object.
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
+   *   The mpx object.
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to import to.
    */
-  public function importItem(MpxMedia $mpx_media, MediaTypeInterface $media_type) {
+  public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type) {
     // @todo Handle POST, PUT, Delete, etc.
     // Store an array of media items we touched, so we can clear out their
     // static cache.
@@ -56,12 +56,12 @@ class DataObjectImporter {
     // @todo start a transaction.
 
     // Find any existing media items, or return a new one.
-    $results = $this->loadMediaEntities($media_type, $mpx_media);
+    $results = $this->loadMediaEntities($media_type, $mpx_object);
 
     // Save the mpx Media item so it's available in getMetadata() in the
     // source plugin.
-    $this->keyValueFactory->get('media_mpx_media')
-      ->set($mpx_media->getId(), $mpx_media);
+    $this->keyValueFactory->get($media_type->getSource()->getPluginId())
+      ->set($mpx_object->getId(), $mpx_object);
 
     foreach ($results as $media) {
       $media->save();
@@ -72,21 +72,21 @@ class DataObjectImporter {
   }
 
   /**
-   * Load all media entities for a given mpx Media item, or return a new stub.
+   * Load all media entities for a given mpx object, or return a new stub.
    *
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to load all entities for.
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The mpx Media item to load the associated entities for.
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
+   *   The mpx object to load the associated entities for.
    *
    * @return \Drupal\media\Entity\Media[]
    *   An array of existing media entities or a new media entity.
    */
-  private function loadMediaEntities(MediaTypeInterface $media_type, MpxMedia $mpx_media): array {
+  private function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
     $media_source = $this->loadMediaSource($media_type);
     $source_field = $media_source->getSourceFieldDefinition($media_type);
     $media_storage = $this->entityTypeManager->getStorage('media');
-    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_media->getId()]);
+    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object->getId()]);
 
     if (empty($results)) {
       /** @var \Drupal\media\Entity\Media $new_media_entity */
@@ -94,7 +94,7 @@ class DataObjectImporter {
         $this->entityTypeManager->getDefinition('media')
           ->getKey('bundle') => $media_type->id(),
       ]);
-      $new_media_entity->set($source_field->getName(), $mpx_media->getId());
+      $new_media_entity->set($source_field->getName(), $mpx_object->getId());
       $results = [$new_media_entity];
     }
 
@@ -110,10 +110,10 @@ class DataObjectImporter {
    * @return \Drupal\media_mpx\Plugin\media\Source\Media
    *   The source plugin.
    */
-  public static function loadMediaSource(MediaTypeInterface $media_type): Media {
+  public static function loadMediaSource(MediaTypeInterface $media_type): MpxMediaSourceInterface {
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $media_source */
     $media_source = $media_type->getSource();
-    if (!($media_source instanceof Media)) {
+    if (!($media_source instanceof MpxMediaSourceInterface)) {
       throw new \RuntimeException(dt('@type is not configured as a mpx Media source.', ['@type' => $media_type->id()]));
     }
     return $media_source;

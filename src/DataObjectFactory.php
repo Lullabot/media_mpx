@@ -3,6 +3,7 @@
 namespace Drupal\media_mpx;
 
 use Drupal\media_mpx\Entity\UserInterface;
+use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
 use Lullabot\Mpx\DataService\DataServiceManager;
 
@@ -57,6 +58,24 @@ class DataObjectFactory {
     $service = $this->manager->getDataService($serviceName, $objectType, $schema);
     $client = $this->authenticatedClientFactory->fromUser($user);
     return new MpxDataObjectFactory($service, $client);
+  }
+
+  /**
+   * Create a \Lullabot\Mpx\DataService\DataObjectFactory from a media source.
+   *
+   * @param \Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface $media_source
+   *   The media source to create the factory from.
+   *
+   * @return \Lullabot\Mpx\DataService\DataObjectFactory
+   *   A factory to load and query objects with.
+   */
+  public function fromMediaSource(MpxMediaSourceInterface $media_source) {
+    if (!$service_info = $media_source->getPluginDefinition()['media_mpx']) {
+      throw new \InvalidArgumentException('The media source annotation must have a media_mpx key');
+    }
+
+    $user = $media_source->getAccount()->getUserEntity();
+    return $this->forObjectType($user, $service_info['service_name'], $service_info['object_type'], $service_info['schema_version']);
   }
 
 }
