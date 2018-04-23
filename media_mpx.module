@@ -28,21 +28,3 @@ function media_mpx_help($route_name, RouteMatchInterface $route_match) {
 
   return NULL;
 }
-
-/**
- * Implements hook_entity_keyvalue_info().
- */
-function media_mpx_entity_keyvalue_info() {
-  return [
-    'media' => [
-      'keys' => [
-        'source_object' => [
-          'default_value' => function (MediaInterface $media) {
-            throw new SourceObjectNotFoundException();
-          },
-          'type' => 'object',
-        ],
-      ],
-    ],
-  ];
-}
