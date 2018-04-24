@@ -1,0 +1,39 @@
+<?php
+
+/**
+ * @file
+ * Installation hooks for media_mpx.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function media_mpx_schema() {
+  // @see \system_schema.
+  $schema['media_mpx_media'] = [
+    'description' => 'Key-value storage table for mpx media.',
+    'fields' => [
+      'collection' => [
+        'description' => 'A named collection of key and value pairs.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'name' => [
+        'description' => 'The key of the key-value pair. As KEY is a SQL reserved keyword, name was chosen instead.',
+        'type' => 'varchar_ascii',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'value' => [
+        'description' => 'The value.',
+        'type' => 'blob',
+        'not null' => TRUE,
+        'size' => 'big',
+      ],
+    ],
+    'primary key' => ['collection', 'name'],
+  ];
+}

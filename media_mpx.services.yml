@@ -46,3 +46,7 @@ services:
     class: Lullabot\Mpx\TokenCachePool
     public: false
     arguments: ['@media_mpx.token_cache_pool_adapter']
+
+  media_mpx.keyvalue.media:
+    class: Drupal\media_mpx\KeyValueStore\KeyValueDatabaseFactory
+    arguments: ['@serialization.phpserialize', '@database', 'media_mpx_media']
