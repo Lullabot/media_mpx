@@ -105,9 +105,10 @@ class AccountForm extends EntityForm {
 
     $options = [];
     foreach ($accounts as $account) {
+      $path_parts = explode('/', $account->getId()->getPath());
       $options[(string) $account->getId()] = $this->t('@title (@id)', [
         '@title' => $account->getTitle(),
-        '@id' => end(explode('/', $account->getId()->getPath())),
+        '@id' => end($path_parts),
       ]);
     }
     $form['accounts_container']['account'] = [
