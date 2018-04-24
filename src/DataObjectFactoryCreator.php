@@ -39,7 +39,7 @@ class DataObjectFactoryCreator {
   }
 
   /**
-   * Create a new \Lullabot\Mpx\DataService\DataObjectFactoryCreator for an mpx object.
+   * Create a new DataObjectFactoryCreator for an mpx object.
    *
    * @param \Drupal\media_mpx\Entity\UserInterface $user
    *   The user to authenticate the connection with.
