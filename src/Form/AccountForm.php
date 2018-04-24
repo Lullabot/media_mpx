@@ -6,7 +6,7 @@ use Drupal\Core\Entity\EntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\Url;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Lullabot\Mpx\DataService\ByFields;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -27,7 +27,7 @@ class AccountForm extends EntityForm {
   /**
    * The factory used to load mpx objects.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
   protected $dataObjectFactory;
 
@@ -36,10 +36,10 @@ class AccountForm extends EntityForm {
    *
    * @param \Drupal\Core\Path\CurrentPathStack $currentPathStack
    *   The current path service.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The factory used to load mpx objects.
    */
-  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactory $dataObjectFactory) {
+  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory) {
     $this->currentPathStack = $currentPathStack;
     $this->dataObjectFactory = $dataObjectFactory;
   }
@@ -50,7 +50,7 @@ class AccountForm extends EntityForm {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('path.current'),
-      $container->get('media_mpx.data_object_factory')
+      $container->get('media_mpx.data_object_factory_creator')
     );
   }
 

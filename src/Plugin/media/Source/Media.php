@@ -12,7 +12,7 @@ use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceInterface;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -40,7 +40,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   /**
    * The service to load mpx data.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
   private $dataObjectFactory;
 
@@ -61,10 +61,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The field type plugin manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactory $dataObjectFactory) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactory = $dataObjectFactory;
   }
@@ -81,7 +81,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $container->get('entity_field.manager'),
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
-      $container->get('media_mpx.data_object_factory')
+      $container->get('media_mpx.data_object_factory_creator')
     );
   }
 
