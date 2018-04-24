@@ -45,6 +45,10 @@ services:
     class: Drupal\media_mpx\ClientFactory
     arguments: ['@media_mpx.http_handler_stack', '@http_client_factory']
 
+  logger.channel.media_mpx:
+    parent: logger.channel_base
+    arguments: ['media_mpx']
+
   # These services are "internal" and generally not needed by custom code.
   media_mpx.session_lock:
     class: Lullabot\DrupalSymfonyLock\DrupalStore

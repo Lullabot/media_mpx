@@ -2,10 +2,14 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
+use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Psr\Http\Message\UriInterface;
 
 /**
  * Media source for mpx Media items.
@@ -19,6 +23,8 @@ use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
  *   description = @Translation("mpx media data, such as videos."),
  *   allowed_field_types = {"string"},
  *   default_thumbnail_filename = "video.png",
+ *   thumbnail_alt_metadata_attribute="thumbnail_alt",
+ *   default_thumbnail_filename = "video.png",
  *   media_mpx = {
  *     "service_name" = "Media Data Service",
  *     "object_type" = "Media",
@@ -29,8 +35,15 @@ use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
 class Media extends MediaSourceBase implements MediaSourceInterface {
 
   /**
-   * {@inheritdoc}
+   * The path to the thumbnails directory.
+   *
+   * Normally this would be a class constant, but file_prepare_directory()
+   * requires the string to be passed by reference.
+   *
+   * @var string
    */
+  private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
+
   public function getMetadataAttributes() {
     list($propertyInfo, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
@@ -51,11 +64,33 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
     if (!$media->get($source_field->getName())->isEmpty()) {
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $this->getMpxMedia($media);
+
+      switch ($attribute_name) {
+        case 'thumbnail_uri':
+          try {
+            return $this->downloadThumbnail($mpx_media->getDefaultThumbnailUrl());
+          }
+          catch (TransferException $e) {
+            // @todo Can this somehow deeplink to the mpx console?
+            $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
+            $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
+              '@title' => $media->label(),
+              '@code' => $e->getCode(),
+              '@message' => $e->getMessage(),
+              'link' => $link,
+            ]);
+            return parent::getMetadata($media, $attribute_name);
+          }
+
+        case 'thumbnail_alt':
+          return $mpx_media->getTitle();
+      }
+
       list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
       if (in_array($attribute_name, $properties)) {
-        $mpx_media = $this->getMpxMedia($media);
-
         $method = 'get' . ucfirst($attribute_name);
         // @todo At the least this should be a static cache tied to $media.
         try {
@@ -79,6 +114,27 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     };
 
     return parent::getMetadata($media, $attribute_name);
+  }
+
+  /**
+   * Download a thumbnail to the local file system.
+   *
+   * @param \Psr\Http\Message\UriInterface $uri
+   *   The URI of the thumbnail to download.
+   *
+   * @return string
+   *   The existing thumbnail, or the newly downloaded thumbnail.
+   */
+  private function downloadThumbnail(UriInterface $uri) {
+    $local_uri = $this->thumbnailsDirectory . $uri->getHost() . $uri->getPath();
+    if (!file_exists($local_uri)) {
+      $directory = dirname($local_uri);
+      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+      $thumbnail = $this->httpClient->request('GET', $uri);
+      file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+    }
+
+    return $local_uri;
   }
 
 }
