@@ -4,8 +4,8 @@ services:
     class: Drupal\media_mpx\AuthenticatedClientFactory
     arguments: ['@media_mpx.client', '@media_mpx.user_session_factory']
 
-  media_mpx.data_object_factory:
-    class: Drupal\media_mpx\DataObjectFactory
+  media_mpx.data_object_factory_creator:
+    class: Drupal\media_mpx\DataObjectFactoryCreator
     arguments: ['@media_mpx.data_service_manager', '@media_mpx.authenticated_client_factory']
 
   media_mpx.data_service_manager:

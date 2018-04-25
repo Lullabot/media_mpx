@@ -10,13 +10,11 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
-use Drupal\entity_keyvalue\EntityKeyValueStoreProvider;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceInterface;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
-use Drupal\media_mpx\Exception\SourceObjectNotFoundException;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
@@ -50,7 +48,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   /**
    * The service to load mpx data.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
   protected $dataObjectFactory;
 
@@ -76,10 +74,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The field type plugin manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactory $dataObjectFactory) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactory = $dataObjectFactory;
     $this->keyValueFactory = $keyValueFactory;
@@ -98,7 +96,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
       $container->get('keyvalue'),
-      $container->get('media_mpx.data_object_factory')
+      $container->get('media_mpx.data_object_factory_creator')
     );
   }
 
@@ -182,9 +180,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       if (in_array($attribute_name, $properties)) {
         $mpx_media = $this->getMpxMedia($media);
 
-        $method = 'get' . ucfirst($attribute_name);
-        // @todo At the least this should be a static cache tied to $media.
-        $value = $mpx_media->$method();
+      $method = 'get' . ucfirst($attribute_name);
+      // @todo At the least this should be a static cache tied to $media.
+      try {$value = $mpx_media->$method();}
+      catch (\TypeError $e) {
+        // @todo The optional value was not set.
+        // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+        // fixed.
+        return parent::getMetadata($media, $attribute_name);
+      }
 
         // @todo Is this the best way to handle complex values like dates and
         // sub-objects?
