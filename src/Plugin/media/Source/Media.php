@@ -13,7 +13,7 @@ use Drupal\entity_keyvalue\EntityKeyValueStoreProvider;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceInterface;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Exception\SourceObjectNotFoundException;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
@@ -42,7 +42,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   /**
    * The service to load mpx data.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
   private $dataObjectFactory;
 
@@ -68,10 +68,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The field type plugin manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, EntityKeyValueStoreProvider $entity_keyvalue_store, DataObjectFactory $dataObjectFactory) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, EntityKeyValueStoreProvider $entity_keyvalue_store, DataObjectFactoryCreator $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->entityKeyValueStore = $entity_keyvalue_store;
     $this->dataObjectFactory = $dataObjectFactory;
@@ -90,7 +90,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
       $container->get('entity_keyvalue_store_provider'),
-      $container->get('media_mpx.data_object_factory')
+      $container->get('media_mpx.data_object_factory_creator')
     );
   }
 
@@ -171,7 +171,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
       $method = 'get' . ucfirst($attribute_name);
       // @todo At the least this should be a static cache tied to $media.
-      $value = $mpx_media->$method();
+      try {
+        $value = $mpx_media->$method();
+      }
+      catch (\TypeError $e) {
+        // @todo The optional value was not set.
+        // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+        // fixed.
+        return parent::getMetadata($media, $attribute_name);
+      }
 
       // @todo Is this the best way to handle complex values like dates and
       // sub-objects?
