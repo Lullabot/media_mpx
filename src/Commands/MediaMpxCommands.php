@@ -4,7 +4,6 @@ namespace Drupal\media_mpx\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
-use Drupal\media\MediaSourceInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactory;
 use Drupal\media_mpx\Plugin\media\Source\Media;
