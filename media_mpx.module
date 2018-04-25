@@ -7,8 +7,6 @@
 
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
-use Drupal\media\MediaInterface;
-use Drupal\media_mpx\Exception\SourceObjectNotFoundException;
 
 /**
  * Implements hook_help().
