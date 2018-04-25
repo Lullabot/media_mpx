@@ -39,6 +39,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   use MessengerTrait;
 
   /**
+   * Constants describing what mpx object this media source implements.
+   *
    * @todo Move these to the MediaSource annotation if possible?
    */
   const SERVICE_NAME = 'Media Data Service';
@@ -53,6 +55,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   protected $dataObjectFactory;
 
   /**
+   * The key-value factory used to store complete objects.
+   *
    * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
    */
   protected $keyValueFactory;
@@ -74,6 +78,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The field type plugin manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
+   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
+   *   The factory used to store complete mpx objects.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    */
