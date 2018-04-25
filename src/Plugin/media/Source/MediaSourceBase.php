@@ -10,7 +10,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\media\MediaInterface;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use GuzzleHttp\ClientInterface;
 use Lullabot\Mpx\DataService\ObjectInterface;
@@ -26,9 +26,9 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
   /**
    * The service to load mpx data.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
-  protected $dataObjectFactory;
+  protected $dataObjectFactoryCreator;
 
   /**
    * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
@@ -68,16 +68,16 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
    *   The config factory service.
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
    *   The factory for the key value service to load full mpx objects from.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    * @param \GuzzleHttp\ClientInterface $httpClient
    *   The HTTP client used to download thumbnails.
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger used to log errors while downloading thumbnails.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactory $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
-    $this->dataObjectFactory = $dataObjectFactory;
+    $this->dataObjectFactoryCreator = $dataObjectFactory;
     $this->keyValueFactory = $keyValueFactory;
     $this->httpClient = $httpClient;
     $this->logger = $logger;
@@ -96,7 +96,7 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
       $container->get('keyvalue'),
-      $container->get('media_mpx.data_object_factory'),
+      $container->get('media_mpx.data_object_factory_creator'),
       $container->get('http_client'),
       $container->get('logger.channel.media_mpx')
     );
@@ -183,7 +183,7 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
     $id = $media->get($this->configuration['source_field'])->getString();
     $store = $this->keyValueFactory->get($this->getPluginId());
     if (!$mpx_item = $store->get($id)) {
-      $factory = $this->dataObjectFactory->fromMediaSource($this);
+      $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
 
       $mpx_item = $factory->load($id)->wait();
       $store->set($id, $mpx_item);
