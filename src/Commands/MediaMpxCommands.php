@@ -5,7 +5,7 @@ namespace Drupal\media_mpx\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\media\MediaTypeInterface;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drush\Commands\DrushCommands;
 use Lullabot\Mpx\DataService\Access\Account;
@@ -36,9 +36,9 @@ class MediaMpxCommands extends DrushCommands {
   /**
    * The factory used to load media data from mpx.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
-  private $dataObjectFactory;
+  private $dataObjectFactoryCreator;
 
   /**
    * The factory used to store full mpx Media objects in the key-value store.
@@ -51,12 +51,15 @@ class MediaMpxCommands extends DrushCommands {
    * MediaMpxCommands constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   *   The manager used to load config and media entities.
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
+   *   The creator used to configure a factory for loading mpx objects.
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
+   *   The key-value factory for storing complete objects.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactory $dataObjectFactory, KeyValueFactoryInterface $keyValueFactory) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, KeyValueFactoryInterface $keyValueFactory) {
     $this->entityTypeManager = $entityTypeManager;
-    $this->dataObjectFactory = $dataObjectFactory;
+    $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->keyValueFactory = $keyValueFactory;
   }
 
@@ -122,7 +125,7 @@ class MediaMpxCommands extends DrushCommands {
    */
   private function loadMediaType(string $media_type_id): MediaTypeInterface {
     $bundle_type = $this->entityTypeManager->getDefinition('media')->getBundleEntityType();
-    /** @var $media_type \Drupal\media\MediaTypeInterface */
+    /* @var $media_type \Drupal\media\MediaTypeInterface */
     if (!$media_type = $this->entityTypeManager->getStorage($bundle_type)
       ->load($media_type_id)) {
       // Normally you wouldn't translate exception text, but Drush does it in
@@ -197,7 +200,7 @@ class MediaMpxCommands extends DrushCommands {
     $mpx_account = new Account();
     $mpx_account->setId($account->get('account'));
 
-    $factory = $this->dataObjectFactory->forObjectType($account->getUserEntity(), $media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
+    $factory = $this->dataObjectFactoryCreator->forObjectType($account->getUserEntity(), $media_source::SERVICE_NAME, $media_source::OBJECT_TYPE, $media_source::SCHEMA_VERSION);
     // @todo Remove this when it's made optional upstream.
     // @see https://github.com/Lullabot/mpx-php/issues/78
     $fields = new ByFields();
