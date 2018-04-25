@@ -8,9 +8,9 @@ use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
 use Lullabot\Mpx\DataService\DataServiceManager;
 
 /**
- * Factory used to load Data Objects from mpx.
+ * Create factories used to load object from mpx.
  */
-class DataObjectFactory {
+class DataObjectFactoryCreator {
 
   /**
    * The manager used to discover what mpx objects are available.
@@ -27,7 +27,7 @@ class DataObjectFactory {
   private $authenticatedClientFactory;
 
   /**
-   * Construct a new DataObjectFactory.
+   * Construct a new DataObjectFactoryCreator.
    *
    * @param \Lullabot\Mpx\DataService\DataServiceManager $manager
    *   The manager used to discover what mpx objects are available.
@@ -40,7 +40,7 @@ class DataObjectFactory {
   }
 
   /**
-   * Create a new \Lullabot\Mpx\DataService\DataObjectFactory for an mpx object.
+   * Create a new DataObjectFactoryCreator for an mpx object.
    *
    * @param \Drupal\media_mpx\Entity\UserInterface $user
    *   The user to authenticate the connection with.
