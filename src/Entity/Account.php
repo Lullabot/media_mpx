@@ -58,4 +58,30 @@ class Account extends ConfigEntityBase implements AccountInterface {
    */
   protected $status;
 
+  /**
+   * The entity id of the User configuration entity.
+   *
+   * @var string
+   */
+  protected $user;
+
+  /**
+   * The URI of the account.
+   *
+   * @var mixed
+   */
+  protected $account;
+
+  /**
+   * Get the User configuration entity associated with this account.
+   *
+   * @return \Drupal\media_mpx\Entity\UserInterface
+   *   The User configuration entity.
+   */
+  public function getUserEntity(): UserInterface {
+    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
+    $user = $this->entityTypeManager()->getStorage('media_mpx_user')->load($this->user);
+    return $user;
+  }
+
 }

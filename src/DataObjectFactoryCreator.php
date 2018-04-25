@@ -2,14 +2,14 @@
 
 namespace Drupal\media_mpx;
 
+use Drupal\media_mpx\Entity\UserInterface;
 use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
-use Drupal\media_mpx\Entity\User;
 use Lullabot\Mpx\DataService\DataServiceManager;
 
 /**
- * Factory used to load Data Objects from mpx.
+ * Create factories used to load object from mpx.
  */
-class DataObjectFactory {
+class DataObjectFactoryCreator {
 
   /**
    * The manager used to discover what mpx objects are available.
@@ -26,7 +26,7 @@ class DataObjectFactory {
   private $authenticatedClientFactory;
 
   /**
-   * Construct a new DataObjectFactory.
+   * Construct a new DataObjectFactoryCreator.
    *
    * @param \Lullabot\Mpx\DataService\DataServiceManager $manager
    *   The manager used to discover what mpx objects are available.
@@ -39,9 +39,9 @@ class DataObjectFactory {
   }
 
   /**
-   * Create a new \Lullabot\Mpx\DataService\DataObjectFactory for an mpx object.
+   * Create a new DataObjectFactoryCreator for an mpx object.
    *
-   * @param \Drupal\media_mpx\Entity\User $user
+   * @param \Drupal\media_mpx\Entity\UserInterface $user
    *   The user to authenticate the connection with.
    * @param string $serviceName
    *   The mpx service name, such as 'Media Data Service'.
@@ -53,7 +53,7 @@ class DataObjectFactory {
    * @return \Lullabot\Mpx\DataService\DataObjectFactory
    *   A factory to load and query objects with.
    */
-  public function forObjectType(User $user, string $serviceName, string $objectType, string $schema): MpxDataObjectFactory {
+  public function forObjectType(UserInterface $user, string $serviceName, string $objectType, string $schema): MpxDataObjectFactory {
     $service = $this->manager->getDataService($serviceName, $objectType, $schema);
     $client = $this->authenticatedClientFactory->fromUser($user);
     return new MpxDataObjectFactory($service, $client);

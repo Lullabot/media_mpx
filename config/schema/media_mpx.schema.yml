@@ -10,6 +10,12 @@ media_mpx.media_mpx_account.*:
       label: Label
     uuid:
       type: string
+    user:
+      label: The user configuration entity associated with this account
+      type: string
+    account:
+      label: The URI of the account
+      type: uri
 
 media_mpx.media_mpx_user.*:
   type: config_entity
@@ -21,5 +27,8 @@ media_mpx.media_mpx_user.*:
     username:
       type: string
       label: 'Username'
+    password:
+      type: string
+      label: 'Password'
     uuid:
       type: string
