@@ -23,7 +23,7 @@ use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 
 /**
- *
+ * Base class for mpx media sources.
  */
 abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMediaSourceInterface {
   use MessengerTrait;

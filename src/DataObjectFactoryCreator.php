@@ -8,7 +8,7 @@ use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
 use Lullabot\Mpx\DataService\DataServiceManager;
 
 /**
- * Create factories used to load object from mpx.
+ * Create factories used to load objects from mpx.
  */
 class DataObjectFactoryCreator {
 
