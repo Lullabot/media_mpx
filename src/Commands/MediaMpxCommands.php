@@ -191,7 +191,6 @@ class MediaMpxCommands extends DrushCommands {
         $items[] = new Notification($notification, $media_type);
       }
       $q->createItem($items);
-      //      $this->importItem($media_type, $mpx_media);
       $this->io()->progressAdvance();
     }
     $state->set($notification_id, end($notifications)->getId());

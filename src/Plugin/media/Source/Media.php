@@ -44,6 +44,9 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    */
   private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
+  /**
+   * {@inheritdoc}
+   */
   public function getMetadataAttributes() {
     list($propertyInfo, $properties) = $this->extractMediaProperties(MpxMedia::class);
 

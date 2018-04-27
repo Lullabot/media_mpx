@@ -83,5 +83,4 @@ class Player extends MediaSourceBase implements MediaSourceInterface {
     return parent::getMetadata($media, $attribute_name);
   }
 
-
 }

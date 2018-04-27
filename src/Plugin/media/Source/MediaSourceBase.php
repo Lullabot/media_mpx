@@ -2,6 +2,7 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
+use Drupal\media\MediaSourceBase as DrupalMediaSourceBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -13,6 +14,7 @@ use Drupal\media\MediaInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -20,7 +22,10 @@ use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 
-abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements MpxMediaSourceInterface {
+/**
+ *
+ */
+abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMediaSourceInterface {
   use MessengerTrait;
 
   /**
@@ -107,8 +112,8 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
    */
   public function defaultConfiguration() {
     return parent::defaultConfiguration() + [
-        'account' => NULL,
-      ];
+      'account' => NULL,
+    ];
   }
 
   /**
@@ -116,10 +121,10 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
    */
   public function calculateDependencies() {
     return parent::calculateDependencies() + [
-        'config' => [
-          'media_mpx.media_mpx_account.' . $this->getConfiguration()['account'],
-        ],
-      ];
+      'config' => [
+        'media_mpx.media_mpx_account.' . $this->getConfiguration()['account'],
+      ],
+    ];
   }
 
   /**
@@ -185,7 +190,7 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
     if (!$mpx_item = $store->get($id)) {
       $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
 
-      $mpx_item = $factory->load($id)->wait();
+      $mpx_item = $factory->load(new Uri($id))->wait();
       $store->set($id, $mpx_item);
     }
     return $mpx_item;
@@ -223,4 +228,5 @@ abstract class MediaSourceBase extends \Drupal\media\MediaSourceBase implements 
     // @todo This should probably be discovered and not hardcoded.
     return [$propertyInfo, $propertyInfo->getProperties($class)];
   }
+
 }
