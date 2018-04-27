@@ -8,15 +8,10 @@ use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\AuthenticatedClientFactory;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
-use Drupal\media_mpx\Notification;
 use Drush\Commands\DrushCommands;
-use GuzzleHttp\Exception\ConnectException;
-use Lullabot\Mpx\DataService\Access\Account;
 use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\DataService\DataServiceManager;
-use Lullabot\Mpx\DataService\NotificationListener;
 use Lullabot\Mpx\DataService\ObjectListIterator;
-use Mockery\Matcher\Not;
 
 /**
  * Drush commands for mpx.
@@ -164,4 +159,5 @@ class MpxImporter extends DrushCommands {
     }
     return $media_type;
   }
+
 }

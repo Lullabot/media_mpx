@@ -4,6 +4,9 @@ namespace Drupal\media_mpx\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\media_mpx\AccountInterface;
+use GuzzleHttp\Psr7\Uri;
+use Lullabot\Mpx\DataService\IdInterface;
+use Psr\Http\Message\UriInterface as PsrUriInterface;
 
 /**
  * Defines the mpx account entity type.
@@ -35,7 +38,7 @@ use Drupal\media_mpx\AccountInterface;
  *   }
  * )
  */
-class Account extends ConfigEntityBase implements AccountInterface {
+class Account extends ConfigEntityBase implements AccountInterface, IdInterface {
 
   /**
    * The mpx account ID.
@@ -68,7 +71,7 @@ class Account extends ConfigEntityBase implements AccountInterface {
   /**
    * The URI of the account.
    *
-   * @var mixed
+   * @var string
    */
   protected $account;
 
@@ -82,6 +85,20 @@ class Account extends ConfigEntityBase implements AccountInterface {
     /** @var \Drupal\media_mpx\Entity\UserInterface $user */
     $user = $this->entityTypeManager()->getStorage('media_mpx_user')->load($this->user);
     return $user;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getId(): PsrUriInterface {
+    return new Uri($this->account);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setId(PsrUriInterface $id) {
+    $this->account = $id;
   }
 
 }
