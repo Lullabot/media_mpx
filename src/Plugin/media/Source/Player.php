@@ -5,38 +5,40 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
-use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Lullabot\Mpx\DataService\Player\Player as MpxPlayer;
 
 /**
- * Media source for mpx Media items.
+ * Media source for mpx Player items.
  *
- * @see \Lullabot\Mpx\DataService\Media\Media
- * @see https://docs.theplatform.com/help/media-media-object
+ * @see \Lullabot\Mpx\DataService\Player\Player
+ * @see https://docs.theplatform.com/help/player-player-object
+ *
+ * @todo Change the default thumbnail.
  *
  * @MediaSource(
- *   id = "media_mpx_media",
- *   label = @Translation("mpx Media"),
- *   description = @Translation("mpx media data, such as videos."),
+ *   id = "media_mpx_player",
+ *   label = @Translation("mpx Player"),
+ *   description = @Translation("mpx player data, such as video players."),
  *   allowed_field_types = {"string"},
  *   default_thumbnail_filename = "video.png",
  *   media_mpx = {
- *     "service_name" = "Media Data Service",
- *     "object_type" = "Media",
- *     "schema_version" = "1.10",
+ *     "service_name" = "Player Data Service",
+ *     "object_type" = "Player",
+ *     "schema_version" = "1.6",
  *   },
  * )
  */
-class Media extends MediaSourceBase implements MediaSourceInterface {
+class Player extends MediaSourceBase implements MediaSourceInterface {
 
   /**
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    list($propertyInfo, $properties) = $this->extractMediaProperties(MpxMedia::class);
+    list($propertyInfo, $properties) = $this->extractMediaProperties(MpxPlayer::class);
 
     $metadata = [];
     foreach ($properties as $property) {
-      $metadata[$property] = $propertyInfo->getShortDescription(MpxMedia::class, $property);
+      $metadata[$property] = $propertyInfo->getShortDescription(MpxPlayer::class, $property);
     }
 
     return $metadata;
@@ -51,15 +53,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
     if (!$media->get($source_field->getName())->isEmpty()) {
-      list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
+      list(, $properties) = $this->extractMediaProperties(MpxPlayer::class);
 
       if (in_array($attribute_name, $properties)) {
-        $mpx_media = $this->getMpxMedia($media);
+        $mpx_player = $this->getMpxMedia($media);
 
         $method = 'get' . ucfirst($attribute_name);
         // @todo At the least this should be a static cache tied to $media.
         try {
-          $value = $mpx_media->$method();
+          $value = $mpx_player->$method();
         }
         catch (\TypeError $e) {
           // @todo The optional value was not set.
@@ -80,5 +82,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     return parent::getMetadata($media, $attribute_name);
   }
+
 
 }
