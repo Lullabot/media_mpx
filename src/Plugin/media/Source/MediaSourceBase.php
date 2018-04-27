@@ -2,6 +2,7 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
+use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaSourceBase as DrupalMediaSourceBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -178,7 +179,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   }
 
   /**
-   * Get the complete mpx Media object associated with a media entity.
+   * Get the complete mpx object associated with a media entity.
    *
    * @param \Drupal\media\MediaInterface $media
    *   The media entity.
@@ -186,7 +187,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    * @return \Lullabot\Mpx\DataService\ObjectInterface
    *   The mpx object.
    */
-  public function getMpxMedia(MediaInterface $media): ObjectInterface {
+  public function getMpxObject(MediaInterface $media): ObjectInterface {
     $id = $media->get($this->configuration['source_field'])->getString();
     $store = $this->keyValueFactory->get($this->getPluginId());
     if (!$mpx_item = $store->get($id)) {
@@ -229,6 +230,41 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
 
     // @todo This should probably be discovered and not hardcoded.
     return [$propertyInfo, $propertyInfo->getProperties($class)];
+  }
+
+  /**
+   * Call a get method on the mpx media object and return it's value.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being accessed.
+   * @param string $attribute_name
+   *   The metadata attribute being accessed.
+   * @param mixed $mpx_object
+   *   The mpx object.
+   *
+   * @return mixed|null
+   *   Metadata attribute value or NULL if unavailable.
+   */
+  protected function getReflectedProperty(MediaInterface $media, string $attribute_name, $mpx_object) {
+    $method = 'get' . ucfirst($attribute_name);
+    // @todo At the least this should be a static cache tied to $media.
+    try {
+      $value = $mpx_object->$method();
+    }
+    catch (\TypeError $e) {
+      // @todo The optional value was not set.
+      // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+      // fixed.
+      return parent::getMetadata($media, $attribute_name);
+    }
+
+    // @todo Is this the best way to handle complex values like dates and
+    // sub-objects?
+    if ($value instanceof \DateTime) {
+      $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+    }
+
+    return $value;
   }
 
 }

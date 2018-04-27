@@ -2,7 +2,6 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
-use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 use Lullabot\Mpx\DataService\Player\Player as MpxPlayer;
@@ -56,27 +55,7 @@ class Player extends MediaSourceBase implements MediaSourceInterface {
       list(, $properties) = $this->extractMediaProperties(MpxPlayer::class);
 
       if (in_array($attribute_name, $properties)) {
-        $mpx_player = $this->getMpxMedia($media);
-
-        $method = 'get' . ucfirst($attribute_name);
-        // @todo At the least this should be a static cache tied to $media.
-        try {
-          $value = $mpx_player->$method();
-        }
-        catch (\TypeError $e) {
-          // @todo The optional value was not set.
-          // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-          // fixed.
-          return parent::getMetadata($media, $attribute_name);
-        }
-
-        // @todo Is this the best way to handle complex values like dates and
-        // sub-objects?
-        if ($value instanceof \DateTime) {
-          $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
-        }
-
-        return $value;
+        return $this->getReflectedProperty($media, $attribute_name, $this->getMpxObject($media));
       }
     };
 

@@ -4,7 +4,6 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 
 use Drupal\Core\Link;
 use Drupal\Core\Url;
-use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 use GuzzleHttp\Exception\TransferException;
@@ -67,7 +66,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-    $mpx_media = $this->getMpxMedia($media);
+    $mpx_media = $this->getMpxObject($media);
     if (!$media->get($source_field->getName())->isEmpty()) {
 
       switch ($attribute_name) {
@@ -115,7 +114,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
     catch (TransferException $e) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxMedia($media);
+      $mpx_media = $this->getMpxObject($media);
       // @todo Can this somehow deeplink to the mpx console?
       $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
       $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
@@ -126,41 +125,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       ]);
       return parent::getMetadata($media, $attribute_name);
     }
-  }
-
-  /**
-   * Call a get method on the mpx media object and return it's value.
-   *
-   * @param \Drupal\media\MediaInterface $media
-   *   The media entity being accessed.
-   * @param string $attribute_name
-   *   The metadata attribute being accessed.
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The mpx media object.
-   *
-   * @return mixed|null
-   *   Metadata attribute value or NULL if unavailable.
-   */
-  private function getReflectedProperty(MediaInterface $media, string $attribute_name, MpxMedia $mpx_media) {
-    $method = 'get' . ucfirst($attribute_name);
-    // @todo At the least this should be a static cache tied to $media.
-    try {
-      $value = $mpx_media->$method();
-    }
-    catch (\TypeError $e) {
-      // @todo The optional value was not set.
-      // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-      // fixed.
-      return parent::getMetadata($media, $attribute_name);
-    }
-
-    // @todo Is this the best way to handle complex values like dates and
-    // sub-objects?
-    if ($value instanceof \DateTime) {
-      $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
-    }
-
-    return $value;
   }
 
 }
