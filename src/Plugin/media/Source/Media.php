@@ -66,26 +66,13 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     /** @var \Drupal\media\MediaTypeInterface $media_type */
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+    $mpx_media = $this->getMpxMedia($media);
     if (!$media->get($source_field->getName())->isEmpty()) {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxMedia($media);
 
       switch ($attribute_name) {
         case 'thumbnail_uri':
-          try {
-            return $this->downloadThumbnail($mpx_media->getDefaultThumbnailUrl());
-          }
-          catch (TransferException $e) {
-            // @todo Can this somehow deeplink to the mpx console?
-            $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
-            $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
-              '@title' => $media->label(),
-              '@code' => $e->getCode(),
-              '@message' => $e->getMessage(),
-              'link' => $link,
-            ]);
-            return parent::getMetadata($media, $attribute_name);
-          }
+          return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
 
         case 'thumbnail_alt':
           return $mpx_media->getTitle();
@@ -94,25 +81,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
       if (in_array($attribute_name, $properties)) {
-        $method = 'get' . ucfirst($attribute_name);
-        // @todo At the least this should be a static cache tied to $media.
-        try {
-          $value = $mpx_media->$method();
-        }
-        catch (\TypeError $e) {
-          // @todo The optional value was not set.
-          // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-          // fixed.
-          return parent::getMetadata($media, $attribute_name);
-        }
-
-        // @todo Is this the best way to handle complex values like dates and
-        // sub-objects?
-        if ($value instanceof \DateTime) {
-          $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
-        }
-
-        return $value;
+        return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
       }
     };
 
@@ -122,22 +91,75 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   /**
    * Download a thumbnail to the local file system.
    *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being accessed.
+   * @param string $attribute_name
+   *   The metadata attribute being accessed.
    * @param \Psr\Http\Message\UriInterface $uri
    *   The URI of the thumbnail to download.
    *
    * @return string
    *   The existing thumbnail, or the newly downloaded thumbnail.
    */
-  private function downloadThumbnail(UriInterface $uri) {
-    $local_uri = $this->thumbnailsDirectory . $uri->getHost() . $uri->getPath();
-    if (!file_exists($local_uri)) {
-      $directory = dirname($local_uri);
-      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-      $thumbnail = $this->httpClient->request('GET', $uri);
-      file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+  private function downloadThumbnail(MediaInterface $media, string $attribute_name, UriInterface $uri) {
+    try {
+      $local_uri = $this->thumbnailsDirectory . $uri->getHost() . $uri->getPath();
+      if (!file_exists($local_uri)) {
+        $directory = dirname($local_uri);
+        file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+        $thumbnail = $this->httpClient->request('GET', $uri);
+        file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+      }
+
+      return $local_uri;
+    }
+    catch (TransferException $e) {
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $this->getMpxMedia($media);
+      // @todo Can this somehow deeplink to the mpx console?
+      $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
+      $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
+        '@title' => $media->label(),
+        '@code' => $e->getCode(),
+        '@message' => $e->getMessage(),
+        'link' => $link,
+      ]);
+      return parent::getMetadata($media, $attribute_name);
+    }
+  }
+
+  /**
+   * Call a get method on the mpx media object and return it's value.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being accessed.
+   * @param string $attribute_name
+   *   The metadata attribute being accessed.
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The mpx media object.
+   *
+   * @return mixed|null
+   *   Metadata attribute value or NULL if unavailable.
+   */
+  private function getReflectedProperty(MediaInterface $media, $attribute_name, $mpx_media) {
+    $method = 'get' . ucfirst($attribute_name);
+    // @todo At the least this should be a static cache tied to $media.
+    try {
+      $value = $mpx_media->$method();
+    } catch (\TypeError $e) {
+      // @todo The optional value was not set.
+      // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+      // fixed.
+      return parent::getMetadata($media, $attribute_name);
     }
 
-    return $local_uri;
+    // @todo Is this the best way to handle complex values like dates and
+    // sub-objects?
+    if ($value instanceof \DateTime) {
+      $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+    }
+
+    return $value;
   }
 
 }
