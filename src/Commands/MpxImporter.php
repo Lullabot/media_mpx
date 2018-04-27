@@ -5,7 +5,6 @@ namespace Drupal\media_mpx\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\media\MediaTypeInterface;
-use Drupal\media_mpx\AuthenticatedClientFactory;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drush\Commands\DrushCommands;
@@ -48,13 +47,6 @@ class MpxImporter extends DrushCommands {
   private $keyValueFactory;
 
   /**
-   * The factory to load authenticated mpx clients.
-   *
-   * @var \Drupal\media_mpx\AuthenticatedClientFactory
-   */
-  protected $authenticatedClientFactory;
-
-  /**
    * The manager to discover data service classes.
    *
    * @var \Lullabot\Mpx\DataService\DataServiceManager
@@ -70,16 +62,13 @@ class MpxImporter extends DrushCommands {
    *   The creator used to configure a factory for loading mpx objects.
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
    *   The key-value factory for storing complete objects.
-   * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticatedClientFactory
-   *   The factory to load authenticated mpx clients.
    * @param \Lullabot\Mpx\DataService\DataServiceManager $dataServiceManager
    *   The manager to discover data service classes.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, KeyValueFactoryInterface $keyValueFactory, AuthenticatedClientFactory $authenticatedClientFactory, DataServiceManager $dataServiceManager) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, KeyValueFactoryInterface $keyValueFactory, DataServiceManager $dataServiceManager) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->keyValueFactory = $keyValueFactory;
-    $this->authenticatedClientFactory = $authenticatedClientFactory;
     $this->dataServiceManager = $dataServiceManager;
   }
 
