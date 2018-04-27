@@ -104,13 +104,21 @@ class AccountForm extends EntityForm {
     $accounts = $accountFactory->select($fields);
 
     $options = [];
+    $account_pids = [];
+    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
     foreach ($accounts as $account) {
       $path_parts = explode('/', $account->getId()->getPath());
       $options[(string) $account->getId()] = $this->t('@title (@id)', [
         '@title' => $account->getTitle(),
         '@id' => end($path_parts),
       ]);
+      $account_pids[(string) $account->getId()] = $account->getPid();
     }
+
+    $form['account_pids'] = [
+      '#type' => 'value',
+      '#value' => $account_pids,
+    ];
     $form['accounts_container']['account'] = [
       // @todo Change to radios when
       // https://www.drupal.org/project/drupal/issues/2758631 is fixed.
@@ -126,6 +134,7 @@ class AccountForm extends EntityForm {
    * {@inheritdoc}
    */
   public function save(array $form, FormStateInterface $form_state) {
+    $this->entity->set('public_id', $form_state->getValue('account_pids')[$this->entity->get('account')]);
     $result = parent::save($form, $form_state);
     $message_args = ['%label' => $this->entity->label()];
     $message = $result == SAVED_NEW

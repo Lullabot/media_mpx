@@ -6,6 +6,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
 use Drupal\media_mpx\AccountInterface;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\IdInterface;
+use Lullabot\Mpx\DataService\PublicIdentifierInterface;
 use Psr\Http\Message\UriInterface as PsrUriInterface;
 
 /**
@@ -38,7 +39,7 @@ use Psr\Http\Message\UriInterface as PsrUriInterface;
  *   }
  * )
  */
-class Account extends ConfigEntityBase implements AccountInterface, IdInterface {
+class Account extends ConfigEntityBase implements AccountInterface, IdInterface, PublicIdentifierInterface {
 
   /**
    * The mpx account ID.
@@ -76,6 +77,14 @@ class Account extends ConfigEntityBase implements AccountInterface, IdInterface 
   protected $account;
 
   /**
+   * The public ID of the account.
+   *
+   * @var string
+   * @see https://docs.theplatform.com/help/wsf-account-object
+   */
+  protected $public_id;
+
+  /**
    * Get the User configuration entity associated with this account.
    *
    * @return \Drupal\media_mpx\Entity\UserInterface
@@ -99,6 +108,20 @@ class Account extends ConfigEntityBase implements AccountInterface, IdInterface 
    */
   public function setId(PsrUriInterface $id) {
     $this->account = $id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPid(): string {
+    return $this->public_id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setPid(string $pid) {
+    $this->public_id = $pid;
   }
 
 }
