@@ -7,6 +7,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaInterface;
@@ -38,11 +39,27 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   use MessengerTrait;
 
   /**
+   * Constants describing what mpx object this media source implements.
+   *
+   * @todo Move these to the MediaSource annotation if possible?
+   */
+  const SERVICE_NAME = 'Media Data Service';
+  const OBJECT_TYPE = 'Media';
+  const SCHEMA_VERSION = '1.10';
+
+  /**
    * The service to load mpx data.
    *
    * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
-  private $dataObjectFactory;
+  protected $dataObjectFactory;
+
+  /**
+   * The key-value factory used to store complete objects.
+   *
+   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
+   */
+  protected $keyValueFactory;
 
   /**
    * Media constructor.
@@ -61,12 +78,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The field type plugin manager service.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory service.
+   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
+   *   The factory used to store complete mpx objects.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The service to load mpx data.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactory = $dataObjectFactory;
+    $this->keyValueFactory = $keyValueFactory;
   }
 
   /**
@@ -81,6 +101,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $container->get('entity_field.manager'),
       $container->get('plugin.manager.field.field_type'),
       $container->get('config.factory'),
+      $container->get('keyvalue'),
       $container->get('media_mpx.data_object_factory_creator')
     );
   }
@@ -155,36 +176,61 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadata(MediaInterface $media, $attribute_name) {
-    list(, $properties) = $this->extractMediaProperties();
+    // Load the media type.
+    /** @var \Drupal\media\MediaTypeInterface $media_type */
+    $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
+    $source_field = $this->getSourceFieldDefinition($media_type);
+    if (!$media->get($source_field->getName())->isEmpty()) {
+      list(, $properties) = $this->extractMediaProperties();
 
-    if (in_array($attribute_name, $properties)) {
-      $user = $this->getAccount()->getUserEntity();
-      $mediaFactory = $this->dataObjectFactory->forObjectType($user, 'Media Data Service', 'Media', '1.10');
+      if (in_array($attribute_name, $properties)) {
+        $mpx_media = $this->getMpxMedia($media);
 
-      $id = $media->get($this->configuration['source_field'])->getString();
-      $mpx_media = $mediaFactory->load($id);
-      $method = 'get' . ucfirst($attribute_name);
-      // @todo At the least this should be a static cache tied to $media.
-      try {
-        $value = $mpx_media->wait()->$method();
+        $method = 'get' . ucfirst($attribute_name);
+        // @todo At the least this should be a static cache tied to $media.
+        try {
+          $value = $mpx_media->$method();
+        }
+        catch (\TypeError $e) {
+          // @todo The optional value was not set.
+          // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
+          // fixed.
+          return parent::getMetadata($media, $attribute_name);
+        }
+
+        // @todo Is this the best way to handle complex values like dates and
+        // sub-objects?
+        if ($value instanceof \DateTime) {
+          $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+        }
+
+        return $value;
       }
-      catch (\TypeError $e) {
-        // @todo The optional value was not set.
-        // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-        // fixed.
-        return parent::getMetadata($media, $attribute_name);
-      }
-
-      // @todo Is this the best way to handle complex values like dates and
-      // sub-objects?
-      if ($value instanceof \DateTime) {
-        $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
-      }
-
-      return $value;
-    }
+    };
 
     return parent::getMetadata($media, $attribute_name);
+  }
+
+  /**
+   * Get the complete mpx Media object associated with a media entity.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity.
+   *
+   * @return \Lullabot\Mpx\DataService\Media\Media
+   *   The media object.
+   */
+  public function getMpxMedia(MediaInterface $media): MpxMedia {
+    $id = $media->get($this->configuration['source_field'])->getString();
+    $store = $this->keyValueFactory->get('media_mpx_media');
+    if (!$mpx_media = $store->get($id)) {
+      $user = $this->getAccount()->getUserEntity();
+      $mediaFactory = $this->dataObjectFactory->forObjectType($user, self::SERVICE_NAME, self::OBJECT_TYPE, self::SCHEMA_VERSION);
+
+      $mpx_media = $mediaFactory->load($id)->wait();
+      $store->set($id, $mpx_media);
+    }
+    return $mpx_media;
   }
 
   /**
@@ -193,7 +239,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @return \Drupal\media_mpx\Entity\Account
    *   The mpx account.
    */
-  protected function getAccount(): Account {
+  public function getAccount(): Account {
     $id = $this->getConfiguration()['account'];
     /** @var \Drupal\media_mpx\Entity\Account $account */
     $account = $this->entityTypeManager->getStorage('media_mpx_account')->load($id);

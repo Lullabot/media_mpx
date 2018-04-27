@@ -57,6 +57,13 @@ class ClientFactory {
     // First, get the default configuration as required by the mpx library.
     $default_config = Client::getDefaultConfiguration($this->handlerStack);
 
+    // We have seen mpx notifications take longer than 30 seconds to return,
+    // which is Drupal's default timeout. This disables the timeout, but
+    // prevents the Drupal default from applying below as would happen with an
+    // unset().
+    // @see http://docs.guzzlephp.org/en/stable/request-options.html
+    $default_config['timeout'] = 0;
+
     // Merge that configuration with any overrides passed to this method.
     $config = NestedArray::mergeDeep($default_config, $options);
 
