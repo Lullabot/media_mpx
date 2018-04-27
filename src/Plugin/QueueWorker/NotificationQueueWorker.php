@@ -2,13 +2,11 @@
 
 namespace Drupal\media_mpx\Plugin\QueueWorker;
 
-use Drupal\Core\Annotation\QueueWorker;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
-use Drupal\media_mpx\DataObjectFactory;
+use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use function GuzzleHttp\Promise\each_limit;
-use Lullabot\Mpx\DataService\Media\Media;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -37,9 +35,9 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
   /**
    * The factory used to load a complete mpx object.
    *
-   * @var \Drupal\media_mpx\DataObjectFactory
+   * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
-  protected $dataObjectFactory;
+  protected $dataObjectFactoryCreator;
 
   /**
    * The class used to import the mpx data into Drupal.
@@ -57,14 +55,14 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\media_mpx\DataObjectFactory $dataObjectFactory
+   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The factory used to load a complete mpx object.
    * @param \Drupal\media_mpx\DataObjectImporter $importer
    *   The class used to import the mpx data into Drupal.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, DataObjectFactory $dataObjectFactory, DataObjectImporter $importer) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $importer) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->dataObjectFactory = $dataObjectFactory;
+    $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->importer = $importer;
   }
 
@@ -76,7 +74,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('media_mpx.data_object_factory'),
+      $container->get('media_mpx.data_object_factory_creator'),
       $container->get('media_mpx.data_object_importer')
     );
   }
@@ -85,7 +83,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
    * {@inheritdoc}
    */
   public function processItem($data) {
-    /** @var $data \Drupal\media_mpx\Notification[] */
+    /* @var $data \Drupal\media_mpx\Notification[] */
 
     $promises = [];
     // While all notifications should have the same media type, we don't want to
@@ -97,7 +95,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $mpx_media = $notification->getNotification()->getEntry();
 
       $media_source = $this->importer::loadMediaSource($notification->getMediaType());
-      $factory = $this->dataObjectFactory->fromMediaSource($media_source);
+      $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
       $promises[] = $factory->load($mpx_media->getId());
       $media_types[] = $notification->getMediaType();
     }
@@ -105,7 +103,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     // Process each request concurrently.
     // @todo Handle individual request rejections by requeuing them to the
     // bottom of the queue.
-    each_limit($promises, 10, function($mpx_media, $index) use ($media_types) {
+    each_limit($promises, 10, function ($mpx_media, $index) use ($media_types) {
       $this->importer->importItem($mpx_media, $media_types[$index]);
     })->wait();
   }
