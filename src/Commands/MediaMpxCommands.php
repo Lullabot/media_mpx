@@ -108,7 +108,7 @@ class MediaMpxCommands extends DrushCommands {
       $importer->importItem($mpx_media, $media_type);
 
       $this->io()->progressAdvance();
-      $this->logger()->info('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]);
+      $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
     }
 
     $this->io()->progressFinish();
