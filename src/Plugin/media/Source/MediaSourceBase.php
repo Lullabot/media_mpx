@@ -36,6 +36,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   protected $dataObjectFactoryCreator;
 
   /**
+   * The factory used to store mpx objects.
+   *
    * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
    */
   protected $keyValueFactory;

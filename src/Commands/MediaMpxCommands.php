@@ -52,11 +52,15 @@ class MediaMpxCommands extends DrushCommands {
   private $keyValueFactory;
 
   /**
+   * The factory to load authenticated mpx clients.
+   *
    * @var \Drupal\media_mpx\AuthenticatedClientFactory
    */
   protected $authenticatedClientFactory;
 
   /**
+   * The manager to discover data service classes.
+   *
    * @var \Lullabot\Mpx\DataService\DataServiceManager
    */
   private $dataServiceManager;
@@ -71,7 +75,9 @@ class MediaMpxCommands extends DrushCommands {
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
    *   The key-value factory for storing complete objects.
    * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticatedClientFactory
+   *   The factory to load authenticated mpx clients.
    * @param \Lullabot\Mpx\DataService\DataServiceManager $dataServiceManager
+   *   The manager to discover data service classes.
    */
   public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, KeyValueFactoryInterface $keyValueFactory, AuthenticatedClientFactory $authenticatedClientFactory, DataServiceManager $dataServiceManager) {
     $this->entityTypeManager = $entityTypeManager;

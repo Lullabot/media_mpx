@@ -141,12 +141,13 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @return mixed|null
    *   Metadata attribute value or NULL if unavailable.
    */
-  private function getReflectedProperty(MediaInterface $media, $attribute_name, $mpx_media) {
+  private function getReflectedProperty(MediaInterface $media, string $attribute_name, MpxMedia $mpx_media) {
     $method = 'get' . ucfirst($attribute_name);
     // @todo At the least this should be a static cache tied to $media.
     try {
       $value = $mpx_media->$method();
-    } catch (\TypeError $e) {
+    }
+    catch (\TypeError $e) {
       // @todo The optional value was not set.
       // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
       // fixed.

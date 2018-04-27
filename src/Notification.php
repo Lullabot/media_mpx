@@ -22,7 +22,7 @@ class Notification {
    *
    * @var \Drupal\media\MediaTypeInterface
    */
-  protected $media_type;
+  protected $mediaType;
 
   /**
    * Notification constructor.
@@ -34,7 +34,7 @@ class Notification {
    */
   public function __construct(MpxNotification $notification, MediaTypeInterface $media_type) {
     $this->notification = $notification;
-    $this->media_type = $media_type;
+    $this->mediaType = $media_type;
   }
 
   /**
@@ -54,7 +54,7 @@ class Notification {
    *   The media type.
    */
   public function getMediaType(): MediaTypeInterface {
-    return $this->media_type;
+    return $this->mediaType;
   }
 
 }
