@@ -17,3 +17,20 @@ mpx is not an acronym, and is used by thePlatform with capitals in all-caps
 sentences. This makes for some odd displays in Drupal, that generally expect
 title case or sentence case. When referring to mpx within the user interface
 and in strings, use lower case such as 'the mpx User entity'.
+
+## Migrating from Media: thePlatform mpx
+
+Migrations should be run with Drush, using the
+[migrate-tools](https://www.drupal.org/project/migrate_tools) module.
+
+Currently, Users and Accounts are migrated from mpx Accounts in Drupal 7. As
+migrating passwords would require access to the Drupal 7 private key, they
+are not migrated. Most Drupal 8 sites should inject passwords through
+`settings.php` or environment variables. For example, if the migrated user
+machine name is `mpx_lullabot`, add the following to `settings.php`:
+
+```php
+<?php
+
+$config['media_mpx.media_mpx_user.lullabot_mpx']['password'] = 'SECRET';
+```
