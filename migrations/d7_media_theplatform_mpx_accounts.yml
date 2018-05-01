@@ -1,5 +1,6 @@
 id: d7_media_theplatform_mpx_accounts
 label: mpx Accounts
+migration_group: media_theplatform_mpx
 migration_tags:
   - Drupal 7
 dependencies:
@@ -10,8 +11,6 @@ migration_dependencies:
 source:
   plugin: media_mpx_account
   key: migrate
-  constants:
-    media_mpx_user: 'media_mpx_user'
 process:
   # @todo This assumes unique account labels, but gives us readable machine
   # names.

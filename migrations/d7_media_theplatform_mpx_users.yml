@@ -1,7 +1,10 @@
 id: d7_media_theplatform_mpx_users
 label: mpx Users
+migration_group: media_theplatform_mpx
 migration_tags:
   - Drupal 7
+dependencies:
+  - migrate_drupal
 source:
   plugin: media_mpx_user
   key: migrate
