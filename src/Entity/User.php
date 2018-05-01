@@ -73,6 +73,7 @@ class User extends ConfigEntityBase implements UserInterface {
    * {@inheritdoc}
    */
   public function getPassword(): string {
+    // @todo Handle null password.
     return $this->password;
   }
 

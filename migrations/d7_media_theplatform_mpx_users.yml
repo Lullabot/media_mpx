@@ -1,0 +1,14 @@
+id: d7_media_theplatform_mpx_users
+label: mpx Users
+migration_tags:
+  - Drupal 7
+source:
+  plugin: media_mpx_user
+  key: migrate
+process:
+  id:
+    plugin: machine_name
+    source: username
+  username: username
+destination:
+  plugin: entity:media_mpx_user

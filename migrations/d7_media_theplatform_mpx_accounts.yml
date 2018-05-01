@@ -1,0 +1,39 @@
+id: d7_media_theplatform_mpx_accounts
+label: mpx Accounts
+migration_tags:
+  - Drupal 7
+dependencies:
+  - migrate_tools
+migration_dependencies:
+  required:
+    - d7_media_theplatform_mpx_users
+source:
+  plugin: media_mpx_account
+  key: migrate
+  constants:
+    media_mpx_user: 'media_mpx_user'
+process:
+  # @todo This assumes unique account labels, but gives us readable machine
+  # names.
+  id:
+    plugin: machine_name
+    source: import_account
+  user:
+    plugin: machine_name
+    source: username
+  label: import_account
+
+  # thePlatform uses http as the URI for each object, observing the strict REST
+  # convention that different schemes are different HTTP resources. The mpx-php
+  # library automatically casts all HTTP API calls to HTTPs, and in our config
+  # we store the IDs as mpx returns them.
+  account:
+    plugin: str_replace
+    source: account_id
+    search: https
+    replace: http
+
+  public_id: account_pid
+
+destination:
+  plugin: entity:media_mpx_account
