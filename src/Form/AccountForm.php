@@ -210,7 +210,7 @@ class AccountForm extends EntityForm {
       '#type' => 'machine_name',
       '#default_value' => $this->entity->id(),
       '#machine_name' => [
-        'exists' => '\Drupal\media_mpx\Entity\MpxAccount::load',
+        'exists' => '\Drupal\media_mpx\Entity\Account::load',
       ],
       '#disabled' => !$this->entity->isNew(),
     ];
