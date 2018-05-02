@@ -31,11 +31,8 @@ process:
       - import_account
   source: constants/media_source_id
   queue_thumbnail_downloads: constants/queue_thumbnail_downloads
-  source_configuration:
-    plugin: media_source_configuration
-    source:
-      account: account_id
-      source_field: constants/mpx_field
+  source_configuration/account: account_id
+  source_configuration/source_field: constants/mpx_field
 
 destination:
   plugin: entity:media_type
