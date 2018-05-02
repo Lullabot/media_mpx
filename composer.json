@@ -16,7 +16,7 @@
   "require": {
     "symfony/cache": "^3.4",
     "highwire/drupal-psr-16": "^1.0",
-    "lullabot/mpx-php": "dev-master",
+    "lullabot/mpx-php": "dev-fix-account",
     "lullabot/drupal-symfony-lock": "dev-master",
     "symfony/property-info": "^3.4"
   },

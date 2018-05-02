@@ -2,24 +2,13 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\EntityFieldManagerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Field\FieldTypePluginManagerInterface;
-use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
-use Drupal\Core\Messenger\MessengerTrait;
-use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
 use Drupal\media\MediaInterface;
-use Drupal\media\MediaSourceBase;
 use Drupal\media\MediaSourceInterface;
-use Drupal\media_mpx\DataObjectFactoryCreator;
-use Drupal\media_mpx\Entity\Account;
+use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
-use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
-use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
+use Psr\Http\Message\UriInterface;
 
 /**
  * Media source for mpx Media items.
@@ -32,137 +21,33 @@ use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
  *   label = @Translation("mpx Media"),
  *   description = @Translation("mpx media data, such as videos."),
  *   allowed_field_types = {"string"},
- *   default_thumbnail_filename = "video.png"
+ *   default_thumbnail_filename = "video.png",
+ *   thumbnail_alt_metadata_attribute="thumbnail_alt",
+ *   default_thumbnail_filename = "video.png",
+ *   media_mpx = {
+ *     "service_name" = "Media Data Service",
+ *     "object_type" = "Media",
+ *     "schema_version" = "1.10",
+ *   },
  * )
  */
 class Media extends MediaSourceBase implements MediaSourceInterface {
-  use MessengerTrait;
 
   /**
-   * Constants describing what mpx object this media source implements.
+   * The path to the thumbnails directory.
    *
-   * @todo Move these to the MediaSource annotation if possible?
-   */
-  const SERVICE_NAME = 'Media Data Service';
-  const OBJECT_TYPE = 'Media';
-  const SCHEMA_VERSION = '1.10';
-
-  /**
-   * The service to load mpx data.
+   * Normally this would be a class constant, but file_prepare_directory()
+   * requires the string to be passed by reference.
    *
-   * @var \Drupal\media_mpx\DataObjectFactoryCreator
+   * @var string
    */
-  protected $dataObjectFactory;
-
-  /**
-   * The key-value factory used to store complete objects.
-   *
-   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
-   */
-  protected $keyValueFactory;
-
-  /**
-   * Media constructor.
-   *
-   * @param array $configuration
-   *   A configuration array containing information about the plugin instance.
-   * @param string $plugin_id
-   *   The plugin_id for the plugin instance.
-   * @param mixed $plugin_definition
-   *   The plugin implementation definition.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   Entity type manager service.
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
-   *   Entity field manager service.
-   * @param \Drupal\Core\Field\FieldTypePluginManagerInterface $field_type_manager
-   *   The field type plugin manager service.
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
-   *   The config factory service.
-   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
-   *   The factory used to store complete mpx objects.
-   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
-   *   The service to load mpx data.
-   */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
-    $this->dataObjectFactory = $dataObjectFactory;
-    $this->keyValueFactory = $keyValueFactory;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $container->get('entity_type.manager'),
-      $container->get('entity_field.manager'),
-      $container->get('plugin.manager.field.field_type'),
-      $container->get('config.factory'),
-      $container->get('keyvalue'),
-      $container->get('media_mpx.data_object_factory_creator')
-    );
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function defaultConfiguration() {
-    return parent::defaultConfiguration() + [
-      'account' => NULL,
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function calculateDependencies() {
-    return parent::calculateDependencies() + [
-      'config' => [
-        'media_mpx.media_mpx_account.' . $this->getConfiguration()['account'],
-      ],
-    ];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildConfigurationForm($form, $form_state);
-    $accounts = $this->entityTypeManager->getStorage('media_mpx_account')->loadMultiple();
-
-    if (empty($accounts)) {
-      // @todo the #ajax callback isn't showing this, core bug?
-      $this->messenger()->addError($this->t('Create an account before configuring an mpx media type.'));
-      return $form;
-    }
-
-    $options = [];
-    foreach ($accounts as $account) {
-      $options[$account->id()] = $this->t('@title', [
-        '@title' => $account->label(),
-      ]);
-    }
-
-    $form['account'] = [
-      '#type' => 'select',
-      '#title' => $this->t('mpx account'),
-      '#description' => $this->t('Select the mpx account to associate with this media type.'),
-      '#default_value' => $this->getConfiguration()['account'],
-      '#options' => $options,
-      '#required' => TRUE,
-    ];
-
-    return $form;
-  }
+  private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
   /**
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    list($propertyInfo, $properties) = $this->extractMediaProperties();
+    list($propertyInfo, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
     $metadata = [];
     foreach ($properties as $property) {
@@ -180,31 +65,22 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     /** @var \Drupal\media\MediaTypeInterface $media_type */
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+    $mpx_media = $this->getMpxObject($media);
     if (!$media->get($source_field->getName())->isEmpty()) {
-      list(, $properties) = $this->extractMediaProperties();
+
+      switch ($attribute_name) {
+        case 'thumbnail_uri':
+          return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
+
+        case 'thumbnail_alt':
+          return $mpx_media->getTitle();
+      }
+
+      list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
       if (in_array($attribute_name, $properties)) {
-        $mpx_media = $this->getMpxMedia($media);
-
-        $method = 'get' . ucfirst($attribute_name);
-        // @todo At the least this should be a static cache tied to $media.
-        try {
-          $value = $mpx_media->$method();
-        }
-        catch (\TypeError $e) {
-          // @todo The optional value was not set.
-          // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-          // fixed.
-          return parent::getMetadata($media, $attribute_name);
-        }
-
-        // @todo Is this the best way to handle complex values like dates and
-        // sub-objects?
-        if ($value instanceof \DateTime) {
-          $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
-        }
-
-        return $value;
+        return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
       }
     };
 
@@ -212,69 +88,43 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   }
 
   /**
-   * Get the complete mpx Media object associated with a media entity.
+   * Download a thumbnail to the local file system.
    *
    * @param \Drupal\media\MediaInterface $media
-   *   The media entity.
+   *   The media entity being accessed.
+   * @param string $attribute_name
+   *   The metadata attribute being accessed.
+   * @param \Psr\Http\Message\UriInterface $uri
+   *   The URI of the thumbnail to download.
    *
-   * @return \Lullabot\Mpx\DataService\Media\Media
-   *   The media object.
+   * @return string
+   *   The existing thumbnail, or the newly downloaded thumbnail.
    */
-  public function getMpxMedia(MediaInterface $media): MpxMedia {
-    $id = $media->get($this->configuration['source_field'])->getString();
-    $store = $this->keyValueFactory->get('media_mpx_media');
-    if (!$mpx_media = $store->get($id)) {
-      $user = $this->getAccount()->getUserEntity();
-      $mediaFactory = $this->dataObjectFactory->forObjectType($user, self::SERVICE_NAME, self::OBJECT_TYPE, self::SCHEMA_VERSION);
+  private function downloadThumbnail(MediaInterface $media, string $attribute_name, UriInterface $uri) {
+    try {
+      $local_uri = $this->thumbnailsDirectory . $uri->getHost() . $uri->getPath();
+      if (!file_exists($local_uri)) {
+        $directory = dirname($local_uri);
+        file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+        $thumbnail = $this->httpClient->request('GET', $uri);
+        file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+      }
 
-      $mpx_media = $mediaFactory->load($id)->wait();
-      $store->set($id, $mpx_media);
+      return $local_uri;
     }
-    return $mpx_media;
-  }
-
-  /**
-   * Return the mpx account used for this media type.
-   *
-   * @return \Drupal\media_mpx\Entity\Account
-   *   The mpx account.
-   */
-  public function getAccount(): Account {
-    $id = $this->getConfiguration()['account'];
-    /** @var \Drupal\media_mpx\Entity\Account $account */
-    $account = $this->entityTypeManager->getStorage('media_mpx_account')->load($id);
-    return $account;
-  }
-
-  /**
-   * Extract the properties available to set on a media entity.
-   *
-   * @return array
-   *   An array of property values and their descriptions.
-   */
-  private function extractMediaProperties(): array {
-    // @todo Cache this!
-    $phpDocExtractor = new PhpDocExtractor();
-    $reflectionExtractor = new ReflectionExtractor();
-
-    $listExtractors = [$reflectionExtractor];
-
-    $typeExtractors = [$phpDocExtractor, $reflectionExtractor];
-
-    $descriptionExtractors = [$phpDocExtractor];
-
-    $accessExtractors = [$reflectionExtractor];
-
-    $propertyInfo = new PropertyInfoExtractor(
-      $listExtractors,
-      $typeExtractors,
-      $descriptionExtractors,
-      $accessExtractors
-    );
-
-    // @todo This should probably be discovered and not hardcoded.
-    $class = MpxMedia::class;
-    return [$propertyInfo, $propertyInfo->getProperties($class)];
+    catch (TransferException $e) {
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $this->getMpxObject($media);
+      // @todo Can this somehow deeplink to the mpx console?
+      $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
+      $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
+        '@title' => $media->label(),
+        '@code' => $e->getCode(),
+        '@message' => $e->getMessage(),
+        'link' => $link,
+      ]);
+      return parent::getMetadata($media, $attribute_name);
+    }
   }
 
 }
