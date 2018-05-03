@@ -65,21 +65,28 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     /** @var \Drupal\media\MediaTypeInterface $media_type */
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
-    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-    $mpx_media = $this->getMpxObject($media);
     if (!$media->get($source_field->getName())->isEmpty()) {
 
       switch ($attribute_name) {
         case 'thumbnail_uri':
+          /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+          $mpx_media = $this->getMpxObject($media);
           return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
 
         case 'thumbnail_alt':
+          /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+          $mpx_media = $this->getMpxObject($media);
+          if (!empty($media->label())) {
+            return $media->label();
+          }
           return $mpx_media->getTitle();
       }
 
       list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
 
       if (in_array($attribute_name, $properties)) {
+        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+        $mpx_media = $this->getMpxObject($media);
         return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
       }
     };
