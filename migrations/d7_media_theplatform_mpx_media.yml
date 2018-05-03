@@ -1,0 +1,49 @@
+id: d7_media_theplatform_mpx_media
+label: mpx Media
+migration_group: media_theplatform_mpx
+migration_tags:
+  - Drupal 7
+migration_dependencies:
+  required:
+    - d7_media_theplatform_mpx_media_types
+source:
+  plugin: media_mpx_video
+  key: migrate
+  constants:
+    mpx_media_base: 'http://data.media.theplatform.com/media/data/Media'
+process:
+  # uid: All files are owned by UID 0 in the source.
+  name: title
+  # description
+  # guid
+  # How to filter by account into media types?
+  bundle:
+    plugin: machine_name
+    source: account
+  account:
+    plugin: machine_name
+    source: account
+  # Download and move thumbnails?
+  created: created
+  updated: updated
+  status: status
+  # released_file_pids
+  # default_released_file_pid
+  # categories
+  # author
+  # airdate
+  # available_date
+  # expiration_date
+  # keywords
+  # vchip_rating
+  # vchip_sub_ratings
+  # exclude_countries
+  # countries
+  field_mpx_url:
+    plugin: concat
+    delimiter: /
+    source:
+      - constants/mpx_media_base
+      - id
+destination:
+  plugin: entity:media
