@@ -8,8 +8,10 @@ use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drush\Commands\DrushCommands;
+use function GuzzleHttp\Promise\each_limit;
 use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\DataService\DataServiceManager;
+use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 
 /**
@@ -104,6 +106,40 @@ class MpxImporter extends DrushCommands {
 
     $this->io()->progressFinish();
 
+  }
+
+  /**
+   * Save mpx objects to the key / value storage.
+   *
+   * @param string $media_type_id
+   *   The media type ID to warm.
+   * @command media_mpx:warm
+   * @aliases mpxm
+   */
+  public function warmKeyValue(string $media_type_id) {
+    $media_type = $this->loadMediaType($media_type_id);
+
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
+    $account = $media_source->getAccount();
+
+    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
+    $fields = new ByFields();
+    $request = $factory->selectRequest($fields, $account);
+    $list = $request->wait();
+
+    // @todo Support fetching the total results via ObjectList.
+    $this->io()->title(dt('Warming key-value for @type media', ['@type' => $media_type_id]));
+    $this->io()->progressStart();
+
+    $importer = new DataObjectImporter($this->keyValueFactory, $this->entityTypeManager);
+    each_limit($list->yieldLists(), 4, function(ObjectList $list) use ($media_type, $importer, &$count) {
+      foreach ($list as $item) {
+        $importer->setKeyValue($item, $media_type);
+        $this->io()->progressAdvance();
+        $this->logger()->info(dt('Fetched @type @uri.', ['@type' => $media_type->id(), '@uri' => $item->getId()]));
+      }
+
+    })->wait();
   }
 
   /**
