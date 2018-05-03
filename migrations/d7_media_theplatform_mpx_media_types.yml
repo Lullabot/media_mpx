@@ -31,7 +31,10 @@ process:
       - import_account
   source: constants/media_source_id
   queue_thumbnail_downloads: constants/queue_thumbnail_downloads
-  source_configuration/account: account_id
+  source_configuration/account:
+    plugin: migration_lookup
+    migration: d7_media_theplatform_mpx_accounts
+    source: id
   source_configuration/source_field: constants/mpx_field
 
 destination:
