@@ -94,26 +94,7 @@ class AccountForm extends EntityForm {
    *   The accounts form item.
    */
   public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
-    $user_entity_id = $form_state->getValue('user');
-
-    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
-    $user = $this->entityTypeManager->getStorage('media_mpx_user')->load($user_entity_id);
-
-    $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
-    $fields = new ByFields();
-    $accounts = $accountFactory->select($fields);
-
-    $options = [];
-    $account_pids = [];
-    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
-    foreach ($accounts as $account) {
-      $path_parts = explode('/', $account->getId()->getPath());
-      $options[(string) $account->getId()] = $this->t('@title (@id)', [
-        '@title' => $account->getTitle(),
-        '@id' => end($path_parts),
-      ]);
-      $account_pids[(string) $account->getId()] = $account->getPid();
-    }
+    list($options, $account_pids) = $this->accountOptions($form_state);
 
     $form['account_pids'] = [
       '#type' => 'value',
@@ -210,7 +191,7 @@ class AccountForm extends EntityForm {
       '#type' => 'machine_name',
       '#default_value' => $this->entity->id(),
       '#machine_name' => [
-        'exists' => '\Drupal\media_mpx\Entity\MpxAccount::load',
+        'exists' => '\Drupal\media_mpx\Entity\Account::load',
       ],
       '#disabled' => !$this->entity->isNew(),
     ];
@@ -239,6 +220,42 @@ class AccountForm extends EntityForm {
     }
 
     return $users;
+  }
+
+  /**
+   * Return the account options and their public IDs.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
+   * @return array
+   *   An array with:
+   *     - The account options.
+   *     - The account public IDs.
+   */
+  private function accountOptions(FormStateInterface $form_state): array {
+    $user_entity_id = $form_state->getValue('user');
+
+    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
+    $user = $this->entityTypeManager->getStorage('media_mpx_user')
+      ->load($user_entity_id);
+
+    $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
+    $fields = new ByFields();
+    $accounts = $accountFactory->select($fields);
+
+    $options = [];
+    $account_pids = [];
+    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
+    foreach ($accounts as $account) {
+      $path_parts = explode('/', $account->getId()->getPath());
+      $options[(string) $account->getId()] = $this->t('@title (@id)', [
+        '@title' => $account->getTitle(),
+        '@id' => end($path_parts),
+      ]);
+      $account_pids[(string) $account->getId()] = $account->getPid();
+    }
+    return [$options, $account_pids];
   }
 
 }
