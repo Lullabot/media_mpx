@@ -41,6 +41,8 @@ class DataObjectFactoryCreator {
    *   The manager used to discover what mpx objects are available.
    * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticatedClientFactory
    *   A factory used to generate new authenticated clients.
+   * @param \Psr\Cache\CacheItemPoolInterface $metadataCache
+   *   The pool for cached class metadata.
    */
   public function __construct(DataServiceManager $manager, AuthenticatedClientFactory $authenticatedClientFactory, CacheItemPoolInterface $metadataCache) {
     $this->manager = $manager;
