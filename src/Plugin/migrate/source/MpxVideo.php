@@ -5,7 +5,7 @@ namespace Drupal\media_mpx\Plugin\migrate\source;
 use Drupal\migrate_drupal\Plugin\migrate\source\DrupalSqlBase;
 
 /**
- * mpx Video (aka Media) importer.
+ * Video (aka Media) importer.
  *
  * @package Drupal\media_mpx\Plugin\migrate\source
  * @MigrateSource(
