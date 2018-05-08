@@ -2,19 +2,13 @@
 
 namespace Drupal\media_mpx\Commands;
 
-use Lullabot\Mpx\DataService\NotificationListener;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
-use Drupal\Core\State\StateInterface;
-use Drupal\media\MediaSourceInterface;
 use Drupal\media\MediaTypeInterface;
-use Drupal\media_mpx\AuthenticatedClientFactory;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
-use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
+use Drupal\media_mpx\NotificationListener;
 use Drush\Commands\DrushCommands;
-use GuzzleHttp\Exception\ConnectException;
-use Lullabot\Mpx\DataService\DataServiceManager;
 use Psr\Log\LoggerAwareTrait;
 
 /**
@@ -29,32 +23,11 @@ class NotificationQueuer extends DrushCommands {
   const MEDIA_MPX_NOTIFICATION_QUEUE = 'media_mpx_notification';
 
   /**
-   * The factory to load authenticated mpx clients.
-   *
-   * @var \Drupal\media_mpx\AuthenticatedClientFactory
-   */
-  private $authenticatedClientFactory;
-
-  /**
-   * The manager to discover data service classes.
-   *
-   * @var \Lullabot\Mpx\DataService\DataServiceManager
-   */
-  private $dataServiceManager;
-
-  /**
    * The factory to load the mpx notification queue.
    *
    * @var \Drupal\Core\Queue\QueueFactory
    */
   private $queueFactory;
-
-  /**
-   * The state backend for notification IDs.
-   *
-   * @var \Drupal\Core\State\StateInterface
-   */
-  private $state;
 
   /**
    * The entity type manager interface.
@@ -64,25 +37,26 @@ class NotificationQueuer extends DrushCommands {
   private $entityTypeManager;
 
   /**
+   * The Drupal mpx notification listener.
+   *
+   * @var \Drupal\media_mpx\NotificationListener
+   */
+  private $listener;
+
+  /**
    * NotificationQueuer constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager interface.
-   * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticated_client_factory
-   *   The factory to load authenticated mpx clients.
-   * @param \Lullabot\Mpx\DataService\DataServiceManager $data_service_manager
-   *   The manager to discover data service classes.
    * @param \Drupal\Core\Queue\QueueFactory $queue_factory
    *   The factory to load the mpx notification queue.
-   * @param \Drupal\Core\State\StateInterface $state
-   *   The state backend for notification IDs.
+   * @param \Drupal\media_mpx\NotificationListener $listener
+   *   The Drupal mpx notification listener.
    */
-  public function __construct(EntityTypeManagerInterface $entity_type_manager, AuthenticatedClientFactory $authenticated_client_factory, DataServiceManager $data_service_manager, QueueFactory $queue_factory, StateInterface $state) {
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
     $this->entityTypeManager = $entity_type_manager;
-    $this->authenticatedClientFactory = $authenticated_client_factory;
-    $this->dataServiceManager = $data_service_manager;
     $this->queueFactory = $queue_factory;
-    $this->state = $state;
+    $this->listener = $listener;
   }
 
   /**
@@ -101,81 +75,21 @@ class NotificationQueuer extends DrushCommands {
     // First, we find the last notification ID.
     $media_type = $this->loadMediaType($media_type_id);
     $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $notification_id = $this->getNotificationId($media_source);
+    $notification_id = $this->listener->getNotificationId($media_source);
 
     // Next, we fetch notifications, removing duplicates (such as multiple saves
     // of an mpx object in a row).
-    $notifications = $this->fetchNotifications($media_source, $notification_id);
+    $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
+    $notifications = $this->listener->listen($media_source, $notification_id);
     $notifications = $this->filterDuplicateNotifications($notifications);
 
     // Take the notifications and store them in the queue for processing later.
     $this->queueNotifications($media_type, $notifications);
 
     // Let the next listen call start from where we left off.
-    $notification_key = $media_source->getPluginId() . '_notification_id';
-    $this->state->set($notification_key, end($notifications)->getId());
+    $this->listener->setNotificationId($media_source, end($notifications));
 
     $this->io()->progressFinish();
-  }
-
-  /**
-   * Return the current notification ID, or -1 if one is not set.
-   *
-   * @param \Drupal\media\MediaSourceInterface $media_source
-   *   The media source the notification ID is for.
-   *
-   * @return int
-   *   The notification ID.
-   */
-  protected function getNotificationId(MediaSourceInterface $media_source): int {
-    // @todo should this really be state?
-    $state = \Drupal::state();
-    $notification_key = $media_source->getPluginId() . '_notification_id';
-    if (!$notification_id = $state->get($notification_key)) {
-      // @todo Should we throw a warning?
-      $notification_id = -1;
-    }
-
-    return $notification_id;
-  }
-
-  /**
-   * Fetch notifications from mpx.
-   *
-   * @param \Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface $media_source
-   *   The media source notifications are being listened for.
-   * @param int $notification_id
-   *   The last notification ID that was processed.
-   *
-   * @return \Lullabot\Mpx\DataService\Notification[]
-   *   An array of notifications.
-   */
-  private function fetchNotifications(MpxMediaSourceInterface $media_source, int $notification_id): array {
-    $account = $media_source->getAccount();
-
-    $client = $this->authenticatedClientFactory->fromUser($account->getUserEntity());
-    $definition = $media_source->getPluginDefinition()['media_mpx'];
-    $service = $this->dataServiceManager->getDataService($definition['service_name'], $definition['object_type'], $definition['schema_version']);
-    // @todo Client ID needs to be configured somehow.
-    $listener = new NotificationListener($client, $service, 'drush-drupal8-mpx');
-
-    $promise = $listener->listen($notification_id);
-    $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
-    try {
-      return $promise->wait();
-    }
-    catch (ConnectException $e) {
-      // This may be a timeout if no notifications are available. However, there
-      // is no good method from the exception to determine if a timeout
-      // occurred.
-      if (strpos($e->getMessage(), 'cURL error 28') !== FALSE) {
-        $this->logger()->info('A timeout occurred while waiting for notifications. This is expected when no content is changing in mpx. No action is required.');
-        return [];
-      }
-
-      // Some other connection exception occurred, so throw that up.
-      throw $e;
-    }
   }
 
   /**

@@ -16,6 +16,9 @@ media_mpx.media_mpx_account.*:
     account:
       label: The URI of the account
       type: uri
+    public_id:
+      label: The Public ID of the account
+      type: string
 
 media_mpx.media_mpx_user.*:
   type: config_entity
@@ -32,3 +35,25 @@ media_mpx.media_mpx_user.*:
       label: 'Password'
     uuid:
       type: string
+
+media.source.media_mpx_media:
+  type: media_mpx.account_aware
+  label: '"Media" media source configuration'
+
+media_mpx.account_aware:
+  type: mapping
+  mapping:
+    source_field:
+      type: string
+      label: 'Source field'
+    account:
+      type: string
+      label: 'mpx Account entity ID'
+
+field.formatter.settings.media_mpx_video:
+  type: mapping
+  label: 'mpx media rendered with a player'
+  mapping:
+    player:
+      type: uri
+      label: 'mpx Player'
