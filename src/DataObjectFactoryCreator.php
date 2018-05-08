@@ -28,6 +28,8 @@ class DataObjectFactoryCreator {
   private $authenticatedClientFactory;
 
   /**
+   * The metadata cache backend.
+   *
    * @var \Psr\Cache\CacheItemPoolInterface
    */
   private $metadataCache;
