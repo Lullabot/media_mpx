@@ -9,6 +9,7 @@ use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
+use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\DataService\Sort;
 use Lullabot\Mpx\Player\Url;
@@ -99,8 +100,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
 
+    // @todo Cache this.
     $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6');
-    $player = $factory->load($this->getSetting('player'))->wait();
+    $player = $factory->load(new Uri($this->getSetting('player')))->wait();
 
     foreach ($items as $delta => $item) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
