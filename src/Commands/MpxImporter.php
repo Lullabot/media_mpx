@@ -113,6 +113,7 @@ class MpxImporter extends DrushCommands {
    *
    * @param string $media_type_id
    *   The media type ID to warm.
+   *
    * @command media_mpx:warm
    * @aliases mpxm
    */
@@ -132,7 +133,7 @@ class MpxImporter extends DrushCommands {
     $this->io()->progressStart();
 
     $importer = new DataObjectImporter($this->keyValueFactory, $this->entityTypeManager);
-    each_limit($list->yieldLists(), 4, function(ObjectList $list) use ($media_type, $importer, &$count) {
+    each_limit($list->yieldLists(), 4, function (ObjectList $list) use ($media_type, $importer, &$count) {
       foreach ($list as $item) {
         $importer->setKeyValue($item, $media_type);
         $this->io()->progressAdvance();
