@@ -60,9 +60,7 @@ class DataObjectImporter {
 
     // Save the mpx Media item so it's available in getMetadata() in the
     // source plugin.
-    $keyValueStore = $this->keyValueFactory->get($media_type->getSource()
-      ->getPluginId());
-    $keyValueStore->set($mpx_object->getId(), $mpx_object);
+    $this->setKeyValue($mpx_object, $media_type);
 
     foreach ($results as $media) {
       $media->save();
@@ -70,6 +68,20 @@ class DataObjectImporter {
     }
 
     $this->entityTypeManager->getStorage('media')->resetCache($reset_ids);
+  }
+
+  /**
+   * Set an mpx object into the key/value store.
+   *
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
+   *   The object to set in the key-value store.
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type the object is associated with.
+   */
+  public function setKeyValue(ObjectInterface $mpx_object, MediaTypeInterface $media_type) {
+    $keyValueStore = $this->keyValueFactory->get($media_type->getSource()
+      ->getPluginId());
+    $keyValueStore->set($mpx_object->getId(), $mpx_object);
   }
 
   /**
