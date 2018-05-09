@@ -6,6 +6,7 @@ use Drupal\media_mpx\Entity\UserInterface;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
 use Lullabot\Mpx\DataService\DataServiceManager;
+use Psr\Cache\CacheItemPoolInterface;
 
 /**
  * Create factories used to load objects from mpx.
@@ -27,16 +28,26 @@ class DataObjectFactoryCreator {
   private $authenticatedClientFactory;
 
   /**
+   * The metadata cache backend.
+   *
+   * @var \Psr\Cache\CacheItemPoolInterface
+   */
+  private $metadataCache;
+
+  /**
    * Construct a new DataObjectFactoryCreator.
    *
    * @param \Lullabot\Mpx\DataService\DataServiceManager $manager
    *   The manager used to discover what mpx objects are available.
    * @param \Drupal\media_mpx\AuthenticatedClientFactory $authenticatedClientFactory
    *   A factory used to generate new authenticated clients.
+   * @param \Psr\Cache\CacheItemPoolInterface $metadataCache
+   *   The pool for cached class metadata.
    */
-  public function __construct(DataServiceManager $manager, AuthenticatedClientFactory $authenticatedClientFactory) {
+  public function __construct(DataServiceManager $manager, AuthenticatedClientFactory $authenticatedClientFactory, CacheItemPoolInterface $metadataCache) {
     $this->manager = $manager;
     $this->authenticatedClientFactory = $authenticatedClientFactory;
+    $this->metadataCache = $metadataCache;
   }
 
   /**
@@ -57,7 +68,7 @@ class DataObjectFactoryCreator {
   public function forObjectType(UserInterface $user, string $serviceName, string $objectType, string $schema): MpxDataObjectFactory {
     $service = $this->manager->getDataService($serviceName, $objectType, $schema);
     $client = $this->authenticatedClientFactory->fromUser($user);
-    return new MpxDataObjectFactory($service, $client);
+    return new MpxDataObjectFactory($service, $client, $this->metadataCache);
   }
 
   /**

@@ -6,7 +6,7 @@ services:
 
   media_mpx.data_object_factory_creator:
     class: Drupal\media_mpx\DataObjectFactoryCreator
-    arguments: ['@media_mpx.data_service_manager', '@media_mpx.authenticated_client_factory']
+    arguments: ['@media_mpx.data_service_manager', '@media_mpx.authenticated_client_factory', '@media_mpx.metadata_cache_pool_adapter']
 
   media_mpx.data_service_manager:
     class: Lullabot\Mpx\DataService\DataServiceManager
@@ -70,6 +70,11 @@ services:
     class: Symfony\Component\Cache\Adapter\SimpleCacheAdapter
     public: false
     arguments: ['@media_mpx.simple_cache_backend', 'media_mpx_token']
+
+  media_mpx.metadata_cache_pool_adapter:
+    class: Symfony\Component\Cache\Adapter\SimpleCacheAdapter
+    public: false
+    arguments: ['@media_mpx.simple_cache_backend', 'media_mpx_metadata']
 
   media_mpx.token_cache_pool:
     class: Lullabot\Mpx\TokenCachePool
