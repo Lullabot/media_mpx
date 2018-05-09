@@ -74,12 +74,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
           return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
 
         case 'thumbnail_alt':
-          /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-          $mpx_media = $this->getMpxObject($media);
-          if (!empty($media->label())) {
-            return $media->label();
-          }
-          return $mpx_media->getTitle();
+          return $this->thumbnailAlt($media);
       }
 
       list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
@@ -132,6 +127,28 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       ]);
       return parent::getMetadata($media, $attribute_name);
     }
+  }
+
+  /**
+   * Return the alt tag for a thumbnail.
+   *
+   * While mpx has support for thumbnail descriptions, in practice they do not
+   * look to be filled with useful text. Instead, we default to using the media
+   * label, and if that is not available we fall back to the media title.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
+   *
+   * @return string
+   *   The thumbnail alt text.
+   */
+  private function thumbnailAlt(MediaInterface $media) {
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+    $mpx_media = $this->getMpxObject($media);
+    if (!empty($media->label())) {
+      return $media->label();
+    }
+    return $mpx_media->getTitle();
   }
 
 }
