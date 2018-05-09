@@ -60,8 +60,9 @@ class DataObjectImporter {
 
     // Save the mpx Media item so it's available in getMetadata() in the
     // source plugin.
-    $this->keyValueFactory->get($media_type->getSource()->getPluginId())
-      ->set($mpx_object->getId(), $mpx_object);
+    $keyValueStore = $this->keyValueFactory->get($media_type->getSource()
+      ->getPluginId());
+    $keyValueStore->set($mpx_object->getId(), $mpx_object);
 
     foreach ($results as $media) {
       $media->save();
