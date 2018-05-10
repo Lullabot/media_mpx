@@ -1,0 +1,26 @@
+id: d7_media_theplatform_mpx_source_field_storage
+label: Source field for mpx objects
+migration_group: media_theplatform_mpx
+source:
+  plugin: empty
+  constants:
+    entity_type: media
+    id: media.field_mpx_url
+    field_name: field_mpx_url
+    type: string
+    cardinality: 1
+    settings:
+      max_length: 255
+    langcode: en
+    translatable: false
+process:
+  entity_type: constants/entity_type
+  id: constants/id
+  field_name: constants/field_name
+  type: constants/type
+  cardinality: constants/cardinality
+  settings: constants/settings
+  langcode: constants/langcode
+  translatable: constants/translatable
+destination:
+  plugin: entity:field_storage_config

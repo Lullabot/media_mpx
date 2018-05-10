@@ -1,0 +1,41 @@
+id: d7_media_theplatform_mpx_media_types
+label: mpx Media types
+migration_group: media_theplatform_mpx
+migration_tags:
+  - Drupal 7
+dependencies:
+  - migrate_plus
+migration_dependencies:
+  required:
+    - d7_media_theplatform_mpx_accounts
+source:
+  plugin: media_mpx_account
+  key: migrate
+  constants:
+    description: 'Videos from account'
+    media_source_id: 'media_mpx_media'
+    queue_thumbnail_downloads: true
+    mpx_field: 'field_mpx_url'
+process:
+  # @todo This assumes unique account labels, but gives us readable machine
+  # names.
+  id:
+    plugin: machine_name
+    source: import_account
+  label: import_account
+  description:
+    plugin: concat
+    delimiter: ' '
+    source:
+      - constants/description
+      - import_account
+  source: constants/media_source_id
+  queue_thumbnail_downloads: constants/queue_thumbnail_downloads
+  source_configuration/account:
+    plugin: migration_lookup
+    migration: d7_media_theplatform_mpx_accounts
+    source: id
+  source_configuration/source_field: constants/mpx_field
+
+destination:
+  plugin: entity:media_type
