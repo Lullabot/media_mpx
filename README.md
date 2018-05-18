@@ -18,6 +18,31 @@ sentences. This makes for some odd displays in Drupal, that generally expect
 title case or sentence case. When referring to mpx within the user interface
 and in strings, use lower case such as 'the mpx User entity'.
 
+## Custom field support
+
+Custom fields are defined in mpx and allow for additional data to be attached
+to media and other mpx objects. Custom fields are grouped by _namespaces_ and
+each object can have custom fields from any number of namespaces.
+
+Out of the box, custom fields will not be available on loaded mpx objects.
+If custom fields are used in mpx, but are not required in Drupal, then you
+can leave things as is and each set of custom fields will be represented by the
+`\Lullabot\Mpx\Normalizer\MissingCustomFieldsClass` class.
+
+To integrate custom fields:
+
+1. Follow the steps at https://github.com/Lullabot/mpx-php to generate the
+   initial custom fields classes. For example, if you wish to include the
+   classes in the `mysite_mpx` module, run:
+   `bin/console mpx:create-custom-field '\Drupal\mysite_mpx\Plugin\media_mpx\CustomField' 'Media Data Service' 'Media' '1.10'`
+1. Rename the classes to something that is reasonable for each set of data they
+   contain.
+1. Move the classes to `src/Plugin/media_mpx/CustomField` in your custom
+   module.
+1. Clear caches. When loading a Media item, your classes will be returned when
+   calling `getCustomFields($namespace)`, where `$namespace` is the mpx
+   namespace of your fields.
+
 ## Migrating from Media: thePlatform mpx
 
 Migrations should be run with Drush, using the
