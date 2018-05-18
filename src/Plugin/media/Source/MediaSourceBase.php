@@ -16,6 +16,7 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Uri;
+use Lullabot\Mpx\DataService\CachingPhpDocExtractor;
 use Lullabot\Mpx\DataService\CustomFieldManager;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Psr\Log\LoggerInterface;
@@ -215,8 +216,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   An array of property values and their descriptions.
    */
   protected function propertyExtractor(): PropertyInfoExtractorInterface {
-    // @todo Cache this!
-    $phpDocExtractor = new PhpDocExtractor();
+    $phpDocExtractor = new CachingPhpDocExtractor();
     $reflectionExtractor = new ReflectionExtractor();
 
     $listExtractors = [$reflectionExtractor];
