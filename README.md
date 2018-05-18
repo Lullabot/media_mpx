@@ -32,5 +32,5 @@ machine name is `mpx_lullabot`, add the following to `settings.php`:
 ```php
 <?php
 
-$config['media_mpx.media_mpx_user.lullabot_mpx']['password'] = 'SECRET';
+$config['media_mpx.media_mpx_user.mpx_lullabot']['password'] = 'SECRET';
 ```
