@@ -47,11 +47,33 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    list($propertyInfo, $properties) = $this->extractMediaProperties(MpxMedia::class);
+    $extractor = $this->propertyExtractor();
 
     $metadata = [];
-    foreach ($properties as $property) {
-      $metadata[$property] = $propertyInfo->getShortDescription(MpxMedia::class, $property);
+    foreach ($extractor->getProperties(MpxMedia::class) as $property) {
+      $label = sprintf('(%s)', $property);
+      if ($shortDescription = $extractor->getShortDescription(MpxMedia::class, $property)) {
+        $label = $shortDescription . ' ' . $label;
+      }
+      $metadata[$property] = $label;
+    }
+
+    $service_info = $this->getPluginDefinition()['media_mpx'];
+    $fields = $this->customFieldManager->getCustomFields();
+    /**
+     * @var string $namespace
+     * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
+     */
+    foreach ($fields[$service_info['service_name']][$service_info['object_type']] as $namespace => $discoveredCustomField) {
+      $class = $discoveredCustomField->getClass();
+      $namespace = $discoveredCustomField->getAnnotation()->namespace;
+      foreach ($extractor->getProperties($class) as $property) {
+        $label = sprintf('(%s:%s)', $namespace, $property);
+        if ($shortDescription = $extractor->getShortDescription($class, $property)) {
+          $label = $shortDescription . ' ' . $label;
+        }
+        $metadata[str_replace('.', '%2E', $namespace) . '/' . $property] = $label;
+      }
     }
 
     return $metadata;
@@ -77,12 +99,35 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
           return $this->thumbnailAlt($media);
       }
 
-      list(, $properties) = $this->extractMediaProperties(MpxMedia::class);
+      $extractor = $this->propertyExtractor();
 
-      if (in_array($attribute_name, $properties)) {
+      if (in_array($attribute_name, $extractor->getProperties(MpxMedia::class))) {
         /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
         $mpx_media = $this->getMpxObject($media);
         return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
+      }
+
+      // Now check for custom fields.
+      $service_info = $this->getPluginDefinition()['media_mpx'];
+      $fields = $this->customFieldManager->getCustomFields();
+      $properties = [];
+      /**
+       * @var string $namespace
+       * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
+       */
+      foreach ($fields[$service_info['service_name']][$service_info['object_type']] as $namespace => $discoveredCustomField) {
+        $class = $discoveredCustomField->getClass();
+        $namespace = $discoveredCustomField->getAnnotation()->namespace;
+        $properties[$namespace] = $extractor->getProperties($class);
+      }
+      $decoded = str_replace('%2E', '.', $attribute_name);
+      $parts = explode('/', $decoded);
+      $field = array_pop($parts);
+      $namespace = implode('/', $parts);
+      if (in_array($namespace, array_keys($properties))) {
+        $mpx_media = $this->getMpxObject($media);
+        $method = 'get' . ucfirst($field);
+        return $mpx_media->getCustomFields($namespace)->$method();
       }
     };
 

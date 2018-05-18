@@ -16,12 +16,14 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Uri;
+use Lullabot\Mpx\DataService\CustomFieldManager;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
+use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 
 /**
  * Base class for mpx media sources.
@@ -58,6 +60,11 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   protected $logger;
 
   /**
+   * @var \Lullabot\Mpx\DataService\CustomFieldManager
+   */
+  protected $customFieldManager;
+
+  /**
    * Media constructor.
    *
    * @param array $configuration
@@ -83,12 +90,13 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger used to log errors while downloading thumbnails.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, KeyValueFactoryInterface $keyValueFactory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger, CustomFieldManager $customFieldManager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactoryCreator = $dataObjectFactory;
     $this->keyValueFactory = $keyValueFactory;
     $this->httpClient = $httpClient;
     $this->logger = $logger;
+    $this->customFieldManager = $customFieldManager;
   }
 
   /**
@@ -106,7 +114,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
       $container->get('keyvalue'),
       $container->get('media_mpx.data_object_factory_creator'),
       $container->get('http_client'),
-      $container->get('logger.channel.media_mpx')
+      $container->get('logger.channel.media_mpx'),
+      $container->get('media_mpx.custom_field_manager')
     );
   }
 
@@ -200,15 +209,12 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   }
 
   /**
-   * Extract the properties available to set on a media entity.
+   * Return a property extractor.
    *
-   * @param string $class
-   *   The mpx library class to extract properties for.
-   *
-   * @return array
+   * @return \Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface
    *   An array of property values and their descriptions.
    */
-  protected function extractMediaProperties(string $class): array {
+  protected function propertyExtractor(): PropertyInfoExtractorInterface {
     // @todo Cache this!
     $phpDocExtractor = new PhpDocExtractor();
     $reflectionExtractor = new ReflectionExtractor();
@@ -227,9 +233,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
       $descriptionExtractors,
       $accessExtractors
     );
-
-    // @todo This should probably be discovered and not hardcoded.
-    return [$propertyInfo, $propertyInfo->getProperties($class)];
+    return $propertyInfo;
   }
 
   /**

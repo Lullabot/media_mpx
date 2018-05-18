@@ -33,11 +33,11 @@ class Player extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    list($propertyInfo, $properties) = $this->extractMediaProperties(MpxPlayer::class);
+    $extractor = $this->propertyExtractor();
 
     $metadata = [];
-    foreach ($properties as $property) {
-      $metadata[$property] = $propertyInfo->getShortDescription(MpxPlayer::class, $property);
+    foreach ($extractor->getProperties(MpxPlayer::class) as $property) {
+      $metadata[$property] = $extractor->getShortDescription(MpxPlayer::class, $property);
     }
 
     return $metadata;
@@ -52,9 +52,10 @@ class Player extends MediaSourceBase implements MediaSourceInterface {
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($media->bundle());
     $source_field = $this->getSourceFieldDefinition($media_type);
     if (!$media->get($source_field->getName())->isEmpty()) {
-      list(, $properties) = $this->extractMediaProperties(MpxPlayer::class);
+      $extractor = $this->propertyExtractor();
 
-      if (in_array($attribute_name, $properties)) {
+
+      if (in_array($attribute_name, $extractor->getProperties(MpxPlayer::class))) {
         return $this->getReflectedProperty($media, $attribute_name, $this->getMpxObject($media));
       }
     };
