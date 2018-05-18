@@ -51,9 +51,9 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     $metadata = [];
     foreach ($extractor->getProperties(MpxMedia::class) as $property) {
-      $label = sprintf('(%s)', $property);
+      $label = $property;
       if ($shortDescription = $extractor->getShortDescription(MpxMedia::class, $property)) {
-        $label = $shortDescription . ' ' . $label;
+        $label = $shortDescription . ' (' . $label . ')';
       }
       $metadata[$property] = $label;
     }
@@ -68,9 +68,9 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $class = $discoveredCustomField->getClass();
       $namespace = $discoveredCustomField->getAnnotation()->namespace;
       foreach ($extractor->getProperties($class) as $property) {
-        $label = sprintf('(%s:%s)', $namespace, $property);
+        $label = sprintf('%s:%s', $namespace, $property);
         if ($shortDescription = $extractor->getShortDescription($class, $property)) {
-          $label = $shortDescription . ' ' . $label;
+          $label = $shortDescription . ' (' . $label . ')';
         }
         $metadata[str_replace('.', '%2E', $namespace) . '/' . $property] = $label;
       }
