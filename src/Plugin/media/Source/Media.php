@@ -200,20 +200,22 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
      * @var string $namespace
      * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
      */
-    foreach ($fields[$service_info['service_name']][$service_info['object_type']] as $namespace => $discoveredCustomField) {
-      $class = $discoveredCustomField->getClass();
-      $namespace = $discoveredCustomField->getAnnotation()->namespace;
-      foreach ($this->propertyExtractor()->getProperties($class) as $property) {
-        $label = sprintf('%s:%s', $namespace, $property);
-        if ($shortDescription = $this->propertyExtractor()
-          ->getShortDescription($class, $property)) {
-          $label = $shortDescription . ' (' . $label . ')';
-        }
+    if ($var = $fields[$service_info['service_name']][$service_info['object_type']]) {
+      foreach ($var as $namespace => $discoveredCustomField) {
+        $class = $discoveredCustomField->getClass();
+        $namespace = $discoveredCustomField->getAnnotation()->namespace;
+        foreach ($this->propertyExtractor()->getProperties($class) as $property) {
+          $label = sprintf('%s:%s', $namespace, $property);
+          if ($shortDescription = $this->propertyExtractor()
+            ->getShortDescription($class, $property)) {
+            $label = $shortDescription . ' (' . $label . ')';
+          }
 
-        // The config system does not allow periods in values, so we encode
-        // those using URL rules.
-        $key = str_replace('.', '%2E', $namespace) . '/' . $property;
-        $metadata[$key] = $label;
+          // The config system does not allow periods in values, so we encode
+          // those using URL rules.
+          $key = str_replace('.', '%2E', $namespace) . '/' . $property;
+          $metadata[$key] = $label;
+        }
       }
     }
 
@@ -234,8 +236,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   private function extractNamespaceField($attribute_name): array {
     $decoded = str_replace('%2E', '.', $attribute_name);
     $parts = explode('/', $decoded);
-    $namespace = implode('/', $parts);
     $field = array_pop($parts);
+    $namespace = implode('/', $parts);
     return [$namespace, $field];
   }
 

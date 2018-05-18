@@ -1,4 +1,7 @@
 {
+  "$xmlns": {
+    "prefix1": "http://xml.example.com"
+  },
   "id": "http://data.media.theplatform.com/media/data/Media/2602559",
   "guid": "zYO7XMrWyix_9UCMurLYEWJPrWYHavMM",
   "title": "thePlatform's History",
@@ -358,5 +361,6 @@
   "fileSourceMediaId": "http://example.com/reserved-for-future-use",
   "originalMediaIds": [
     "http://example.com/media-url"
-  ]
+  ],
+  "prefix1$series": "The Adventures of Pixel the Cat"
 }
