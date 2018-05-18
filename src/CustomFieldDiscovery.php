@@ -50,12 +50,12 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   }
 
   /**
-   * Returns all the Custom Fields
+   * Returns all the Custom Fields.
    *
-   * @return DiscoveredCustomField[] An array of all discovered data services, indexed by service name, object type, and namespace.
+   * @return \Lullabot\Mpx\DataService\DiscoveredCustomField[]
+   *   An array of all discovered data services, indexed by service name, object type, and namespace.
    */
-  public function getCustomFields(): array
-  {
+  public function getCustomFields(): array {
     $definitions = [];
 
     $reader = new AnnotationReader();
@@ -132,20 +132,21 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   protected function getPluginNamespaces() {
     $plugin_namespaces = [];
     $namespaceSuffix = str_replace('/', '\\', '/Plugin/media_mpx/CustomField');
-      foreach ($this->rootNamespacesIterator as $namespace => $dirs) {
-        // Append the namespace suffix to the base namespace, to obtain the
-        // plugin namespace; for example, 'Drupal\Views' may become
-        // 'Drupal\Views\Plugin\Block'.
-        $namespace .= $namespaceSuffix;
-        foreach ((array) $dirs as $dir) {
-          // Append the directory suffix to the PSR-4 base directory, to obtain
-          // the directory where plugins are found. For example,
-          // DRUPAL_ROOT . '/core/modules/views/src' may become
-          // DRUPAL_ROOT . '/core/modules/views/src/Plugin/Block'.
-          $plugin_namespaces[$namespace][] = $dir . '/Plugin/media_mpx/CustomField';
-        }
+    foreach ($this->rootNamespacesIterator as $namespace => $dirs) {
+      // Append the namespace suffix to the base namespace, to obtain the
+      // plugin namespace; for example, 'Drupal\Views' may become
+      // 'Drupal\Views\Plugin\Block'.
+      $namespace .= $namespaceSuffix;
+      foreach ((array) $dirs as $dir) {
+        // Append the directory suffix to the PSR-4 base directory, to obtain
+        // the directory where plugins are found. For example,
+        // DRUPAL_ROOT . '/core/modules/views/src' may become
+        // DRUPAL_ROOT . '/core/modules/views/src/Plugin/Block'.
+        $plugin_namespaces[$namespace][] = $dir . '/Plugin/media_mpx/CustomField';
       }
+    }
 
     return $plugin_namespaces;
   }
+
 }

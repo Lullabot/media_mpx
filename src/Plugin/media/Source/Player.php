@@ -54,7 +54,6 @@ class Player extends MediaSourceBase implements MediaSourceInterface {
     if (!$media->get($source_field->getName())->isEmpty()) {
       $extractor = $this->propertyExtractor();
 
-
       if (in_array($attribute_name, $extractor->getProperties(MpxPlayer::class))) {
         return $this->getReflectedProperty($media, $attribute_name, $this->getMpxObject($media));
       }
