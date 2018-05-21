@@ -2,10 +2,14 @@
 
 namespace Drupal\media_mpx_test\Plugin\media_mpx\CustomField;
 
+// @codingStandardsIgnoreStart
 use Lullabot\Mpx\DataService\Annotation\CustomField;
+// @codingStandardsIgnoreEnd
 use Lullabot\Mpx\DataService\CustomFieldInterface;
 
 /**
+ * A mock custom field implementation containing a series.
+ *
  * @CustomField(
  *   namespace="http://xml.example.com",
  *   service="Media Data Service",
