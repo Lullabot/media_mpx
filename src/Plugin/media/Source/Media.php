@@ -80,10 +80,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
-    /**
-     * @var string $namespace
-     * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
-     */
+    /* @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
     $service_name = $service_info['service_name'];
     $object_type = $service_info['object_type'];
     if (isset($fields[$service_name]) && isset($fields[$service_name][$object_type]) && $var = $fields[$service_name][$object_type]) {
@@ -110,7 +107,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @param string $class
    *   The custom field class implementation name.
    */
-  private function addProperties(&$metadata, $namespace, $properties, $class) {
+  private function addProperties(array &$metadata, string $namespace, array $properties, string $class) {
     foreach ($properties as $property) {
       $label = $this->propertyLabel($namespace, $property, $class);
 
@@ -171,6 +168,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The media item to return the source field definition for.
    *
    * @return \Drupal\Core\Field\FieldDefinitionInterface|null
+   *   The source field definition, if one exists.
    */
   private function sourceField(MediaInterface $media) {
     /** @var \Drupal\media\MediaTypeInterface $media_type */
@@ -183,7 +181,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * Return the mpx metadata for a given attribute on a media entity.
    *
    * @param \Drupal\media\MediaInterface $media
-   *   The media entity to return metdata for.
+   *   The media entity to return metadata for.
    * @param string $attribute_name
    *   The mpx field or property name.
    *
@@ -243,7 +241,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       }
 
       return $local_uri;
-    } catch (TransferException $e) {
+    }
+    catch (TransferException $e) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $this->getMpxObject($media);
       // @todo Can this somehow deeplink to the mpx console?
@@ -286,23 +285,20 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *
    * @param \Drupal\media\MediaInterface $media
    *   The media entity being processed.
-   * @param $attribute_name
+   * @param string $attribute_name
    *   The attribute of the field.
    *
    * @return mixed|null
    *   The metadata value or NULL if one is not found.
    */
-  private function getCustomFieldsMetadata(MediaInterface $media, $attribute_name) {
+  private function getCustomFieldsMetadata(MediaInterface $media, string $attribute_name) {
     // Now check for custom fields.
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
     $properties = [];
 
     // First, we extract all possible custom fields that may be defined.
-    /**
-     * @var string $namespace
-     * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
-     */
+    /* @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
     foreach ($fields[$service_info['service_name']][$service_info['object_type']] as $namespace => $discoveredCustomField) {
       $class = $discoveredCustomField->getClass();
       $namespace = $discoveredCustomField->getAnnotation()->namespace;
