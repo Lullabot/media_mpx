@@ -189,28 +189,35 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The metadata value.
    */
   private function getMpxMetadata(MediaInterface $media, $attribute_name) {
+    $value = NULL;
+
     // First, check for the special thumbnail attributes that are defined by
     // the media module.
     switch ($attribute_name) {
       case 'thumbnail_uri':
         /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
         $mpx_media = $this->getMpxObject($media);
-        return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
+        $value = $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
+        break;
 
       case 'thumbnail_alt':
-        return $this->thumbnailAlt($media);
+        $value = $this->thumbnailAlt($media);
+        break;
     }
 
     // Check if the attribute is a core thePlatform-defined field.
-    if (in_array($attribute_name, $this->propertyExtractor()
-      ->getProperties(MpxMedia::class))) {
+    if (!$value && $this->hasReflectedProperty($attribute_name)) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $this->getMpxObject($media);
-      return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
+      $value = $this->getReflectedProperty($media, $attribute_name, $mpx_media);
     }
 
     // Finally, check if a custom field own this attribute.
-    if ($value = $this->getCustomFieldsMetadata($media, $attribute_name)) {
+    if (!$value) {
+      $value = $this->getCustomFieldsMetadata($media, $attribute_name);
+    }
+
+    if ($value) {
       return $value;
     }
 
@@ -334,6 +341,20 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $field = array_pop($parts);
     $namespace = implode('/', $parts);
     return [$namespace, $field];
+  }
+
+  /**
+   * Return if the mpx class has a given property.
+   *
+   * @param string $attribute_name
+   *   The property name.
+   *
+   * @return bool
+   *   True if the property is a valid field, FALSE otherwise.
+   */
+  private function hasReflectedProperty($attribute_name) {
+    return in_array($attribute_name, $this->propertyExtractor()
+      ->getProperties(MpxMedia::class));
   }
 
 }
