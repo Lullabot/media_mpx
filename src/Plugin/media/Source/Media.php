@@ -47,7 +47,102 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    return $this->mpxMetadata() + $this->customMetadata();
+    return $this->mpxMetadataProperties() + $this->customMetadataProperties();
+  }
+
+  /**
+   * Returns metadata mappings for thePlatform-defined fields.
+   *
+   * @return array
+   *   The array of metadata labels, keyed by their property.
+   */
+  private function mpxMetadataProperties(): array {
+    $metadata = [];
+    $extractor = $this->propertyExtractor();
+    foreach ($extractor->getProperties(MpxMedia::class) as $property) {
+      $label = $property;
+      if ($shortDescription = $extractor->getShortDescription(MpxMedia::class, $property)) {
+        $label = $shortDescription . ' (' . $label . ')';
+      }
+      $metadata[$property] = $label;
+    }
+    return $metadata;
+  }
+
+  /**
+   * Returns an array of custom field metadata.
+   *
+   * @return array
+   *   An array of labels, keyed by an encoded namespace / property key.
+   */
+  private function customMetadataProperties() {
+    $metadata = [];
+
+    $service_info = $this->getPluginDefinition()['media_mpx'];
+    $fields = $this->customFieldManager->getCustomFields();
+    /**
+     * @var string $namespace
+     * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
+     */
+    if ($var = $fields[$service_info['service_name']][$service_info['object_type']]) {
+      foreach ($var as $namespace => $discoveredCustomField) {
+        $class = $discoveredCustomField->getClass();
+        $namespace = $discoveredCustomField->getAnnotation()->namespace;
+        $this->addProperties($metadata, $namespace, $this->propertyExtractor()
+          ->getProperties($class), $class);
+      }
+    }
+
+    return $metadata;
+  }
+
+  /**
+   * Add custom mpx field properties to the metadata array.
+   *
+   * @param array &$metadata
+   *   The array of metadata to add to.
+   * @param string $namespace
+   *   The mpx namespace the property belongs to.
+   * @param array $properties
+   *   An array of property names.
+   * @param string $class
+   *   The custom field class implementation name.
+   */
+  private function addProperties(&$metadata, $namespace, $properties, $class) {
+    foreach ($properties as $property) {
+      $label = $this->propertyLabel($namespace, $property, $class);
+
+      // The config system does not allow periods in values, so we encode
+      // those using URL rules.
+      $key = str_replace('.', '%2E', $namespace) . '/' . $property;
+      $metadata[$key] = $label;
+    }
+  }
+
+  /**
+   * Return a human-readable label for a property.
+   *
+   * Different namespaces may define the same property, making it difficult for
+   * site builders to map custom fields. This builds a label that includes the
+   * short description, if available, along with the namespaced-property itself.
+   *
+   * @param string $namespace
+   *   The mpx namespace the property belongs to.
+   * @param string $property
+   *   An property name.
+   * @param string $class
+   *   The custom field class implementation name.
+   *
+   * @return string
+   *   The property label.
+   */
+  private function propertyLabel($namespace, $property, $class): string {
+    $label = sprintf('%s:%s', $namespace, $property);
+    if ($shortDescription = $this->propertyExtractor()
+      ->getShortDescription($class, $property)) {
+      $label = $shortDescription . ' (' . $label . ')';
+    }
+    return $label;
   }
 
   /**
@@ -65,6 +160,61 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
 
     return $this->getMpxMetadata($media, $attribute_name);
+  }
+
+  /**
+   * Return the source field definition for a media item.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media item to return the source field definition for.
+   *
+   * @return \Drupal\Core\Field\FieldDefinitionInterface|null
+   */
+  private function sourceField(MediaInterface $media) {
+    /** @var \Drupal\media\MediaTypeInterface $media_type */
+    $media_type = $this->entityTypeManager->getStorage('media_type')
+      ->load($media->bundle());
+    return $this->getSourceFieldDefinition($media_type);
+  }
+
+  /**
+   * Return the mpx metadata for a given attribute on a media entity.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity to return metdata for.
+   * @param string $attribute_name
+   *   The mpx field or property name.
+   *
+   * @return mixed|null|string
+   *   The metadata value.
+   */
+  private function getMpxMetadata(MediaInterface $media, $attribute_name) {
+    // First, check for the special thumbnail attributes that are defined by
+    // the media module.
+    switch ($attribute_name) {
+      case 'thumbnail_uri':
+        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+        $mpx_media = $this->getMpxObject($media);
+        return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
+
+      case 'thumbnail_alt':
+        return $this->thumbnailAlt($media);
+    }
+
+    // Check if the attribute is a core thePlatform-defined field.
+    if (in_array($attribute_name, $this->propertyExtractor()
+      ->getProperties(MpxMedia::class))) {
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $this->getMpxObject($media);
+      return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
+    }
+
+    // Finally, check if a custom field own this attribute.
+    if ($value = $this->getCustomFieldsMetadata($media, $attribute_name)) {
+      return $value;
+    }
+
+    return parent::getMetadata($media, $attribute_name);
   }
 
   /**
@@ -91,12 +241,12 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       }
 
       return $local_uri;
-    }
-    catch (TransferException $e) {
+    } catch (TransferException $e) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $this->getMpxObject($media);
       // @todo Can this somehow deeplink to the mpx console?
-      $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))->toString();
+      $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))
+        ->toString();
       $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
         '@title' => $media->label(),
         '@code' => $e->getCode(),
@@ -130,148 +280,17 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   }
 
   /**
-   * Returns metadata mappings for thePlatform-defined fields.
+   * Return a metadata value for a custom field.
    *
-   * @return array
-   *   The array of metadata labels, keyed by their property.
-   */
-  private function mpxMetadata(): array {
-    $metadata = [];
-    $extractor = $this->propertyExtractor();
-    foreach ($extractor->getProperties(MpxMedia::class) as $property) {
-      $label = $property;
-      if ($shortDescription = $extractor->getShortDescription(MpxMedia::class, $property)) {
-        $label = $shortDescription . ' (' . $label . ')';
-      }
-      $metadata[$property] = $label;
-    }
-    return $metadata;
-  }
-
-  /**
-   * Returns an array of custom field metadata.
-   *
-   * @return array
-   *   An array of labels, keyed by an encoded namespace / property key.
-   */
-  private function customMetadata() {
-    $metadata = [];
-
-    $service_info = $this->getPluginDefinition()['media_mpx'];
-    $fields = $this->customFieldManager->getCustomFields();
-    /**
-     * @var string $namespace
-     * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
-     */
-    if ($var = $fields[$service_info['service_name']][$service_info['object_type']]) {
-      foreach ($var as $namespace => $discoveredCustomField) {
-        $class = $discoveredCustomField->getClass();
-        $namespace = $discoveredCustomField->getAnnotation()->namespace;
-        $this->addProperties($this->propertyExtractor()->getProperties($class), $namespace, $class, $metadata);
-      }
-    }
-
-    return $metadata;
-  }
-
-  /**
-   * Decode and extract the namespace and field for a custom metadata value.
-   *
-   * @param string $attribute_name
-   *   The attribute being decoded.
-   *
-   * @return array
-   *   An array containing:
-   *     - The decoded namespace.
-   *     - The field name.
-   */
-  private function extractNamespaceField($attribute_name): array {
-    $decoded = str_replace('%2E', '.', $attribute_name);
-    $parts = explode('/', $decoded);
-    $field = array_pop($parts);
-    $namespace = implode('/', $parts);
-    return [$namespace, $field];
-  }
-
-  /**
-   * @param $namespace
-   * @param $property
-   * @param $class
-   *
-   * @return string
-   */
-  private function propertyLabel($namespace, $property, $class): string {
-    $label = sprintf('%s:%s', $namespace, $property);
-    if ($shortDescription = $this->propertyExtractor()
-      ->getShortDescription($class, $property)) {
-      $label = $shortDescription . ' (' . $label . ')';
-    }
-    return $label;
-  }
-
-  /**
-   * @param $properties
-   * @param $namespace
-   * @param $class
-   * @param $metadata
-   */
-  private function addProperties($properties, $namespace, $class, &$metadata): void {
-    foreach ($properties as $property) {
-      $label = $this->propertyLabel($namespace, $property, $class);
-
-      // The config system does not allow periods in values, so we encode
-      // those using URL rules.
-      $key = str_replace('.', '%2E', $namespace) . '/' . $property;
-      $metadata[$key] = $label;
-    }
-  }
-
-  /**
    * @param \Drupal\media\MediaInterface $media
-   *
-   * @return \Drupal\Core\Field\FieldDefinitionInterface|null
-   */
-  private function sourceField(MediaInterface $media) {
-    $media_type = $this->entityTypeManager->getStorage('media_type')
-      ->load($media->bundle());
-    $source_field = $this->getSourceFieldDefinition($media_type);
-    return $source_field;
-  }
-
-  /**
-   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
    * @param $attribute_name
+   *   The attribute of the field.
    *
-   * @return mixed|null|string
+   * @return mixed|null
+   *   The metadata value or NULL if one is not found.
    */
-  private function getMpxMetadata(MediaInterface $media, $attribute_name) {
-    switch ($attribute_name) {
-      case 'thumbnail_uri':
-        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-        $mpx_media = $this->getMpxObject($media);
-        return $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
-
-      case 'thumbnail_alt':
-        return $this->thumbnailAlt($media);
-    }
-
-    if (in_array($attribute_name, $this->propertyExtractor()
-      ->getProperties(MpxMedia::class))) {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxObject($media);
-      return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
-    }
-
-    return $this->getCustomFieldsMetdata($media, $attribute_name);
-  }
-
-  /**
-   * @param \Drupal\media\MediaInterface $media
-   * @param $attribute_name
-   *
-   * @return mixed|null|string
-   */
-  private function getCustomFieldsMetdata(MediaInterface $media, $attribute_name) {
+  private function getCustomFieldsMetadata(MediaInterface $media, $attribute_name) {
     // Now check for custom fields.
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
@@ -297,7 +316,26 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       return $mpx_media->getCustomFields($attribute_namespace)->$method();
     }
 
-    return parent::getMetadata($media, $attribute_name);
+    return NULL;
+  }
+
+  /**
+   * Decode and extract the namespace and field for a custom metadata value.
+   *
+   * @param string $attribute_name
+   *   The attribute being decoded.
+   *
+   * @return array
+   *   An array containing:
+   *     - The decoded namespace.
+   *     - The field name.
+   */
+  private function extractNamespaceField($attribute_name): array {
+    $decoded = str_replace('%2E', '.', $attribute_name);
+    $parts = explode('/', $decoded);
+    $field = array_pop($parts);
+    $namespace = implode('/', $parts);
+    return [$namespace, $field];
   }
 
 }

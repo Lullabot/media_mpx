@@ -60,6 +60,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   protected $logger;
 
   /**
+   * The manager used to load custom field implementations.
+   *
    * @var \Lullabot\Mpx\DataService\CustomFieldManager
    */
   protected $customFieldManager;
