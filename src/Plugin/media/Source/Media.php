@@ -193,22 +193,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     // First, check for the special thumbnail attributes that are defined by
     // the media module.
-    switch ($attribute_name) {
-      case 'thumbnail_uri':
-        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-        $mpx_media = $this->getMpxObject($media);
-        $value = $this->downloadThumbnail($media, $attribute_name, $mpx_media->getDefaultThumbnailUrl());
-        break;
-
-      case 'thumbnail_alt':
-        $value = $this->thumbnailAlt($media);
-        break;
-    }
+    $value = $this->getThumbnailMetadata($media, $attribute_name);
 
     // Check if the attribute is a core thePlatform-defined field.
     if (!$value && $this->hasReflectedProperty($attribute_name)) {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxObject($media);
       $value = $this->getReflectedProperty($media, $attribute_name, $mpx_media);
     }
 
@@ -231,19 +219,21 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The media entity being accessed.
    * @param string $attribute_name
    *   The metadata attribute being accessed.
-   * @param \Psr\Http\Message\UriInterface $uri
-   *   The URI of the thumbnail to download.
    *
    * @return string
    *   The existing thumbnail, or the newly downloaded thumbnail.
    */
-  private function downloadThumbnail(MediaInterface $media, string $attribute_name, UriInterface $uri) {
+  private function downloadThumbnail(MediaInterface $media, string $attribute_name) {
     try {
-      $local_uri = $this->thumbnailsDirectory . $uri->getHost() . $uri->getPath();
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $this->getMpxObject($media);
+
+      $thumbnailUrl = $mpx_media->getDefaultThumbnailUrl();
+      $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
       if (!file_exists($local_uri)) {
         $directory = dirname($local_uri);
         file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-        $thumbnail = $this->httpClient->request('GET', $uri);
+        $thumbnail = $this->httpClient->request('GET', $thumbnailUrl);
         file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
       }
 
@@ -355,6 +345,31 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   private function hasReflectedProperty($attribute_name) {
     return in_array($attribute_name, $this->propertyExtractor()
       ->getProperties(MpxMedia::class));
+  }
+
+  /**
+   * Return thumbnail metadata if it is set.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
+   * @param string $attribute_name
+   *   The requested attribute.
+   *
+   * @return string|null
+   *   The attribute value.
+   */
+  private function getThumbnailMetadata(MediaInterface $media, string $attribute_name) {
+    $value = NULL;
+    switch ($attribute_name) {
+      case 'thumbnail_uri':
+        $value = $this->downloadThumbnail($media, $attribute_name);
+        break;
+
+      case 'thumbnail_alt':
+        $value = $this->thumbnailAlt($media);
+        break;
+    }
+    return $value;
   }
 
 }
