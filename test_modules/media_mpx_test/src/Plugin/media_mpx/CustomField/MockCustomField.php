@@ -2,6 +2,7 @@
 
 namespace Drupal\media_mpx_test\Plugin\media_mpx\CustomField;
 
+use Lullabot\Mpx\DataService\Annotation\CustomField;
 use Lullabot\Mpx\DataService\CustomFieldInterface;
 
 /**
