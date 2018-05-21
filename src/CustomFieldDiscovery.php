@@ -58,8 +58,6 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   public function getCustomFields(): array {
     $definitions = [];
 
-    $reader = new AnnotationReader();
-
     // Clear the annotation loaders of any previous annotation classes.
     AnnotationRegistry::reset();
     // Register the namespaces of classes that can be used for annotations.
@@ -67,7 +65,7 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
 
     // Search for classes within all PSR-0 namespace locations.
     foreach ($this->getPluginNamespaces() as $namespace => $dirs) {
-      $this->getDefinitions($dirs, $definitions, $namespace, $reader);
+      $this->getDefinitions($dirs, $definitions, $namespace);
     }
 
     // Don't let annotation loaders pile up.
@@ -105,14 +103,13 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
    * @param $dirs
    * @param $definitions
    * @param $namespace
-   * @param $reader
    *
    * @return mixed
    */
-  private function getDefinitions($dirs, &$definitions, $namespace, $reader) {
+  private function getDefinitions($dirs, &$definitions, $namespace) {
     foreach ($dirs as $dir) {
       if (file_exists($dir)) {
-        $this->fetchFromDirectory($definitions, $namespace, $reader, $dir);
+        $this->fetchFromDirectory($definitions, $namespace, $dir);
       }
     }
   }
@@ -120,16 +117,15 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   /**
    * @param $definitions
    * @param $namespace
-   * @param $reader
    * @param $dir
    */
-  private function fetchFromDirectory(&$definitions, $namespace, $reader, $dir) {
+  private function fetchFromDirectory(&$definitions, $namespace, $dir) {
     $iterator = new \RecursiveIteratorIterator(
       new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS)
     );
     foreach ($iterator as $fileinfo) {
       if ($fileinfo->getExtension() == 'php') {
-        $this->fetchFromFile($definitions, $namespace, $reader, $fileinfo, $iterator);
+        $this->fetchFromFile($definitions, $namespace, $fileinfo, $iterator);
       }
     }
   }
@@ -137,19 +133,14 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   /**
    * @param $definitions
    * @param $namespace
-   * @param $reader
    * @param $fileinfo
    * @param $iterator
    */
-  private function fetchFromFile(&$definitions, $namespace, $reader, $fileinfo, $iterator): void {
-    if ($cached = $this->fileCache->get($fileinfo->getPathName())) {
-      if (isset($cached['namespace'])) {
-        // Explicitly unserialize this to create a new object instance.
-        /** @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discovered */
-        $discovered = unserialize($cached['content']);
-        $definitions[$cached['service']][$cached['objectType']][$cached['namespace']] = $discovered;
-        return;
-      }
+  private function fetchFromFile(&$definitions, $namespace, $fileinfo, $iterator) {
+    $reader = new AnnotationReader();
+
+    if ($this->cacheGet($definitions, $fileinfo)) {
+      return;
     }
 
     $class = $this->parseClassName($namespace, $fileinfo, $iterator);
@@ -175,14 +166,7 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
       $class, $annotation
     );
     $definitions[$annotation->service][$annotation->objectType][$annotation->namespace] = $discovered;
-
-    // Explicitly serialize this to create a new object instance.
-    $this->fileCache->set($fileinfo->getPathName(), [
-      'service' => $annotation->service,
-      'objectType' => $annotation->objectType,
-      'namespace' => $annotation->namespace,
-      'content' => serialize($discovered)
-    ]);
+    $this->cacheSet($fileinfo, $annotation, $discovered);
   }
 
   /**
@@ -197,6 +181,40 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
     $sub_path = $sub_path ? str_replace(DIRECTORY_SEPARATOR, '\\', $sub_path) . '\\' : '';
     $class = $namespace . '\\' . $sub_path . $fileinfo->getBasename('.php');
     return $class;
+  }
+
+  /**
+   * @param $definitions
+   * @param $fileinfo
+   */
+  private function cacheGet(&$definitions, $fileinfo): bool {
+    if ($cached = $this->fileCache->get($fileinfo->getPathName())) {
+      if (isset($cached['namespace'])) {
+        // Explicitly unserialize this to create a new object instance.
+        /** @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discovered */
+        $discovered = unserialize($cached['content']);
+        $definitions[$cached['service']][$cached['objectType']][$cached['namespace']] = $discovered;
+
+        return TRUE;
+      }
+    }
+
+    return FALSE;
+  }
+
+  /**
+   * @param $fileinfo
+   * @param $annotation
+   * @param $discovered
+   */
+  private function cacheSet($fileinfo, $annotation, $discovered) {
+    // Explicitly serialize this to create a new object instance.
+    $this->fileCache->set($fileinfo->getPathName(), [
+      'service' => $annotation->service,
+      'objectType' => $annotation->objectType,
+      'namespace' => $annotation->namespace,
+      'content' => serialize($discovered)
+    ]);
   }
 
 }
