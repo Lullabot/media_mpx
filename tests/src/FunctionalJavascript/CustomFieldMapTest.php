@@ -25,6 +25,12 @@ class CustomFieldMapTest extends JavascriptTestBase {
   ];
 
   /**
+   * Tests mapping a custom field.
+   *
+   * This test:
+   *   - Relies on a custom field defined in media_mpx_test.
+   *   - Validates the UI for mapping a custom field.
+   *   - Validates saving an mpx media entity and that the field is visible.
    */
   public function testMapCustomField() {
     /** @var \Drupal\media_mpx_test\MockClientFactory $factory */
