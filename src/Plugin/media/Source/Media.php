@@ -262,6 +262,16 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       return $this->getReflectedProperty($media, $attribute_name, $mpx_media);
     }
 
+    return $this->getCustomFieldsMetdata($media, $attribute_name);
+  }
+
+  /**
+   * @param \Drupal\media\MediaInterface $media
+   * @param $attribute_name
+   *
+   * @return mixed|null|string
+   */
+  private function getCustomFieldsMetdata(MediaInterface $media, $attribute_name) {
     // Now check for custom fields.
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
