@@ -8,7 +8,6 @@ use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
-use Psr\Http\Message\UriInterface;
 
 /**
  * Media source for mpx Media items.
