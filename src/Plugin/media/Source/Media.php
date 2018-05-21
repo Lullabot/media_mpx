@@ -84,7 +84,9 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
      * @var string $namespace
      * @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField
      */
-    if ($var = $fields[$service_info['service_name']][$service_info['object_type']]) {
+    $service_name = $service_info['service_name'];
+    $object_type = $service_info['object_type'];
+    if (isset($fields[$service_name]) && isset($fields[$service_name][$object_type]) && $var = $fields[$service_name][$object_type]) {
       foreach ($var as $namespace => $discoveredCustomField) {
         $class = $discoveredCustomField->getClass();
         $namespace = $discoveredCustomField->getAnnotation()->namespace;
