@@ -9,6 +9,11 @@ use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Entity\User;
 use Drupal\media_mpx_test\JsonResponse;
 
+/**
+ * Tests mapping a custom mpx field to a Drupal field.
+ *
+ * @group media_mpx
+ */
 class CustomFieldMapTest extends JavascriptTestBase {
 
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
@@ -26,7 +31,6 @@ class CustomFieldMapTest extends JavascriptTestBase {
     $factory = $this->container->get('media_mpx.client_factory');
     $factory->getMockHandler()->append([
       new JsonResponse(200, [], 'signin-success.json'),
-//      new JsonResponse(200, [], 'resolveDomain.json'),
       new JsonResponse(200, [], 'media-object.json'),
     ]);
 

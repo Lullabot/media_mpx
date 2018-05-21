@@ -52,8 +52,9 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   /**
    * Returns all the Custom Fields.
    *
-   * @return \Lullabot\Mpx\DataService\DiscoveredCustomField[]
-   *   An array of all discovered data services, indexed by service name, object type, and namespace.
+   * @return array
+   *   An array of all discovered data services, indexed by service name,
+   *   object type, and namespace.
    */
   public function getCustomFields(): array {
     $definitions = [];
@@ -65,7 +66,7 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
 
     // Search for classes within all PSR-0 namespace locations.
     foreach ($this->getPluginNamespaces() as $namespace => $dirs) {
-      $this->getDefinitions($dirs, $definitions, $namespace);
+      $this->getDefinitions($definitions, $namespace, $dirs);
     }
 
     // Don't let annotation loaders pile up.
@@ -78,8 +79,9 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
    * Return an array of possible plugin namespaces.
    *
    * @return array
+   *   The possible plugin namespaces, with each array keyed by it's namespace.
    */
-  protected function getPluginNamespaces() {
+  private function getPluginNamespaces() {
     $plugin_namespaces = [];
     $namespaceSuffix = str_replace('/', '\\', '/Plugin/media_mpx/CustomField');
     foreach ($this->rootNamespacesIterator as $namespace => $dirs) {
@@ -100,13 +102,16 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   }
 
   /**
-   * @param $dirs
-   * @param $definitions
-   * @param $namespace
+   * Set plugin definitions for a namespace and it's directories.
    *
-   * @return mixed
+   * @param array &$definitions
+   *   The array of definitions to add to.
+   * @param string $namespace
+   *   The namespace implementations should belong to.
+   * @param string[] $dirs
+   *   An array of directory paths, relative to the app root.
    */
-  private function getDefinitions($dirs, &$definitions, $namespace) {
+  private function getDefinitions(array &$definitions, string $namespace, array $dirs) {
     foreach ($dirs as $dir) {
       if (file_exists($dir)) {
         $this->fetchFromDirectory($definitions, $namespace, $dir);
@@ -115,11 +120,16 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   }
 
   /**
-   * @param $definitions
-   * @param $namespace
-   * @param $dir
+   * Fetch plugin definitions from a directory.
+   *
+   * @param array &$definitions
+   *   The array of definitions to add to.
+   * @param string $namespace
+   *   The namespace implementations in the directory belong to.
+   * @param string $dir
+   *   The directory to search.
    */
-  private function fetchFromDirectory(&$definitions, $namespace, $dir) {
+  private function fetchFromDirectory(array &$definitions, string $namespace, string $dir) {
     $iterator = new \RecursiveIteratorIterator(
       new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS)
     );
@@ -131,12 +141,18 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   }
 
   /**
-   * @param $definitions
-   * @param $namespace
-   * @param $fileinfo
-   * @param $iterator
+   * Fetch the annotation from a file.
+   *
+   * @param array &$definitions
+   *   The array of definitions to add to.
+   * @param string $namespace
+   *   The namespace the class belongs to.
+   * @param \SplFileInfo $fileinfo
+   *   The information about the current file.
+   * @param \RecursiveIteratorIterator $iterator
+   *   The iterator traversing the directory.
    */
-  private function fetchFromFile(&$definitions, $namespace, $fileinfo, $iterator) {
+  private function fetchFromFile(array &$definitions, string $namespace, \SplFileInfo $fileinfo, \RecursiveIteratorIterator $iterator) {
     $reader = new AnnotationReader();
 
     if ($this->cacheGet($definitions, $fileinfo)) {
@@ -151,7 +167,7 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
     $finder = MockFileFinder::create($fileinfo->getPathName());
     $parser = new StaticReflectionParser($class, $finder, TRUE);
 
-    /** @var $annotation \Lullabot\Mpx\DataService\Annotation\CustomField */
+    /* @var $annotation \Lullabot\Mpx\DataService\Annotation\CustomField */
     if (!$annotation = $reader->getClassAnnotation($parser->getReflectionClass(), CustomField::class)) {
       // Store a NULL object, so the file is not reparsed again.
       $this->fileCache->set($fileinfo->getPathName(), [NULL]);
@@ -166,28 +182,22 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
       $class, $annotation
     );
     $definitions[$annotation->service][$annotation->objectType][$annotation->namespace] = $discovered;
-    $this->cacheSet($fileinfo, $annotation, $discovered);
+    $this->cacheSet($fileinfo, $discovered);
   }
 
   /**
-   * @param $namespace
-   * @param $fileinfo
-   * @param $iterator
+   * Get the definitions from the cache, if possible.
    *
-   * @return string
+   * @param array &$definitions
+   *   The array of definitions to add to.
+   * @param \SplFileInfo $fileinfo
+   *   The information about the current file.
+   *
+   * @return bool
+   *   TRUE if the cache was hit and $definitions has been populated, FALSE
+   *   otherwise.
    */
-  private function parseClassName($namespace, $fileinfo, $iterator): string {
-    $sub_path = $iterator->getSubIterator()->getSubPath();
-    $sub_path = $sub_path ? str_replace(DIRECTORY_SEPARATOR, '\\', $sub_path) . '\\' : '';
-    $class = $namespace . '\\' . $sub_path . $fileinfo->getBasename('.php');
-    return $class;
-  }
-
-  /**
-   * @param $definitions
-   * @param $fileinfo
-   */
-  private function cacheGet(&$definitions, $fileinfo): bool {
+  private function cacheGet(array &$definitions, \SplFileInfo $fileinfo): bool {
     if ($cached = $this->fileCache->get($fileinfo->getPathName())) {
       if (isset($cached['namespace'])) {
         // Explicitly unserialize this to create a new object instance.
@@ -203,17 +213,41 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
   }
 
   /**
-   * @param $fileinfo
-   * @param $annotation
-   * @param $discovered
+   * Parse the class name from a file.
+   *
+   * @param string $namespace
+   *   The namespace the class belongs to.
+   * @param \SplFileInfo $fileinfo
+   *   The information about the current file.
+   * @param \RecursiveIteratorIterator $iterator
+   *   The iterator traversing the directory.
+   *
+   * @return string
+   *   The fully-qualified class name.
    */
-  private function cacheSet($fileinfo, $annotation, $discovered) {
+  private function parseClassName(string $namespace, \SplFileInfo $fileinfo, \RecursiveIteratorIterator $iterator): string {
+    $sub_path = $iterator->getSubIterator()->getSubPath();
+    $sub_path = $sub_path ? str_replace(DIRECTORY_SEPARATOR, '\\', $sub_path) . '\\' : '';
+    $class = $namespace . '\\' . $sub_path . $fileinfo->getBasename('.php');
+    return $class;
+  }
+
+  /**
+   * Set a discovered custom field class data into the cache.
+   *
+   * @param \SplFileInfo $fileinfo
+   *   The information about the current file.
+   * @param \Lullabot\Mpx\DataService\DiscoveredCustomField $discovered
+   *   The discovered Custom Field class.
+   */
+  private function cacheSet(\SplFileInfo $fileinfo, DiscoveredCustomField $discovered) {
+    $annotation = $discovered->getAnnotation();
     // Explicitly serialize this to create a new object instance.
     $this->fileCache->set($fileinfo->getPathName(), [
       'service' => $annotation->service,
       'objectType' => $annotation->objectType,
       'namespace' => $annotation->namespace,
-      'content' => serialize($discovered)
+      'content' => serialize($discovered),
     ]);
   }
 
