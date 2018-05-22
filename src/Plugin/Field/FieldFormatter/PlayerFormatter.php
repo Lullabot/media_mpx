@@ -14,6 +14,7 @@ use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
 use Lullabot\Mpx\Player\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -136,25 +137,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       $this->mpxLogger->logException($e);
       return $element;
     }
-
-    foreach ($items as $delta => $item) {
-      try {
-        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-        $mpx_media = $source_plugin->getMpxObject($entity);
-      }
-      catch (TransferException $e) {
-        // If this media item is missing, continue on to the next element.
-        $this->mpxLogger->logException($e);
-        continue;
-      }
-      $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-
-      // @todo What cache contexts or tags do we set?
-      $element[$delta] = [
-        '#type' => 'media_mpx_iframe',
-        '#url' => (string) $url,
-      ];
-    }
+    $this->renderIframes($items, $player, $element);
 
     return $element;
   }
@@ -243,6 +226,41 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       }
     }
     return $options;
+  }
+
+  /**
+   * Render the player iframes for this element.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   The items to render.
+   * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *   The player to render the items with.
+   * @param array &$element
+   *   The render array.
+   */
+  private function renderIframes(FieldItemListInterface $items, Player $player, array &$element) {
+    /** @var \Drupal\media\Entity\Media $entity */
+    $entity = $items->getEntity();
+    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
+    $source_plugin = $entity->getSource();
+    foreach ($items as $delta => $item) {
+      try {
+        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+        $mpx_media = $source_plugin->getMpxObject($entity);
+      }
+      catch (TransferException $e) {
+        // If this media item is missing, continue on to the next element.
+        $this->mpxLogger->logException($e);
+        continue;
+      }
+      $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+
+      // @todo What cache contexts or tags do we set?
+      $element[$delta] = [
+        '#type' => 'media_mpx_iframe',
+        '#url' => (string) $url,
+      ];
+    }
   }
 
 }
