@@ -65,14 +65,13 @@ class UserForm extends EntityForm {
   public function form(array $form, FormStateInterface $form_state) {
     $form = parent::form($form, $form_state);
 
-    $media_mpx_user = $this->entity;
     // @todo Email validation.
     // @todo html5 placeholder
     $form['username'] = [
       '#type' => 'textfield',
       '#title' => $this->t('mpx user name'),
       '#maxlength' => 255,
-      '#default_value' => $media_mpx_user->label(),
+      '#default_value' => $this->entity->label(),
       '#description' => $this->t('The MPX user name. Typically, this is an email address. See the <a href="@user-docs">user setup documentation</a> for more details.', [
         '@user-docs' => 'https://docs.theplatform.com/help/setting-up-new-mpx-users',
       ]),
@@ -81,12 +80,12 @@ class UserForm extends EntityForm {
 
     $form['id'] = [
       '#type' => 'machine_name',
-      '#default_value' => $media_mpx_user->id(),
+      '#default_value' => $this->entity->id(),
       '#machine_name' => [
         'exists' => '\Drupal\media_mpx\Entity\User::load',
         'source' => ['username'],
       ],
-      '#disabled' => !$media_mpx_user->isNew(),
+      '#disabled' => !$this->entity->isNew(),
     ];
 
     $form['password'] = [
