@@ -11,7 +11,8 @@ services:
   media_mpx.data_service_manager:
     class: Lullabot\Mpx\DataService\DataServiceManager
     public: false
-    factory: ['Lullabot\Mpx\DataService\DataServiceManager', basicDiscovery]
+    factory: ['Lullabot\Mpx\DataService\DataServiceManager', 'basicDiscovery']
+    arguments: ['@media_mpx.custom_field_manager']
 
   media_mpx.user_session_factory:
     class: Drupal\media_mpx\UserSessionFactory
@@ -24,6 +25,15 @@ services:
   media_mpx.notification_listener:
     class: Drupal\media_mpx\NotificationListener
     arguments: ['@media_mpx.authenticated_client_factory', '@media_mpx.data_service_manager', '@state', '@logger.channel.media_mpx']
+
+  # Discovers custom field classes in all enabled modules
+  media_mpx.custom_field_discovery:
+    class: Drupal\media_mpx\CustomFieldDiscovery
+    arguments: ['@container.namespaces']
+
+  media_mpx.custom_field_manager:
+    class: Lullabot\Mpx\DataService\CustomFieldManager
+    arguments: ['@media_mpx.custom_field_discovery']
 
   # We need to define our own handler stack instance separate from Drupal
   # core's. Otherwise, when we add the mpx_errors handler, it gets applied to
