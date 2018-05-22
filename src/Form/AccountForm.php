@@ -108,24 +108,8 @@ class AccountForm extends EntityForm {
    *   The accounts form item.
    */
   public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
-    try {
-
-      try {
-        list($options, $account_pids) = $this->accountOptions($form_state);
-      }
-      catch (ClientException $e) {
-        $this->displayCredentialError($e);
-        return [];
-      }
-    }
-    catch (TransferException $e) {
-      // Something went very wrong, so we log the whole exception for reference.
-      $this->mpxLogger->logException($e);
-      $this->messenger()->addError($this->t('An unexpected error occurred. The full error has been logged. %error',
-        [
-          '%error' => $e->getMessage(),
-        ])
-      );
+    list($options, $account_pids) = $this->accountOptions($form_state);
+    if (empty($options)) {
       return [];
     }
 
@@ -266,29 +250,24 @@ class AccountForm extends EntityForm {
    *     - The account options.
    *     - The account public IDs.
    */
-  private function accountOptions(FormStateInterface $form_state): array {
-    $user_entity_id = $form_state->getValue('user');
-
-    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
-    $user = $this->entityTypeManager->getStorage('media_mpx_user')
-      ->load($user_entity_id);
-
-    $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
-    $fields = new ByFields();
-    $accounts = $accountFactory->select($fields);
-
-    $options = [];
-    $account_pids = [];
-    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
-    foreach ($accounts as $account) {
-      $path_parts = explode('/', $account->getId()->getPath());
-      $options[(string) $account->getId()] = $this->t('@title (@id)', [
-        '@title' => $account->getTitle(),
-        '@id' => end($path_parts),
-      ]);
-      $account_pids[(string) $account->getId()] = $account->getPid();
+  protected function accountOptions(FormStateInterface $form_state): array {
+    try {
+      try {
+        return $this->fetchAccountOptions($form_state);
+      }
+      catch (ClientException $e) {
+        $this->displayCredentialError($e);
+      }
     }
-    return [$options, $account_pids];
+    catch (TransferException $e) {
+      // Something went very wrong, so we log the whole exception for reference.
+      $this->mpxLogger->logException($e);
+      $this->messenger()->addError($this->t('An unexpected error occurred. The full error has been logged. %error',
+        [
+          '%error' => $e->getMessage(),
+        ])
+      );
+    }
   }
 
   /**
@@ -311,6 +290,42 @@ class AccountForm extends EntityForm {
     // This is a client exception, but not an authentication error so we
     // throw this up to the "unexpected error" case.
     throw $e;
+  }
+
+  /**
+   * Fetch the account options from mpx.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
+   * @return array
+   *   An array with:
+   *     - The account options.
+   *     - The account public IDs.
+   */
+  private function fetchAccountOptions(FormStateInterface $form_state): array {
+    $options = [];
+    $account_pids = [];
+    $user_entity_id = $form_state->getValue('user');
+    /** @var \Drupal\media_mpx\Entity\UserInterface $user */
+    $user = $this->entityTypeManager->getStorage('media_mpx_user')
+      ->load($user_entity_id);
+
+    $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
+    $fields = new ByFields();
+
+    $accounts = $accountFactory->select($fields);
+
+    /** @var \Lullabot\Mpx\DataService\Access\Account $account */
+    foreach ($accounts as $account) {
+      $path_parts = explode('/', $account->getId()->getPath());
+      $options[(string) $account->getId()] = $this->t('@title (@id)', [
+        '@title' => $account->getTitle(),
+        '@id' => end($path_parts),
+      ]);
+      $account_pids[(string) $account->getId()] = $account->getPid();
+    }
+    return [$options, $account_pids];
   }
 
 }
