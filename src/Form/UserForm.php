@@ -181,7 +181,6 @@ class UserForm extends EntityForm {
         ])
       );
       $this->mpxLogger->logException($e);
-      return;
     }
   }
 
