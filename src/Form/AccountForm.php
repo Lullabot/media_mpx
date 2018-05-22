@@ -7,7 +7,11 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\Url;
 use Drupal\media_mpx\DataObjectFactoryCreator;
+use Drupal\media_mpx\MpxLogger;
+use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\Exception\ClientException;
+use Lullabot\Mpx\Exception\MpxExceptionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -32,6 +36,11 @@ class AccountForm extends EntityForm {
   protected $dataObjectFactory;
 
   /**
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $mpxLogger;
+
+  /**
    * AccountForm constructor.
    *
    * @param \Drupal\Core\Path\CurrentPathStack $currentPathStack
@@ -39,9 +48,10 @@ class AccountForm extends EntityForm {
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The factory used to load mpx objects.
    */
-  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory) {
+  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory, MpxLogger $mpxLogger) {
     $this->currentPathStack = $currentPathStack;
     $this->dataObjectFactory = $dataObjectFactory;
+    $this->mpxLogger = $mpxLogger;
   }
 
   /**
@@ -50,7 +60,8 @@ class AccountForm extends EntityForm {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('path.current'),
-      $container->get('media_mpx.data_object_factory_creator')
+      $container->get('media_mpx.data_object_factory_creator'),
+      $container->get('media_mpx.exception_logger')
     );
   }
 
@@ -94,7 +105,37 @@ class AccountForm extends EntityForm {
    *   The accounts form item.
    */
   public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
-    list($options, $account_pids) = $this->accountOptions($form_state);
+    try {
+
+      try {
+        list($options, $account_pids) = $this->accountOptions($form_state);
+      }
+      catch (ClientException $e) {
+        // First, we have special handling for credential errors.
+        if ($e->getCode() == 401 || $e->getCode() == 403) {
+          $this->messenger()->addError($this->t('Access was denied connecting to mpx. %error',
+            [
+              '%error' => $e->getMessage(),
+            ])
+          );
+          return [];
+        }
+
+        // This is a client exception, but not an authentication error so we
+        // throw this up to the "unexpected error" case.
+        throw $e;
+      }
+    }
+    catch (TransferException $e) {
+      // Something went very wrong, so we log the whole exception for reference.
+      $this->mpxLogger->logException($e);
+      $this->messenger()->addError($this->t('An unexpected error occurred. The full error has been logged. %error',
+        [
+          '%error' => $e->getMessage(),
+        ])
+      );
+      return [];
+    }
 
     $form['account_pids'] = [
       '#type' => 'value',
