@@ -111,32 +111,7 @@ class UserForm extends EntityForm {
       return;
     }
 
-    $session = $this->userSessionFactory->fromUser($this->entity);
-    try {
-      try {
-        $session->acquireToken(1);
-      }
-      catch (ClientException $e) {
-        if ($e->getCode() == 401 || $e->getCode() == 403) {
-          $form_state->setError($form, $this->t('Access was denied connecting to mpx. @error',
-            [
-              '@error' => $e->getMessage(),
-            ])
-          );
-          return;
-        }
-        throw $e;
-      }
-    }
-    catch (TransferException $e) {
-      $form_state->setError($form, $this->t('An error occurred connecting to mpx. The full error has been logged. @error',
-        [
-          '@error' => $e->getMessage(),
-        ])
-      );
-      $this->mpxLogger->logException($e);
-      return;
-    }
+    $this->validateMpxCredentials($form, $form_state);
   }
 
   /**
@@ -171,6 +146,43 @@ class UserForm extends EntityForm {
   private function addMpxDirectory() {
     if (strpos($this->entity->getUsername(), '/') === FALSE) {
       $this->entity->set('username', 'mpx/' . $this->entity->getUsername());
+    }
+  }
+
+  /**
+   * Validate the mpx username and password.
+   *
+   * @param array &$form
+   *   The settings form.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   */
+  private function validateMpxCredentials(array &$form, FormStateInterface $form_state) {
+    $session = $this->userSessionFactory->fromUser($this->entity);
+    try {
+      try {
+        $session->acquireToken(1);
+      }
+      catch (ClientException $e) {
+        if ($e->getCode() == 401 || $e->getCode() == 403) {
+          $form_state->setError($form, $this->t('Access was denied connecting to mpx. @error',
+            [
+              '@error' => $e->getMessage(),
+            ])
+          );
+          return;
+        }
+        throw $e;
+      }
+    }
+    catch (TransferException $e) {
+      $form_state->setError($form, $this->t('An error occurred connecting to mpx. The full error has been logged. @error',
+        [
+          '@error' => $e->getMessage(),
+        ])
+      );
+      $this->mpxLogger->logException($e);
+      return;
     }
   }
 
