@@ -77,4 +77,18 @@ class User extends ConfigEntityBase implements UserInterface {
     return $this->password;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getMpxUsername() {
+    return $this->getUsername();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getMpxPassword() {
+    return $this->getPassword();
+  }
+
 }

@@ -3,11 +3,12 @@
 namespace Drupal\media_mpx\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
+use Lullabot\Mpx\Service\IdentityManagement\UserInterface as MpxUserInterface;
 
 /**
  * Provides an interface for defining mpx User entities.
  */
-interface UserInterface extends ConfigEntityInterface {
+interface UserInterface extends ConfigEntityInterface, MpxUserInterface {
 
   /**
    * Return the mpx username.
