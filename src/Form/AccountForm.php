@@ -11,7 +11,6 @@ use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\Exception\ClientException;
-use Lullabot\Mpx\Exception\MpxExceptionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -36,6 +35,8 @@ class AccountForm extends EntityForm {
   protected $dataObjectFactory;
 
   /**
+   * The system logger for mpx errors.
+   *
    * @var \Drupal\media_mpx\MpxLogger
    */
   private $mpxLogger;
@@ -47,6 +48,8 @@ class AccountForm extends EntityForm {
    *   The current path service.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The factory used to load mpx objects.
+   * @param \Drupal\media_mpx\MpxLogger $mpxLogger
+   *   The system logger for mpx errors.
    */
   public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory, MpxLogger $mpxLogger) {
     $this->currentPathStack = $currentPathStack;
