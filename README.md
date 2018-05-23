@@ -18,6 +18,20 @@ sentences. This makes for some odd displays in Drupal, that generally expect
 title case or sentence case. When referring to mpx within the user interface
 and in strings, use lower case such as 'the mpx User entity'.
 
+## Thumbnail integration
+
+When an mpx media item is saved, Drupal will download the default thumbnail so
+it can be used with image styles.
+
+Consider enabling "Queue thumbnail downloads" in your media type configuration,
+depending on your editorial workflow and the number of videos created each day.
+When this setting is off, expect an additional performance hit of a few hundred
+milliseconds when importing videos. One advantage of queueing thumbnails is
+that [Concurrent Queue](https://www.drupal.org/project/concurrent_queue) can be
+used to download thumbnails in parallel. Until thumbnails are downloaded, a
+placeholder will be used in admin listing (and on your site, if videos are
+published automatically).
+
 ## Custom field support
 
 Custom fields are defined in mpx and allow for additional data to be attached
