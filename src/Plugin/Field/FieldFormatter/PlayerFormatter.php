@@ -7,10 +7,14 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
+use Drupal\media_mpx\MpxLogger;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
 use Lullabot\Mpx\Player\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -45,6 +49,20 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   private $dataObjectFactoryCreator;
 
   /**
+   * The logger for mpx errors.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $mpxLogger;
+
+  /**
+   * The system messenger for error reporting.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  private $messenger;
+
+  /**
    * Constructs a PlayerFormatter object.
    *
    * @param string $plugin_id
@@ -65,11 +83,17 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *   The entity type manager.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $data_object_factory_creator
    *   The creator of mpx data factories.
+   * @param \Drupal\media_mpx\MpxLogger $mpx_logger
+   *   The logger for mpx errors.
+   * @param \Drupal\Core\Messenger\MessengerInterface $messenger
+   *   The system messenger for error reporting.
    */
-  public function __construct(string $plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, string $label, string $view_mode, array $third_party_settings, EntityTypeManagerInterface $entity_type_manager, DataObjectFactoryCreator $data_object_factory_creator) {
+  public function __construct(string $plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, string $label, string $view_mode, array $third_party_settings, EntityTypeManagerInterface $entity_type_manager, DataObjectFactoryCreator $data_object_factory_creator, MpxLogger $mpx_logger, MessengerInterface $messenger) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings);
     $this->entityTypeManager = $entity_type_manager;
     $this->dataObjectFactoryCreator = $data_object_factory_creator;
+    $this->mpxLogger = $mpx_logger;
+    $this->messenger = $messenger;
   }
 
   /**
@@ -85,7 +109,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       $configuration['view_mode'],
       $configuration['third_party_settings'],
       $container->get('entity_type.manager'),
-      $container->get('media_mpx.data_object_factory_creator')
+      $container->get('media_mpx.data_object_factory_creator'),
+      $container->get('media_mpx.exception_logger'),
+      $container->get('messenger')
     );
   }
 
@@ -102,19 +128,16 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
 
     // @todo Cache this.
     $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6');
-    $player = $factory->load(new Uri($this->getSetting('player')))->wait();
 
-    foreach ($items as $delta => $item) {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $source_plugin->getMpxObject($entity);
-      $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-
-      // @todo What cache contexts or tags do we set?
-      $element[$delta] = [
-        '#type' => 'media_mpx_iframe',
-        '#url' => (string) $url,
-      ];
+    try {
+      $player = $factory->load(new Uri($this->getSetting('player')))->wait();
     }
+    catch (TransferException $e) {
+      // If we can't load a player, we can't render any elements.
+      $this->mpxLogger->logException($e);
+      return $element;
+    }
+    $this->renderIframes($items, $player, $element);
 
     return $element;
   }
@@ -130,7 +153,19 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     static $options = [];
 
     if (empty($options)) {
-      $options = $this->fetchPlayerOptions();
+      try {
+        $options = $this->fetchPlayerOptions();
+      }
+      catch (TransferException $e) {
+        $this->mpxLogger->logException($e);
+        $this->messenger->addError($this->t('An unexpected error occurred. The full error has been logged. %error',
+          [
+            '%error' => $e->getMessage(),
+          ])
+        );
+
+        return [];
+      }
     }
 
     $elements['player'] = [
@@ -191,6 +226,41 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       }
     }
     return $options;
+  }
+
+  /**
+   * Render the player iframes for this element.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   The items to render.
+   * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *   The player to render the items with.
+   * @param array &$element
+   *   The render array.
+   */
+  private function renderIframes(FieldItemListInterface $items, Player $player, array &$element) {
+    /** @var \Drupal\media\Entity\Media $entity */
+    $entity = $items->getEntity();
+    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
+    $source_plugin = $entity->getSource();
+    foreach ($items as $delta => $item) {
+      try {
+        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+        $mpx_media = $source_plugin->getMpxObject($entity);
+      }
+      catch (TransferException $e) {
+        // If this media item is missing, continue on to the next element.
+        $this->mpxLogger->logException($e);
+        continue;
+      }
+      $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+
+      // @todo What cache contexts or tags do we set?
+      $element[$delta] = [
+        '#type' => 'media_mpx_iframe',
+        '#url' => (string) $url,
+      ];
+    }
   }
 
 }

@@ -7,7 +7,10 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Path\CurrentPathStack;
 use Drupal\Core\Url;
 use Drupal\media_mpx\DataObjectFactoryCreator;
+use Drupal\media_mpx\MpxLogger;
+use GuzzleHttp\Exception\TransferException;
 use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\Exception\ClientException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -32,16 +35,26 @@ class AccountForm extends EntityForm {
   protected $dataObjectFactory;
 
   /**
+   * The system logger for mpx errors.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $mpxLogger;
+
+  /**
    * AccountForm constructor.
    *
    * @param \Drupal\Core\Path\CurrentPathStack $currentPathStack
    *   The current path service.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactory
    *   The factory used to load mpx objects.
+   * @param \Drupal\media_mpx\MpxLogger $mpxLogger
+   *   The system logger for mpx errors.
    */
-  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory) {
+  public function __construct(CurrentPathStack $currentPathStack, DataObjectFactoryCreator $dataObjectFactory, MpxLogger $mpxLogger) {
     $this->currentPathStack = $currentPathStack;
     $this->dataObjectFactory = $dataObjectFactory;
+    $this->mpxLogger = $mpxLogger;
   }
 
   /**
@@ -50,7 +63,8 @@ class AccountForm extends EntityForm {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('path.current'),
-      $container->get('media_mpx.data_object_factory_creator')
+      $container->get('media_mpx.data_object_factory_creator'),
+      $container->get('media_mpx.exception_logger')
     );
   }
 
@@ -95,6 +109,9 @@ class AccountForm extends EntityForm {
    */
   public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
     list($options, $account_pids) = $this->accountOptions($form_state);
+    if (empty($options)) {
+      return [];
+    }
 
     $form['account_pids'] = [
       '#type' => 'value',
@@ -233,19 +250,72 @@ class AccountForm extends EntityForm {
    *     - The account options.
    *     - The account public IDs.
    */
-  private function accountOptions(FormStateInterface $form_state): array {
-    $user_entity_id = $form_state->getValue('user');
+  protected function accountOptions(FormStateInterface $form_state): array {
+    try {
+      try {
+        return $this->fetchAccountOptions($form_state);
+      }
+      catch (ClientException $e) {
+        $this->displayCredentialError($e);
+      }
+    }
+    catch (TransferException $e) {
+      // Something went very wrong, so we log the whole exception for reference.
+      $this->mpxLogger->logException($e);
+      $this->messenger()->addError($this->t('An unexpected error occurred. The full error has been logged. %error',
+        [
+          '%error' => $e->getMessage(),
+        ])
+      );
+    }
+  }
 
+  /**
+   * Display an access denied error.
+   *
+   * @param \Lullabot\Mpx\Exception\ClientException $e
+   *   The mpx client exception.
+   */
+  private function displayCredentialError(ClientException $e) {
+    // First, we have special handling for credential errors.
+    if ($e->getCode() == 401 || $e->getCode() == 403) {
+      $this->messenger()->addError($this->t('Access was denied connecting to mpx. %error',
+        [
+          '%error' => $e->getMessage(),
+        ])
+      );
+      return;
+    }
+
+    // This is a client exception, but not an authentication error so we
+    // throw this up to the "unexpected error" case.
+    throw $e;
+  }
+
+  /**
+   * Fetch the account options from mpx.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The current state of the form.
+   *
+   * @return array
+   *   An array with:
+   *     - The account options.
+   *     - The account public IDs.
+   */
+  private function fetchAccountOptions(FormStateInterface $form_state): array {
+    $options = [];
+    $account_pids = [];
+    $user_entity_id = $form_state->getValue('user');
     /** @var \Drupal\media_mpx\Entity\UserInterface $user */
     $user = $this->entityTypeManager->getStorage('media_mpx_user')
       ->load($user_entity_id);
 
     $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
     $fields = new ByFields();
+
     $accounts = $accountFactory->select($fields);
 
-    $options = [];
-    $account_pids = [];
     /** @var \Lullabot\Mpx\DataService\Access\Account $account */
     foreach ($accounts as $account) {
       $path_parts = explode('/', $account->getId()->getPath());

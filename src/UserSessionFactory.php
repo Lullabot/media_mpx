@@ -7,7 +7,6 @@ use Lullabot\Mpx\TokenCachePool;
 use Symfony\Component\Lock\StoreInterface;
 use Lullabot\Mpx\Client;
 use Drupal\media_mpx\Entity\UserInterface;
-use Lullabot\Mpx\Service\IdentityManagement\User;
 
 /**
  * Factory used to create mpx user sessions.
@@ -61,8 +60,7 @@ class UserSessionFactory {
    *   The new user session.
    */
   public function fromUser(UserInterface $user): UserSession {
-    $mpx_user = new User($user->getUsername(), $user->getPassword());
-    return new UserSession($mpx_user, $this->client, $this->store, $this->tokenCachePool);
+    return new UserSession($user, $this->client, $this->store, $this->tokenCachePool);
   }
 
 }

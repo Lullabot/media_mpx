@@ -26,6 +26,14 @@ services:
     class: Drupal\media_mpx\NotificationListener
     arguments: ['@media_mpx.authenticated_client_factory', '@media_mpx.data_service_manager', '@state', '@logger.channel.media_mpx']
 
+  logger.channel.media_mpx:
+    parent: logger.channel_base
+    arguments: ['media_mpx']
+
+  media_mpx.exception_logger:
+    class: Drupal\media_mpx\MpxLogger
+    arguments: ['@logger.channel.media_mpx']
+
   # Discovers custom field classes in all enabled modules
   media_mpx.custom_field_discovery:
     class: Drupal\media_mpx\CustomFieldDiscovery
@@ -58,10 +66,6 @@ services:
   media_mpx.client_factory:
     class: Drupal\media_mpx\ClientFactory
     arguments: ['@media_mpx.http_handler_stack', '@http_client_factory']
-
-  logger.channel.media_mpx:
-    parent: logger.channel_base
-    arguments: ['media_mpx']
 
   # These services are "internal" and generally not needed by custom code.
   media_mpx.session_lock:
