@@ -101,11 +101,13 @@ class DataObjectImporter {
     $media_storage = $this->entityTypeManager->getStorage('media');
     $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object->getId()]);
 
+    // Create a new entity owned by the admin user.
     if (empty($results)) {
       /** @var \Drupal\media\Entity\Media $new_media_entity */
       $new_media_entity = $media_storage->create([
         $this->entityTypeManager->getDefinition('media')
           ->getKey('bundle') => $media_type->id(),
+        'uid' => 1,
       ]);
       $new_media_entity->set($source_field->getName(), $mpx_object->getId());
       $results = [$new_media_entity];
