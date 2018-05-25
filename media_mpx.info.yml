@@ -5,4 +5,5 @@ package: Media
 core: 8.x
 dependencies:
   - drupal:media (>=8.5.0)
+  - drupal:guzzle_cache (>=8.x-2.x)
 configure: entity.media_mpx_account.collection
