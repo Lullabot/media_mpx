@@ -3,7 +3,6 @@
 namespace Drupal\media_mpx\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
@@ -42,18 +41,18 @@ class MpxImporter extends DrushCommands {
   private $dataObjectFactoryCreator;
 
   /**
-   * The factory used to store full mpx Media objects in the key-value store.
-   *
-   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
-   */
-  private $keyValueFactory;
-
-  /**
    * The manager to discover data service classes.
    *
    * @var \Lullabot\Mpx\DataService\DataServiceManager
    */
   private $dataServiceManager;
+
+  /**
+   * The class to import mpx objects.
+   *
+   * @var \Drupal\media_mpx\DataObjectImporter
+   */
+  private $dataObjectImporter;
 
   /**
    * MpxImporter constructor.
@@ -62,16 +61,16 @@ class MpxImporter extends DrushCommands {
    *   The manager used to load config and media entities.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The creator used to configure a factory for loading mpx objects.
-   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
-   *   The key-value factory for storing complete objects.
+   * @param \Drupal\media_mpx\DataObjectImporter $dataObjectImporter
+   *   The class used to import mpx objects.
    * @param \Lullabot\Mpx\DataService\DataServiceManager $dataServiceManager
    *   The manager to discover data service classes.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, KeyValueFactoryInterface $keyValueFactory, DataServiceManager $dataServiceManager) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, DataServiceManager $dataServiceManager) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
-    $this->keyValueFactory = $keyValueFactory;
     $this->dataServiceManager = $dataServiceManager;
+    $this->dataObjectImporter = $dataObjectImporter;
   }
 
   /**
@@ -95,10 +94,9 @@ class MpxImporter extends DrushCommands {
     $this->io()->title(dt('Importing @type media', ['@type' => $media_type_id]));
     $this->io()->progressStart();
 
-    $importer = new DataObjectImporter($this->keyValueFactory, $this->entityTypeManager);
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
     foreach ($results as $index => $mpx_media) {
-      $importer->importItem($mpx_media, $media_type);
+      $this->dataObjectImporter->importItem($mpx_media, $media_type);
 
       $this->io()->progressAdvance();
       $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
@@ -109,15 +107,15 @@ class MpxImporter extends DrushCommands {
   }
 
   /**
-   * Save mpx objects to the key / value storage.
+   * Warm the mpx response cache.
    *
    * @param string $media_type_id
    *   The media type ID to warm.
    *
    * @command media_mpx:warm
-   * @aliases mpxm
+   * @aliases mpxw
    */
-  public function warmKeyValue(string $media_type_id) {
+  public function warmCache(string $media_type_id) {
     $media_type = $this->loadMediaType($media_type_id);
 
     $media_source = DataObjectImporter::loadMediaSource($media_type);
@@ -129,13 +127,16 @@ class MpxImporter extends DrushCommands {
     $list = $request->wait();
 
     // @todo Support fetching the total results via ObjectList.
-    $this->io()->title(dt('Warming key-value for @type media', ['@type' => $media_type_id]));
+    $this->io()->title(dt('Warming cache for @type media', ['@type' => $media_type_id]));
     $this->io()->progressStart();
 
-    $importer = new DataObjectImporter($this->keyValueFactory, $this->entityTypeManager);
-    each_limit($list->yieldLists(), 4, function (ObjectList $list) use ($media_type, $importer, &$count) {
-      foreach ($list as $item) {
-        $importer->setKeyValue($item, $media_type);
+    $service_info = $media_source->getPluginDefinition()['media_mpx'];
+
+    each_limit($list->yieldLists(), 4, function (ObjectList $list) use ($media_type, $service_info) {
+      foreach ($list as $index => $item) {
+        // For each item, we need to inject it into the response cache as if
+        // a single request for the item was made.
+        $this->dataObjectImporter->cacheItem($item, $service_info);
         $this->io()->progressAdvance();
         $this->logger()->info(dt('Fetched @type @uri.', ['@type' => $media_type->id(), '@uri' => $item->getId()]));
       }

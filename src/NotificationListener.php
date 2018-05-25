@@ -84,6 +84,7 @@ class NotificationListener {
     $definition = $media_source->getPluginDefinition()['media_mpx'];
     $service = $this->dataServiceManager->getDataService($definition['service_name'], $definition['object_type'], $definition['schema_version']);
     // @todo Client ID needs to be configured somehow.
+    // @todo Inject caches
     $listener = new MpxNotificationListener($client, $service, 'drush-drupal8-mpx');
 
     $promise = $listener->listen($notification_id);

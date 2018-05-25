@@ -20,7 +20,7 @@ services:
 
   media_mpx.data_object_importer:
     class: Drupal\media_mpx\DataObjectImporter
-    arguments: ['@keyvalue', '@entity_type.manager']
+    arguments: ['@entity_type.manager', '@cache.media_mpx_http']
 
   media_mpx.notification_listener:
     class: Drupal\media_mpx\NotificationListener
@@ -65,7 +65,14 @@ services:
 
   media_mpx.client_factory:
     class: Drupal\media_mpx\ClientFactory
-    arguments: ['@media_mpx.http_handler_stack', '@http_client_factory']
+    arguments: ['@media_mpx.http_handler_stack', '@http_client_factory', '@cache.media_mpx_http']
+
+  cache.media_mpx_http:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: cache_factory:get
+    arguments: [media_mpx_http]
 
   # These services are "internal" and generally not needed by custom code.
   media_mpx.session_lock:
