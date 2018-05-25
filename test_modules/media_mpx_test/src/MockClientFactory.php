@@ -31,7 +31,7 @@ class MockClientFactory extends ClientFactory {
     $mockHandler = new MockStateHandler($state);
     $stack = HandlerStack::create($mockHandler);
     $this->mockHandler = $mockHandler;
-    parent::__construct($stack, $httpClientFactory);
+    parent::__construct($stack, $httpClientFactory, \Drupal::cache('media_mpx_http'));
   }
 
   /**
