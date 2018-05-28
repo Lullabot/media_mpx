@@ -10,7 +10,6 @@ migration_dependencies:
     - d7_media_theplatform_mpx_accounts
 source:
   plugin: media_mpx_account
-  key: migrate
   constants:
     description: 'Videos from account'
     media_source_id: 'media_mpx_media'

@@ -8,7 +8,6 @@ migration_dependencies:
     - d7_media_theplatform_mpx_media_types
 source:
   plugin: media_mpx_video
-  key: migrate
   constants:
     mpx_media_base: 'http://data.media.theplatform.com/media/data/Media'
 process:
