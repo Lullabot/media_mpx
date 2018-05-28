@@ -202,14 +202,9 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    */
   public function getMpxObject(MediaInterface $media): ObjectInterface {
     $id = $media->get($this->configuration['source_field'])->getString();
-    $store = $this->keyValueFactory->get($this->getPluginId());
-    if (!$mpx_item = $store->get($id)) {
-      $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
+    $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
 
-      $mpx_item = $factory->load(new Uri($id))->wait();
-      $store->set($id, $mpx_item);
-    }
-    return $mpx_item;
+    return $factory->load(new Uri($id))->wait();
   }
 
   /**
