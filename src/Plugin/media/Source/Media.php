@@ -196,7 +196,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     // Check if the attribute is a core thePlatform-defined field.
     if (!$value && $this->hasReflectedProperty($attribute_name)) {
-      $value = $this->getReflectedProperty($media, $attribute_name, $mpx_media);
+      $value = $this->getReflectedProperty($media, $attribute_name);
     }
 
     // Finally, check if a custom field own this attribute.
