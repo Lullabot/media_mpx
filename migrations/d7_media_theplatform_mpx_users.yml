@@ -7,7 +7,6 @@ dependencies:
   - migrate_drupal
 source:
   plugin: media_mpx_user
-  key: migrate
 process:
   id:
     plugin: machine_name
