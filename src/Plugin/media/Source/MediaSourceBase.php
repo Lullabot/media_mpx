@@ -192,7 +192,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $id = $media->get($this->configuration['source_field'])->getString();
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
 
-      return $factory->load(new Uri($id))->wait();
+    return $factory->load(new Uri($id))->wait();
 
   }
 
