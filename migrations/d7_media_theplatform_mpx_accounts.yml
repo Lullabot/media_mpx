@@ -10,7 +10,6 @@ migration_dependencies:
     - d7_media_theplatform_mpx_users
 source:
   plugin: media_mpx_account
-  key: migrate
 process:
   # @todo This assumes unique account labels, but gives us readable machine
   # names.

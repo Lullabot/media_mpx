@@ -1,6 +1,10 @@
 id: d7_media_theplatform_mpx_source_field_storage
 label: Source field for mpx objects
 migration_group: media_theplatform_mpx
+# This migration cannot be attached to the Drupal 7 tag as it uses the Empty
+# plugin, which doesn't define the required source_module key.
+#migration_tags:
+#  - 'Drupal 7'
 source:
   plugin: empty
   constants:
