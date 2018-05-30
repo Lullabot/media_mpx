@@ -49,7 +49,9 @@ class AuthenticatedClientFactory {
    *   A new authenticated client.
    */
   public function fromSession(UserSession $session): AuthenticatedClient {
-    return new AuthenticatedClient($this->client, $session);
+    $authenticatedClient = new AuthenticatedClient($this->client, $session);
+    $authenticatedClient->setTokenDuration(300);
+    return $authenticatedClient;
   }
 
   /**
