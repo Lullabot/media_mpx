@@ -16,4 +16,4 @@ apache2-foreground&
 
 robo override:phpunit-config $1
 
-sudo -E -u www-data vendor/bin/phpunit -c core --testsuite Unit,Kernel --group $1 --debug --verbose --log-junit artifacts/phpunit/phpunit.xml
+sudo -E -u www-data vendor/bin/phpunit -c core --testsuite unit,kernel --group $1 --debug --verbose --log-junit artifacts/phpunit/phpunit.xml
