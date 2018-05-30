@@ -322,7 +322,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     $service_name = $service_info['service_name'];
     $object_type = $service_info['object_type'];
-    if (!isset($fields[$service_name]) || !isset($fields[$object_type])) {
+    if (!isset($fields[$service_name]) || !isset($fields[$service_name][$object_type])) {
       // No custom fields for this object exist, so we can exit early.
       return NULL;
     }
