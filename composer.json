@@ -14,7 +14,7 @@
     "source": "http://cgit.drupalcode.org/media_mpx"
   },
   "require": {
-    "drupal/guzzle_cache": "^1.0",
+    "drupal/guzzle_cache": "^2.0",
     "symfony/cache": "^3.4",
     "highwire/drupal-psr-16": "^1.0",
     "lullabot/mpx-php": "^0.3.0",

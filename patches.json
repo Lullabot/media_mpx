@@ -1,8 +1,5 @@
 {
   "drupal/coder": {
     "CodeSniffer testing all file extensions instead of the configured ones": "https://www.drupal.org/files/issues/2867601.11-disable-txt-sniffs.patch"
-  },
-  "drupal/guzzle_cache": {
-    "Support guzzle-cache-middleware 3.0": "https://www.drupal.org/files/issues/2018-05-24/2945390.3-guzzle-cache-32.patch"
   }
 }
