@@ -20,7 +20,7 @@ services:
 
   media_mpx.data_object_importer:
     class: Drupal\media_mpx\DataObjectImporter
-    arguments: ['@entity_type.manager', '@cache.media_mpx_http']
+    arguments: ['@entity_type.manager', '@event_dispatcher', '@cache.media_mpx_http']
 
   media_mpx.notification_listener:
     class: Drupal\media_mpx\NotificationListener
