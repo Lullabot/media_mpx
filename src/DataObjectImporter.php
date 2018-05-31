@@ -2,10 +2,14 @@
 
 namespace Drupal\media_mpx;
 
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
+use Drupal\guzzle_cache\DrupalGuzzleCache;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
+use function GuzzleHttp\Psr7\build_query;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use Lullabot\Mpx\DataService\ObjectInterface;
 
 /**
@@ -14,11 +18,22 @@ use Lullabot\Mpx\DataService\ObjectInterface;
 class DataObjectImporter {
 
   /**
-   * The factory used to store complete mpx objects.
-   *
-   * @var \Drupal\Core\KeyValueStore\KeyValueFactoryInterface
+   * The request headers to use for our injected cache responses.
    */
-  private $keyValueFactory;
+  const REQUEST_HEADERS = [
+    'Accept' =>
+      [
+        'application/json',
+      ],
+    'Content-Type' =>
+      [
+        'application/json',
+      ],
+    'Host' =>
+      [
+        'read.data.media.theplatform.com',
+      ],
+  ];
 
   /**
    * The entity type manager used to load existing media entities.
@@ -28,16 +43,23 @@ class DataObjectImporter {
   private $entityTypeManager;
 
   /**
+   * The mpx cache strategy for injecting cache items.
+   *
+   * @var \Drupal\media_mpx\MpxCacheStrategy
+   */
+  private $cache;
+
+  /**
    * DataObjectImporter constructor.
    *
-   * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValueFactory
-   *   The factory used to store complete mpx objects.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager used to load existing media entities.
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cacheBackend
+   *   The cache backend to store HTTP responses in.
    */
-  public function __construct(KeyValueFactoryInterface $keyValueFactory, EntityTypeManagerInterface $entityTypeManager) {
-    $this->keyValueFactory = $keyValueFactory;
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, CacheBackendInterface $cacheBackend) {
     $this->entityTypeManager = $entityTypeManager;
+    $this->cache = new MpxCacheStrategy(new DrupalGuzzleCache($cacheBackend), 3600 * 24 * 30);
   }
 
   /**
@@ -58,10 +80,6 @@ class DataObjectImporter {
     // Find any existing media items, or return a new one.
     $results = $this->loadMediaEntities($media_type, $mpx_object);
 
-    // Save the mpx Media item so it's available in getMetadata() in the
-    // source plugin.
-    $this->setKeyValue($mpx_object, $media_type);
-
     foreach ($results as $media) {
       $media->save();
       $reset_ids[] = $media->id();
@@ -71,16 +89,26 @@ class DataObjectImporter {
   }
 
   /**
-   * Set an mpx object into the key/value store.
+   * Inject a single mpx item into the response cache.
    *
-   * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
-   *   The object to set in the key-value store.
-   * @param \Drupal\media\MediaTypeInterface $media_type
-   *   The media type the object is associated with.
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $item
+   *   The object being injected.
+   * @param array $service_info
+   *   The service definition from the media source plugin, containing a
+   *   'schema_version' key.
    */
-  public function setKeyValue(ObjectInterface $mpx_object, MediaTypeInterface $media_type) {
-    // Removed to prevent unserialize() errors.
-    // @see https://github.com/Lullabot/media_mpx/pull/46
+  public function cacheItem(ObjectInterface $item, array $service_info) {
+    $query = [
+      'form' => 'cjson',
+      'schema' => $service_info['schema_version'],
+    ];
+    $encoded = \GuzzleHttp\json_encode($item->getJson());
+
+    $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
+    $request = new Request('GET', $uri, static::REQUEST_HEADERS);
+    $response_headers = $this->getResponseHeaders($encoded);
+    $response = new Response(200, $response_headers, $encoded);
+    $this->cache->cache($request, $response);
   }
 
   /**
@@ -131,6 +159,41 @@ class DataObjectImporter {
       throw new \RuntimeException(dt('@type is not configured as a mpx Media source.', ['@type' => $media_type->id()]));
     }
     return $media_source;
+  }
+
+  /**
+   * Return response headers for a single encoded entry item.
+   *
+   * @param string $encoded
+   *   The encoded item.
+   *
+   * @return array
+   *   An array of response headers.
+   */
+  private function getResponseHeaders($encoded): array {
+    $response_headers = [
+      'Access-Control-Allow-Origin' =>
+        [
+          '*',
+        ],
+      'Cache-Control' =>
+        [
+          'max-age=0',
+        ],
+      'Date' =>
+        [
+          gmdate('D, d M Y H:i:s \G\M\T', time()),
+        ],
+      'Content-Type' =>
+        [
+          'application/json; charset=UTF-8',
+        ],
+      'Content-Length' =>
+        [
+          strlen($encoded),
+        ],
+    ];
+    return $response_headers;
   }
 
 }

@@ -45,7 +45,6 @@ class PlayerFormatterTest extends JavascriptTestBase {
       new JsonResponse(200, [], 'select-player.json'),
       new JsonResponse(200, [], 'media-object.json'),
       new JsonResponse(200, [], 'player-object.json'),
-      new JsonResponse(200, [], 'media-object.json'),
     ]);
 
     $user = User::create([
