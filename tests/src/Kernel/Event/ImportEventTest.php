@@ -2,16 +2,8 @@
 
 namespace Drupal\Tests\media_mpx\Kernel\Event;
 
-use Drupal\media\Entity\MediaType;
-use Drupal\media_mpx\Entity\Account;
-use Drupal\media_mpx\Entity\User;
 use Drupal\media_mpx_test\Event\ImportEventSubscriber;
-use Drupal\media_mpx_test\JsonResponse;
-use Drupal\Tests\video_embed_field\Kernel\KernelTestBase;
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Uri;
-use Lullabot\Mpx\Client;
 
 /**
  * Tests the event subscriber for import events.
