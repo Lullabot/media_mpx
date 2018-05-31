@@ -3,8 +3,12 @@
 namespace Drupal\media_mpx;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Http\ClientFactory as HttpClientFactory;
+use Drupal\guzzle_cache\DrupalGuzzleCache;
 use GuzzleHttp\HandlerStack;
+use Kevinrob\GuzzleCache\CacheMiddleware;
+use Kevinrob\GuzzleCache\Strategy\Delegate\DelegatingCacheStrategy;
 use Lullabot\Mpx\Client;
 use Lullabot\Mpx\Middleware;
 
@@ -34,14 +38,33 @@ class ClientFactory {
    *   The Drupal-configured HTTP handler stack.
    * @param \Drupal\Core\Http\ClientFactory $httpClientFactory
    *   The Drupal core HTTP client factory.
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cacheBackend
+   *   The cache used for mpx responses.
    */
-  public function __construct(HandlerStack $handlerStack, HttpClientFactory $httpClientFactory) {
+  public function __construct(HandlerStack $handlerStack, HttpClientFactory $httpClientFactory, CacheBackendInterface $cacheBackend) {
     $this->httpClientFactory = $httpClientFactory;
     $this->handlerStack = $handlerStack;
 
     // This must be in the constructor, otherwise this will be added every time
     // a new mpx client is created during a page request.
     $this->handlerStack->push(Middleware::mpxErrors(), 'mpx_errors');
+
+    $cache = new DrupalGuzzleCache($cacheBackend);
+
+    $strategy = new DelegatingCacheStrategy();
+    $strategy->registerRequestMatcher(new MpxObjectRequestMatcher(), new MpxCacheStrategy($cache, 3600 * 24 * 30));
+
+    // Mpx returns no-caching headers, which in practice is horrible for
+    // performance. This cache strategy forces caching regardless of those
+    // headers. To force loading of an mpx object without clearing the whole
+    // cache, use the internal header defined at
+    // \Kevinrob\GuzzleCache\CacheMiddleware::HEADER_RE_VALIDATION.
+    $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
   }
 
   /**

@@ -90,6 +90,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     // assume that.
     $media_types = [];
 
+    // @todo convert this to a yield.
     foreach ($data as $notification) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $notification->getNotification()->getEntry();
