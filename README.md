@@ -45,7 +45,7 @@ Note that this event should _not_ be used for mapping mpx data to Drupal
 fields. Instead, use the mapping functionality in the media type configuration.
 
 See
-[\Drupal\media_mpx_test\Event\ImportEventSubscriber](modules/media_mpx/test_modules/media_mpx_test/src/Event/ImportEventSubscriber.php)
+[\Drupal\media_mpx_test\Event\ImportEventSubscriber](test_modules/media_mpx_test/src/Event/ImportEventSubscriber.php)
 for an example implementation. To add your own in a custom module, create a
 similar class and add the following in your module's `mymodule.services.yml`.
 
