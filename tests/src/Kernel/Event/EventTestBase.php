@@ -43,6 +43,9 @@ abstract class EventTestBase extends KernelTestBase {
    */
   protected $mediaType;
 
+  /**
+   * {@inheritdoc}
+   */
   public function setUp() {
     parent::setUp();
 
