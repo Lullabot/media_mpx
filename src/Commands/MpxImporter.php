@@ -6,12 +6,13 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
+use Drupal\media_mpx\Event\ImportSelectEvent;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
 use Lullabot\Mpx\DataService\ByFields;
-use Lullabot\Mpx\DataService\DataServiceManager;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListIterator;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Drush commands for mpx.
@@ -41,18 +42,18 @@ class MpxImporter extends DrushCommands {
   private $dataObjectFactoryCreator;
 
   /**
-   * The manager to discover data service classes.
-   *
-   * @var \Lullabot\Mpx\DataService\DataServiceManager
-   */
-  private $dataServiceManager;
-
-  /**
    * The class to import mpx objects.
    *
    * @var \Drupal\media_mpx\DataObjectImporter
    */
   private $dataObjectImporter;
+
+  /**
+   * The system event dispatcher.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  private $eventDispatcher;
 
   /**
    * MpxImporter constructor.
@@ -63,14 +64,14 @@ class MpxImporter extends DrushCommands {
    *   The creator used to configure a factory for loading mpx objects.
    * @param \Drupal\media_mpx\DataObjectImporter $dataObjectImporter
    *   The class used to import mpx objects.
-   * @param \Lullabot\Mpx\DataService\DataServiceManager $dataServiceManager
-   *   The manager to discover data service classes.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $eventDispatcher
+   *   The system event dispatcher.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, DataServiceManager $dataServiceManager) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
-    $this->dataServiceManager = $dataServiceManager;
     $this->dataObjectImporter = $dataObjectImporter;
+    $this->eventDispatcher = $eventDispatcher;
   }
 
   /**
@@ -155,13 +156,11 @@ class MpxImporter extends DrushCommands {
    */
   private function selectAll(MediaTypeInterface $media_type): ObjectListIterator {
     $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $account = $media_source->getAccount();
-
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    // @todo Remove this when it's made optional upstream.
-    // @see https://github.com/Lullabot/mpx-php/issues/78
     $fields = new ByFields();
-    $results = $factory->select($fields, $account);
+    $event = new ImportSelectEvent($fields, $media_source);
+    $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
+    $results = $factory->select($fields, $media_source->getAccount());
     return $results;
   }
 

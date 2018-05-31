@@ -6,11 +6,13 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\guzzle_cache\DrupalGuzzleCache;
 use Drupal\media\MediaTypeInterface;
+use Drupal\media_mpx\Event\ImportEvent;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use function GuzzleHttp\Psr7\build_query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Lullabot\Mpx\DataService\ObjectInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Import an mpx item into a media entity.
@@ -50,15 +52,25 @@ class DataObjectImporter {
   private $cache;
 
   /**
+   * The system event dispatcher.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  private $eventDispatcher;
+
+  /**
    * DataObjectImporter constructor.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager used to load existing media entities.
+   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $eventDispatcher
+   *   The system event dispatcher.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cacheBackend
    *   The cache backend to store HTTP responses in.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, CacheBackendInterface $cacheBackend) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, EventDispatcherInterface $eventDispatcher, CacheBackendInterface $cacheBackend) {
     $this->entityTypeManager = $entityTypeManager;
+    $this->eventDispatcher = $eventDispatcher;
     $this->cache = new MpxCacheStrategy(new DrupalGuzzleCache($cacheBackend), 3600 * 24 * 30);
   }
 
@@ -79,6 +91,11 @@ class DataObjectImporter {
 
     // Find any existing media items, or return a new one.
     $results = $this->loadMediaEntities($media_type, $mpx_object);
+
+    // Allow other modules to alter the media entities as they are imported.
+    $event = new ImportEvent($mpx_object, $results);
+    $this->eventDispatcher->dispatch(ImportEvent::IMPORT, $event);
+    $results = $event->getEntities();
 
     foreach ($results as $media) {
       $media->save();

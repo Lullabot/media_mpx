@@ -32,6 +32,50 @@ used to download thumbnails in parallel. Until thumbnails are downloaded, a
 placeholder will be used in admin listing (and on your site, if videos are
 published automatically).
 
+## Limiting results during an mpx import
+
+Sometimes sites will want to add code to alter how data is imported into
+Drupal. For example, an mpx account could have a custom field to indicate if
+a given asset should be ignored by Drupal. Since ignoring assets is a common
+use case, we can't use the normal entity hooks.
+
+Sites wishing to limit the mpx data that is imported will need to implement two
+event subscribers.
+
+### 1. Altering import mpx queries
+
+First, it is a best practice to limit the returned data from mpx where
+possible. This is possible by subscribing to the
+`\Drupal\media_mpx\Event\ImportSelectEvent::IMPORT_SELECT` event and by
+altering the `ByFields` object attached to that event. See
+[\Drupal\media_mpx_test\Event\ImportSelectSubscriber](test_modules/media_mpx_test/src/Event/ImportSelectSubscriber.php)
+for an example. To add your own in a custom module, create a similar class and
+add the following in your module's `mymodule.services.yml`.
+
+```yml
+services:
+  mymodule.import_select_subscriber:
+    class: Drupal\mymodule\Event\MyImportSubscriber
+    tags:
+      - { name: event_subscriber }
+```
+
+### 2. Altering ingested mpx objects
+
+Unfortunately, mpx has no ability to filter results in notifications. While the
+above subscriber will work for initial imports, it will not work for
+notifications.
+
+During an import, an `ImportEvent` is dispatched with references to each media
+entity that would be created or updated by the import.
+
+Note that this event should _not_ be used for mapping mpx data to Drupal
+fields. Instead, use the mapping functionality in the media type configuration.
+
+See
+[\Drupal\media_mpx_test\Event\ImportEventSubscriber](test_modules/media_mpx_test/src/Event/ImportEventSubscriber.php)
+for an example implementation.
+
 ## Custom field support
 
 Custom fields are defined in mpx and allow for additional data to be attached
