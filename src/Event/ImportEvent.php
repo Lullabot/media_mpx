@@ -13,7 +13,7 @@ class ImportEvent extends Event {
   /**
    * The import event type.
    */
-  const IMPORT = 'import';
+  const IMPORT = 'media_mpx.import';
 
   /**
    * The mpx object that was loaded from mpx.

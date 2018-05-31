@@ -1,7 +1,7 @@
 services:
   media_mpx.importer:
     class: \Drupal\media_mpx\Commands\MpxImporter
-    arguments: ['@entity_type.manager', '@media_mpx.data_object_factory_creator', '@media_mpx.data_object_importer', '@media_mpx.data_service_manager']
+    arguments: ['@entity_type.manager', '@media_mpx.data_object_factory_creator', '@media_mpx.data_object_importer', '@event_dispatcher']
     tags:
       - { name: drush.command }
   media_mpx.notification_queuer:
