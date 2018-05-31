@@ -38,7 +38,6 @@ class CustomFieldMapTest extends JavascriptTestBase {
     $factory->getMockHandler()->append([
       new JsonResponse(200, [], 'signin-success.json'),
       new JsonResponse(200, [], 'media-object.json'),
-      new JsonResponse(200, [], 'media-object.json'),
     ]);
 
     $user = User::create([
