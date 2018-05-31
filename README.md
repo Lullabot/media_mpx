@@ -32,6 +32,31 @@ used to download thumbnails in parallel. Until thumbnails are downloaded, a
 placeholder will be used in admin listing (and on your site, if videos are
 published automatically).
 
+## Altering ingested mpx objects
+
+Sometimes sites will want to add code to alter how data is imported into
+Drupal. For example, an mpx account could have a custom field to indicate if
+a given asset should be ignored by Drupal. Since ignoring assets is a common
+use case, we can't use the normal entity hooks. During an import, an
+`ImportEvent` is dispatched with references to each media entity that would be
+created or updated by the import.
+
+Note that this event should _not_ be used for mapping mpx data to Drupal
+fields. Instead, use the mapping functionality in the media type configuration.
+
+See
+[\Drupal\media_mpx_test\Event\ImportEventSubscriber](modules/media_mpx/test_modules/media_mpx_test/src/Event/ImportEventSubscriber.php)
+for an example implementation. To add your own in a custom module, create a
+similar class and add the following in your module's `mymodule.services.yml`.
+
+```yml
+services:
+  mymodule.import_subscriber:
+    class: Drupal\mymodule\Event\MyImportSubscriber
+    tags:
+      - { name: event_subscriber }
+```
+
 ## Custom field support
 
 Custom fields are defined in mpx and allow for additional data to be attached
