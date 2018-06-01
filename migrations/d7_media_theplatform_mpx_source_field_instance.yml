@@ -27,6 +27,6 @@ process:
     source: id
   label: constants/label
   translatable: constants/translatable
-  required: constants/requried
+  required: constants/required
 destination:
   plugin: entity:field_config
