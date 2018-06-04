@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * Installation hooks for media_mpx.
+ */
+
+/**
+ * Install the new guzzle_cache dependency.
+ */
+function media_mpx_update_8101() {
+  \Drupal::service('module_installer')->install(['guzzle_cache']);
+}
