@@ -13,6 +13,7 @@ use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\media\MediaInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\Entity\Account;
+use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\CachingPhpDocExtractor;
@@ -59,6 +60,13 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   protected $customFieldManager;
 
   /**
+   * The logger used for mpx-specific errors.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  protected $mpxLogger;
+
+  /**
    * Media constructor.
    *
    * @param array $configuration
@@ -90,6 +98,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $this->httpClient = $httpClient;
     $this->logger = $logger;
     $this->customFieldManager = $customFieldManager;
+
+    $this->mpxLogger = new MpxLogger($logger);
   }
 
   /**

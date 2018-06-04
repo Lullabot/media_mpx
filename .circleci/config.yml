@@ -88,6 +88,7 @@ unit_kernel_tests: &unit_kernel_tests
     - run:
         working_directory: /var/www/html
         command: |
+          cp modules/$CIRCLE_PROJECT_REPONAME/.circleci/test.sh .
           ./test.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:

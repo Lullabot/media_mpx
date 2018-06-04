@@ -55,8 +55,14 @@ class MpxLogger {
       '%code' => $exception->getCode(),
       '%title' => $exception->getTitle(),
       '%description' => $exception->getDescription(),
-      '%correlation_id' => $exception->getCorrelationId(),
     ];
+
+    try {
+      $variables['%correlation_id'] = $exception->getCorrelationId();
+    }
+    catch (\OutOfBoundsException $e) {
+      // No correlation ID is included so ignore it.
+    }
     $this->watchdogException($exception, $message, $variables, $severity, $link);
   }
 
