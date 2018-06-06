@@ -3,6 +3,7 @@
 namespace Drupal\media_mpx_test\Event;
 
 use Drupal\media_mpx\Event\ImportSelectEvent;
+use Lullabot\Mpx\DataService\ByFields;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -17,7 +18,8 @@ class ImportSelectSubscriber implements EventSubscriberInterface {
    *   The import event.
    */
   public function excludeDrupal(ImportSelectEvent $event) {
-    $event->getFields()->addField('customValue', '{excludeDrupal}{false|-}');
+    $fields = new ByFields();
+    $event->getFields()->add($fields->addField('customValue', '{excludeDrupal}{false|-}'));
   }
 
   /**

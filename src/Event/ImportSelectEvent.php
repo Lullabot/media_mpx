@@ -3,7 +3,7 @@
 namespace Drupal\media_mpx\Event;
 
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
-use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\DataService\ObjectListQuery;
 use Symfony\Component\EventDispatcher\Event;
 
 /**
@@ -21,9 +21,9 @@ class ImportSelectEvent extends Event {
   /**
    * The fields class to be used when querying mpx.
    *
-   * @var \Lullabot\Mpx\DataService\ByFields
+   * @var \Lullabot\Mpx\DataService\ObjectListQuery
    */
-  private $fields;
+  private $query;
 
   /**
    * The media source being imported for.
@@ -35,24 +35,24 @@ class ImportSelectEvent extends Event {
   /**
    * ImportSelectEvent constructor.
    *
-   * @param \Lullabot\Mpx\DataService\ByFields $fields
+   * @param \Lullabot\Mpx\DataService\ObjectListQuery $query
    *   The fields class to be used when querying mpx.
    * @param \Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface $media_source
    *   The media source being imported for.
    */
-  public function __construct(ByFields $fields, MpxMediaSourceInterface $media_source) {
-    $this->fields = $fields;
+  public function __construct(ObjectListQuery $query, MpxMediaSourceInterface $media_source) {
+    $this->query = $query;
     $this->mediaSource = $media_source;
   }
 
   /**
    * Return the fields used to limit this request.
    *
-   * @return \Lullabot\Mpx\DataService\ByFields
-   *   The ByFields object.
+   * @return \Lullabot\Mpx\DataService\ObjectListQuery
+   *   The ObjectListQuery object.
    */
-  public function getFields(): ByFields {
-    return $this->fields;
+  public function getFields(): ObjectListQuery {
+    return $this->query;
   }
 
   /**
