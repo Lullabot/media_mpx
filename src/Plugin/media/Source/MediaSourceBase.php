@@ -240,16 +240,15 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The media entity being accessed.
    * @param string $attribute_name
    *   The metadata attribute being accessed.
+   * @param object $mpx_object
+   *   The mpx object to get the property on.
    *
    * @return mixed|null
    *   Metadata attribute value or NULL if unavailable.
    */
-  protected function getReflectedProperty(MediaInterface $media, string $attribute_name) {
+  protected function getReflectedProperty(MediaInterface $media, string $attribute_name, $mpx_object) {
     $method = 'get' . ucfirst($attribute_name);
-    // @todo At the least this should be a static cache tied to $media.
     try {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
-      $mpx_object = $this->getMpxObject($media);
       $value = $mpx_object->$method();
     }
     catch (\TypeError $e) {

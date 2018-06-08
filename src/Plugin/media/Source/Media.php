@@ -2,13 +2,20 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldTypePluginManagerInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
+use Drupal\media_mpx\DataObjectFactoryCreator;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\TransferException;
-use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Lullabot\Mpx\DataService\CustomFieldManager;
+use Psr\Log\LoggerInterface;
 
 /**
  * Media source for mpx Media items.
@@ -44,27 +51,54 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
   /**
+   * @var string
+   */
+  private $mediaClass;
+
+  /**
+   * @var string
+   */
+  private $mediaFileClass;
+
+  /**
+   * {@inheritdoc}
+   */
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger, CustomFieldManager $customFieldManager) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory, $dataObjectFactory, $httpClient, $logger, $customFieldManager);
+
+    $service_info = $this->getPluginDefinition()['media_mpx'];
+    $this->mediaClass = \Drupal::service('media_mpx.data_service_manager')->getDataService($service_info['service_name'], $service_info['object_type'], $service_info['schema_version'])->getClass();
+    $this->mediaFileClass = \Drupal::service('media_mpx.data_service_manager')->getDataService($service_info['service_name'], 'MediaFile', $service_info['schema_version'])->getClass();
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getMetadataAttributes() {
-    return $this->mpxMetadataProperties() + $this->customMetadataProperties();
+    return $this->mpxMetadataProperties('Media', $this->mediaClass) + $this->mpxMetadataProperties('MediaFile', $this->mediaFileClass) + $this->customMetadataProperties();
   }
 
   /**
    * Returns metadata mappings for thePlatform-defined fields.
    *
+   * @param string $mpx_object_name
+   *   The name of the object type from mpx, such as 'MediaFile'.
+   * @param string $class
+   *   The class name to extract properties from. This typically contains the
+   *   mpx object name but is not required.
+   *
    * @return array
    *   The array of metadata labels, keyed by their property.
    */
-  private function mpxMetadataProperties(): array {
+  private function mpxMetadataProperties(string $mpx_object_name, string $class): array {
     $metadata = [];
     $extractor = $this->propertyExtractor();
-    foreach ($extractor->getProperties(MpxMedia::class) as $property) {
+    foreach ($extractor->getProperties($class) as $property) {
       $label = $property;
-      if ($shortDescription = $extractor->getShortDescription(MpxMedia::class, $property)) {
+      if ($shortDescription = $extractor->getShortDescription($class, $property)) {
         $label = $shortDescription . ' (' . $label . ')';
       }
-      $metadata[$property] = $label;
+      $metadata[$mpx_object_name . ':' . $property] = $label;
     }
     return $metadata;
   }
@@ -222,8 +256,20 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $value = $this->getThumbnailMetadata($media, $attribute_name);
 
     // Check if the attribute is a core thePlatform-defined field.
-    if (!$value && $this->hasReflectedProperty($attribute_name)) {
-      $value = $this->getReflectedProperty($media, $attribute_name);
+    if (strpos($attribute_name, 'Media:') === 0 && !$value) {
+      $property = substr($attribute_name, strlen('Media:'));
+      if ($this->hasReflectedProperty($property, $this->mediaClass)) {
+        $mpx_object = $this->getMpxObject($media);
+        $value = $this->getReflectedProperty($media, $attribute_name, $mpx_object);
+      }
+    }
+
+    // Check if the attribute is on the first video file.
+    if (strpos($attribute_name, 'MediaFile:') === 0 && !$value) {
+      $property = substr($attribute_name, strlen('MediaFile:'));
+      if ($this->hasReflectedProperty($property, $this->mediaFileClass)) {
+        $value = $this->getMediaFileReflectedProperty($media, $property);
+      }
     }
 
     // Finally, check if a custom field own this attribute.
@@ -371,13 +417,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *
    * @param string $attribute_name
    *   The property name.
+   * @param string $class
+   *   The class to inspect.
    *
    * @return bool
    *   True if the property is a valid field, FALSE otherwise.
    */
-  private function hasReflectedProperty($attribute_name) {
+  private function hasReflectedProperty($attribute_name, $class) {
     return in_array($attribute_name, $this->propertyExtractor()
-      ->getProperties(MpxMedia::class));
+      ->getProperties($class));
   }
 
   /**
@@ -403,6 +451,29 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
         break;
     }
     return $value;
+  }
+
+  /**
+   * Call a get method on the first media file video and return it's value.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being accessed.
+   * @param string $attribute_name
+   *   The metadata attribute being accessed.
+   *
+   * @return mixed|null
+   *   Metadata attribute value or NULL if unavailable.
+   */
+  protected function getMediaFileReflectedProperty(MediaInterface $media, string $attribute_name) {
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
+    $mpx_object = $this->getMpxObject($media);
+    foreach ($mpx_object->getContent() as $media_file) {
+      if ($media_file->getContentType() == 'video') {
+        return $this->getReflectedProperty($media, $attribute_name, $media_file);
+      }
+    }
+
+    return NULL;
   }
 
 }

@@ -10,7 +10,6 @@ services:
 
   media_mpx.data_service_manager:
     class: Lullabot\Mpx\DataService\DataServiceManager
-    public: false
     factory: ['Lullabot\Mpx\DataService\DataServiceManager', 'basicDiscovery']
     arguments: ['@media_mpx.custom_field_manager']
 
