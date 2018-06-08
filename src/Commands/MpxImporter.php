@@ -9,9 +9,9 @@ use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Event\ImportSelectEvent;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
-use Lullabot\Mpx\DataService\ByFields;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListIterator;
+use Lullabot\Mpx\DataService\ObjectListQuery;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -123,8 +123,8 @@ class MpxImporter extends DrushCommands {
     $account = $media_source->getAccount();
 
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    $fields = new ByFields();
-    $request = $factory->selectRequest($fields, $account);
+    $query = new ObjectListQuery();
+    $request = $factory->selectRequest($query, $account);
     $list = $request->wait();
 
     // @todo Support fetching the total results via ObjectList.
@@ -157,10 +157,10 @@ class MpxImporter extends DrushCommands {
   private function selectAll(MediaTypeInterface $media_type): ObjectListIterator {
     $media_source = DataObjectImporter::loadMediaSource($media_type);
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    $fields = new ByFields();
-    $event = new ImportSelectEvent($fields, $media_source);
+    $query = new ObjectListQuery();
+    $event = new ImportSelectEvent($query, $media_source);
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
-    $results = $factory->select($fields, $media_source->getAccount());
+    $results = $factory->select($query, $media_source->getAccount());
     return $results;
   }
 

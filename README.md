@@ -60,7 +60,7 @@ event subscribers.
 First, it is a best practice to limit the returned data from mpx where
 possible. This is possible by subscribing to the
 `\Drupal\media_mpx\Event\ImportSelectEvent::IMPORT_SELECT` event and by
-altering the `ByFields` object attached to that event. See
+altering the `ObjectListQuery` object attached to that event. See
 [\Drupal\media_mpx_test\Event\ImportSelectSubscriber](test_modules/media_mpx_test/src/Event/ImportSelectSubscriber.php)
 for an example. To add your own in a custom module, create a similar class and
 add the following in your module's `mymodule.services.yml`.

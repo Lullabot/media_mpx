@@ -13,7 +13,7 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Psr7\Uri;
-use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\DataService\ObjectListQuery;
 use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
 use Lullabot\Mpx\Player\Url;
@@ -212,13 +212,13 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
 
     $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()
       ->getUserEntity(), 'Player Data Service', 'Player', '1.6');
-    $fields = new ByFields();
+    $query = new ObjectListQuery();
     $sort = new Sort();
     $sort->addSort('title');
-    $fields->setSort($sort);
+    $query->setSort($sort);
 
     /** @var \Lullabot\Mpx\DataService\Player\Player[] $results */
-    $results = $factory->select($fields, $source_plugin->getAccount());
+    $results = $factory->select($query, $source_plugin->getAccount());
 
     foreach ($results as $player) {
       if (!$player->getDisabled()) {
