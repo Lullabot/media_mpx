@@ -9,7 +9,7 @@ use Drupal\Core\Url;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
-use Lullabot\Mpx\DataService\ByFields;
+use Lullabot\Mpx\DataService\ObjectListQuery;
 use Lullabot\Mpx\Exception\ClientException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -310,9 +310,9 @@ class AccountForm extends EntityForm {
       ->load($user_entity_id);
 
     $accountFactory = $this->dataObjectFactory->forObjectType($user, 'Access Data Service', 'Account', '1.0');
-    $fields = new ByFields();
+    $query = new ObjectListQuery();
 
-    $accounts = $accountFactory->select($fields);
+    $accounts = $accountFactory->select($query);
 
     /** @var \Lullabot\Mpx\DataService\Access\Account $account */
     foreach ($accounts as $account) {
