@@ -96,7 +96,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     foreach ($extractor->getProperties($class) as $property) {
       $label = $property;
       if ($shortDescription = $extractor->getShortDescription($class, $property)) {
-        $label = $shortDescription . ' (' . $label . ')';
+        $label = sprintf('%s %s: %s', $mpx_object_name, $label, $shortDescription);
       }
       $metadata[$mpx_object_name . ':' . $property] = $label;
     }
