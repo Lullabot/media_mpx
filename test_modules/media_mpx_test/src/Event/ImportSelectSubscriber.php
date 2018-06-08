@@ -19,7 +19,7 @@ class ImportSelectSubscriber implements EventSubscriberInterface {
    */
   public function excludeDrupal(ImportSelectEvent $event) {
     $fields = new ByFields();
-    $event->getFields()->add($fields->addField('customValue', '{excludeDrupal}{false|-}'));
+    $event->getQuery()->add($fields->addField('customValue', '{excludeDrupal}{false|-}'));
   }
 
   /**
