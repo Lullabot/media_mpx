@@ -139,7 +139,7 @@ class MediaTest extends KernelTestBase {
     $messenger = $this->createMock(MessengerInterface::class);
     $messenger->expects($this->once())->method('addError')->with($message);
     $this->source->setMessenger($messenger);
-    $this->source->getMetadata($this->media, 'title');
+    $this->source->getMetadata($this->media, 'Media:title');
   }
 
   /**
