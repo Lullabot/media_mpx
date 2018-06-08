@@ -51,11 +51,15 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
   /**
+   * The discovered class that is used for mpx Media objects.
+   *
    * @var string
    */
   private $mediaClass;
 
   /**
+   * The discovered class that is used for mpx MediaFile objects.
+   *
    * @var string
    */
   private $mediaFileClass;

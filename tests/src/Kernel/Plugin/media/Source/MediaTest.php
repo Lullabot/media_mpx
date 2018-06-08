@@ -9,6 +9,7 @@ use Drupal\media\Entity\Media;
 use Drupal\media\Entity\MediaType;
 use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Entity\User;
+use Drupal\Tests\media_mpx\Kernel\JsonResponse;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Response;
@@ -203,6 +204,19 @@ class MediaTest extends KernelTestBase {
         'There was an error loading the video from mpx. The error from mpx was: HTTP 503 Error Service Unavailable: The hamsters are on strike',
       ],
     ];
+  }
+
+  /**
+   * Test mapping the duration of the video.
+   *
+   * @covers ::getMetadataAttributes
+   * @covers ::getMetadata
+   */
+  public function testMediaFileMap() {
+    $this->handler->append(new JsonResponse(200, [], 'signin-success.json'));
+    $this->handler->append(new JsonResponse(200, [], 'media-object.json'));
+    $this->assertContains('MediaFile:duration', array_keys($this->source->getMetadataAttributes()));
+    $this->assertEquals(55.289, $this->source->getMetadata($this->media, 'MediaFile:duration'));
   }
 
 }
