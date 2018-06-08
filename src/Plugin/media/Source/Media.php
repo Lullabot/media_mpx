@@ -71,8 +71,9 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory, $dataObjectFactory, $httpClient, $logger, $customFieldManager);
 
     $service_info = $this->getPluginDefinition()['media_mpx'];
-    $this->mediaClass = \Drupal::service('media_mpx.data_service_manager')->getDataService($service_info['service_name'], $service_info['object_type'], $service_info['schema_version'])->getClass();
-    $this->mediaFileClass = \Drupal::service('media_mpx.data_service_manager')->getDataService($service_info['service_name'], 'MediaFile', $service_info['schema_version'])->getClass();
+    $dataServiceManager = $dataObjectFactory->getDataServiceManager();
+    $this->mediaClass = $dataServiceManager->getDataService($service_info['service_name'], $service_info['object_type'], $service_info['schema_version'])->getClass();
+    $this->mediaFileClass = $dataServiceManager->getDataService($service_info['service_name'], 'MediaFile', $service_info['schema_version'])->getClass();
   }
 
   /**

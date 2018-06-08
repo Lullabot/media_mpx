@@ -89,4 +89,14 @@ class DataObjectFactoryCreator {
     return $this->forObjectType($user, $service_info['service_name'], $service_info['object_type'], $service_info['schema_version']);
   }
 
+  /**
+   * Return the data service manager used to discover services.
+   *
+   * @return \Lullabot\Mpx\DataService\DataServiceManager
+   *   The data service manager.
+   */
+  public function getDataServiceManager(): DataServiceManager {
+    return $this->manager;
+  }
+
 }
