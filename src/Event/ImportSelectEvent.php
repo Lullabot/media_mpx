@@ -19,7 +19,7 @@ class ImportSelectEvent extends Event {
   const IMPORT_SELECT = 'media_mpx.import_select';
 
   /**
-   * The fields class to be used when querying mpx.
+   * The query to be used when selecting objects from mpx.
    *
    * @var \Lullabot\Mpx\DataService\ObjectListQuery
    */
@@ -46,12 +46,12 @@ class ImportSelectEvent extends Event {
   }
 
   /**
-   * Return the fields used to limit this request.
+   * Return the query used to limit this request.
    *
    * @return \Lullabot\Mpx\DataService\ObjectListQuery
    *   The ObjectListQuery object.
    */
-  public function getFields(): ObjectListQuery {
+  public function getQuery(): ObjectListQuery {
     return $this->query;
   }
 
