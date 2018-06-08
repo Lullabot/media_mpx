@@ -261,25 +261,18 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $value = $this->getThumbnailMetadata($media, $attribute_name);
 
     // Check if the attribute is a core thePlatform-defined field.
-    if (strpos($attribute_name, 'Media:') === 0 && !$value) {
-      $property = substr($attribute_name, strlen('Media:'));
-      if ($this->hasReflectedProperty($property, $this->mediaClass)) {
-        $mpx_object = $this->getMpxObject($media);
-        $value = $this->getReflectedProperty($media, $attribute_name, $mpx_object);
-      }
+    if (!$value) {
+      $value = $this->getMediaValue($media, $attribute_name);
     }
 
     // Check if the attribute is on the first video file.
-    if (strpos($attribute_name, 'MediaFile:') === 0 && !$value) {
-      $property = substr($attribute_name, strlen('MediaFile:'));
-      if ($this->hasReflectedProperty($property, $this->mediaFileClass)) {
-        $value = $this->getMediaFileReflectedProperty($media, $property);
-      }
+    if (!$value) {
+      $value = $this->getMediaFileValue($media, $attribute_name);
     }
 
     // Finally, check if a custom field own this attribute.
     if (!$value) {
-      $value = $this->getCustomFieldsMetadata($media, $attribute_name);
+      $value = $this->getCustomFieldsValue($media, $attribute_name);
     }
 
     if ($value) {
@@ -365,7 +358,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * @return mixed|null
    *   The metadata value or NULL if one is not found.
    */
-  private function getCustomFieldsMetadata(MediaInterface $media, string $attribute_name) {
+  private function getCustomFieldsValue(MediaInterface $media, string $attribute_name) {
     // Now check for custom fields.
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
@@ -479,6 +472,51 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
 
     return NULL;
+  }
+
+  /**
+   * Return a metadata value for Media File.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
+   * @param string $attribute_name
+   *   The attribute of the field.
+   *
+   * @return mixed|null
+   *   The metadata value or NULL if one is not found.
+   */
+  private function getMediaFileValue(MediaInterface $media, $attribute_name) {
+    $value = NULL;
+    if (strpos($attribute_name, 'MediaFile:') === 0) {
+      $property = substr($attribute_name, strlen('MediaFile:'));
+      if ($this->hasReflectedProperty($property, $this->mediaFileClass)) {
+        $value = $this->getMediaFileReflectedProperty($media, $property);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Return a metadata value for a Media object.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
+   * @param string $attribute_name
+   *   The attribute of the field.
+   *
+   * @return mixed|null
+   *   The metadata value or NULL if one is not found.
+   */
+  private function getMediaValue(MediaInterface $media, $attribute_name) {
+    $value = NULL;
+    if (strpos($attribute_name, 'Media:') === 0) {
+      $property = substr($attribute_name, strlen('Media:'));
+      if ($this->hasReflectedProperty($property, $this->mediaClass)) {
+        $mpx_object = $this->getMpxObject($media);
+        $value = $this->getReflectedProperty($media, $attribute_name, $mpx_object);
+      }
+    }
+    return $value;
   }
 
 }
