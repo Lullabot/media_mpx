@@ -18,6 +18,19 @@ sentences. This makes for some odd displays in Drupal, that generally expect
 title case or sentence case. When referring to mpx within the user interface
 and in strings, use lower case such as 'the mpx User entity'.
 
+## Metadata mapping support
+
+This module supports the following mappings with Drupal's media module:
+
+* Scalar properties (like strings, numbers, and dates) on mpx objects like
+  Media and Players.
+* Scalar properties on the _first video MediaFile_ attached to an mpx Media
+  object. This includes duration, bitrate, format, and so on.
+* Scalar properties on custom fields that have a corresponding Custom Field
+  class implementation.
+
+![Field mapping form example](docs/field-mapping.png)
+
 ## Thumbnail integration
 
 When an mpx media item is saved, Drupal will download the default thumbnail so
