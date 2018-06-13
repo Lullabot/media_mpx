@@ -91,6 +91,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The logger used to log errors while downloading thumbnails.
    * @param \Lullabot\Mpx\DataService\CustomFieldManager $customFieldManager
    *   The manager used to load custom field classes.
+   *
+   * @todo Refactor this constructor to reduce the number of parameters.
    */
   public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger, CustomFieldManager $customFieldManager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
@@ -240,16 +242,15 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The media entity being accessed.
    * @param string $attribute_name
    *   The metadata attribute being accessed.
+   * @param object $mpx_object
+   *   The mpx object to get the property on.
    *
    * @return mixed|null
    *   Metadata attribute value or NULL if unavailable.
    */
-  protected function getReflectedProperty(MediaInterface $media, string $attribute_name) {
+  protected function getReflectedProperty(MediaInterface $media, string $attribute_name, $mpx_object) {
     $method = 'get' . ucfirst($attribute_name);
-    // @todo At the least this should be a static cache tied to $media.
     try {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
-      $mpx_object = $this->getMpxObject($media);
       $value = $mpx_object->$method();
     }
     catch (\TypeError $e) {
