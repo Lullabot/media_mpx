@@ -103,14 +103,11 @@ class AccountForm extends EntityForm {
    *   The form being rendered.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
-   *
-   * @return array
-   *   The accounts form item.
    */
-  public function fetchAccounts(array &$form, FormStateInterface $form_state) : array {
+  public function fetchAccounts(array &$form, FormStateInterface $form_state) {
     list($options, $account_pids) = $this->accountOptions($form_state);
     if (empty($options)) {
-      return [];
+      return;
     }
 
     $form['account_pids'] = [
@@ -125,7 +122,6 @@ class AccountForm extends EntityForm {
       '#options' => $options,
       '#default_value' => $this->entity->get('account'),
     ];
-    return $form['accounts_container']['account'];
   }
 
   /**
@@ -268,6 +264,8 @@ class AccountForm extends EntityForm {
         ])
       );
     }
+
+    return [[], []];
   }
 
   /**
