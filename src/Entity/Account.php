@@ -99,15 +99,15 @@ class Account extends ConfigEntityBase implements AccountInterface, IdInterface,
   /**
    * {@inheritdoc}
    */
-  public function getId(): PsrUriInterface {
+  public function getMpxId(): PsrUriInterface {
     return new Uri($this->account);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function setId(PsrUriInterface $id) {
-    $this->account = $id;
+  public function setMpxId(PsrUriInterface $id) {
+    $this->account = (string) $id;
   }
 
   /**
@@ -120,7 +120,7 @@ class Account extends ConfigEntityBase implements AccountInterface, IdInterface,
   /**
    * {@inheritdoc}
    */
-  public function setPid(string $pid) {
+  public function setPid(?string $pid) {
     $this->public_id = $pid;
   }
 
