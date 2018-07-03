@@ -385,7 +385,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     if (in_array($attribute_namespace, array_keys($properties))) {
       $mpx_media = $this->getMpxObject($media);
       $method = 'get' . ucfirst($field);
-      return $mpx_media->getCustomFields($attribute_namespace)->$method();
+      return $mpx_media->getCustomFields()->$method();
     }
 
     return NULL;
