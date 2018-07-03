@@ -17,7 +17,7 @@
     "drupal/guzzle_cache": "^2.0",
     "symfony/cache": "^3.4",
     "highwire/drupal-psr-16": "^1.0",
-    "lullabot/mpx-php": "^0.5.0",
+    "lullabot/mpx-php": "dev-always-custom-field",
     "lullabot/drupal-symfony-lock": "^1.0",
     "symfony/property-info": "^3.4"
   },
