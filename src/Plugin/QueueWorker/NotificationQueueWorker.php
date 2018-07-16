@@ -97,7 +97,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
 
       $media_source = $this->importer::loadMediaSource($notification->getMediaType());
       $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-      $promises[] = $factory->load($mpx_media->getId());
+      $promises[] = $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
       $media_types[] = $notification->getMediaType();
     }
 
