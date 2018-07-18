@@ -31,6 +31,21 @@ This module supports the following mappings with Drupal's media module:
 
 ![Field mapping form example](docs/field-mapping.png)
 
+## Video ingestion
+
+This module includes two Drush commands to import content from mpx:
+
+- `drush media_mpx:import <media type>` will import all content for a given media
+  type. Existing content previously imported into Drupal will be updated if any
+  mapped fields are empty, matching Drupal's core behaviour.
+- `drush media_mpx:listen <media type>` will listen for mpx notifications for
+  the given media type. This command will not actually update any content in
+  Drupal. Instead, it will deduplicate notifications and place them into a
+  queue for later ingestion. By default, these updates will be processed with
+  cron. However, to improve import performance, consider running a separate
+  `drush queue-run media_mpx_notification` job to process imports separately
+  from cron.
+
 ## Thumbnail integration
 
 When an mpx media item is saved, Drupal will download the default thumbnail so
@@ -44,6 +59,23 @@ that [Concurrent Queue](https://www.drupal.org/project/concurrent_queue) can be
 used to download thumbnails in parallel. Until thumbnails are downloaded, a
 placeholder will be used in admin listing (and on your site, if videos are
 published automatically).
+
+## Caching of mpx responses
+
+Unfortunately, mpx returns `Cache-control: no-cache` headers in every request.
+For most Drupal sites, cached video data is fine to use and expected given that
+the data is copied into media entities. By default, all requests loading a
+single data object (like an mpx media item) are cached. When using any of the
+provided services to load mpx data (such as `media_mpx.authenticated_client` or
+`media_mpx.data_object_factory_creator`), assume data will be cached. To force
+a fresh request, pass in an appropriate `Cache-Control` header, such as:
+
+```php
+$factory->load('http://data.media.theplatform.com/media/data/Media/2602559', ['headers' => ['Cache-Control' => 'no-cache']]);
+```
+
+Note that this will incur a significant performance hit on the order of 500ms
+or more, so use this option sparingly and rely on cached data where possible.
 
 ## Limiting results during an mpx import
 

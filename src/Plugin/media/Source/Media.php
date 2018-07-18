@@ -275,7 +275,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $value = $this->getCustomFieldsValue($media, $attribute_name);
     }
 
-    if ($value) {
+    if (!is_null($value)) {
       return $value;
     }
 
