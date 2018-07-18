@@ -4,16 +4,10 @@ namespace Drupal\Tests\media_mpx\Kernel\Plugin\media\Source;
 
 use Drupal\Core\Logger\RfcLogLevel;
 use Drupal\Core\Messenger\MessengerInterface;
-use Drupal\KernelTests\KernelTestBase;
 use Drupal\media\Entity\Media;
-use Drupal\media\Entity\MediaType;
-use Drupal\media_mpx\Entity\Account;
-use Drupal\media_mpx\Entity\User;
 use Drupal\Tests\media_mpx\Kernel\JsonResponse;
-use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Handler\MockHandler;
+use Drupal\Tests\media_mpx\Kernel\MediaMpxTestBase;
 use GuzzleHttp\Psr7\Response;
-use Lullabot\Mpx\Client;
 use Lullabot\Mpx\Exception\ClientException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
@@ -24,26 +18,7 @@ use Psr\Log\LoggerInterface;
  * @group media_mpx
  * @coversDefaultClass \Drupal\media_mpx\Plugin\media\Source\Media
  */
-class MediaTest extends KernelTestBase {
-
-  /**
-   * {@inheritdoc}
-   */
-  protected static $modules = [
-    'field',
-    'file',
-    'user',
-    'image',
-    'media',
-    'media_mpx',
-  ];
-
-  /**
-   * The media source being tested.
-   *
-   * @var \Drupal\media_mpx\Plugin\media\Source\Media
-   */
-  private $source;
+class MediaTest extends MediaMpxTestBase {
 
   /**
    * The media entity to fetch metadata from.
@@ -53,54 +28,10 @@ class MediaTest extends KernelTestBase {
   private $media;
 
   /**
-   * The mock HTTP handler.
-   *
-   * @var \GuzzleHttp\Handler\MockHandler
-   */
-  private $handler;
-
-  /**
    * {@inheritdoc}
    */
   public function setUp() {
     parent::setUp();
-
-    $this->handler = new MockHandler();
-    $client = new Client(new GuzzleClient(['handler' => $this->handler]));
-    $this->container->set('media_mpx.client', $client);
-    $user = User::create([
-      'label' => 'JavaScript test user',
-      'id' => 'mpx_testing_example_com',
-      'username' => 'mpx/testing@example.com',
-      'password' => 'SECRET',
-    ]);
-    $user->save();
-    $account = Account::create([
-      'label' => 'JavaScript test account',
-      'id' => 'mpx_account',
-      'user' => $user->id(),
-      'account' => 'http://example.com/account/1',
-      'public_id' => 'public-id',
-    ]);
-    $account->save();
-
-    $manager = $this->container->get('plugin.manager.media.source');
-    $this->source = $manager->createInstance('media_mpx_media', [
-      'source_field' => 'field_media_media_mpx_media',
-      'account' => $account->id(),
-    ]);
-
-    /** @var \Drupal\media\MediaTypeInterface $media_type */
-    $media_type = MediaType::create([
-      'id' => 'mpx',
-      'label' => 'mpx media type',
-      'source' => 'media_mpx_media',
-    ]);
-    $media_type->save();
-    $source_field = $media_type->getSource()->createSourceField($media_type);
-    $source_field->getFieldStorageDefinition()->save();
-    $source_field->save();
-
     $this->media = Media::create([
       'bundle' => 'mpx',
       'title' => 'test',
