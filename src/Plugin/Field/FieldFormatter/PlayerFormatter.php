@@ -60,7 +60,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *
    * @var \Drupal\Core\Messenger\MessengerInterface
    */
-  private $messenger;
+  protected $messenger;
 
   /**
    * Constructs a PlayerFormatter object.
