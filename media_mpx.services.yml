@@ -100,3 +100,9 @@ services:
     class: Lullabot\Mpx\TokenCachePool
     public: false
     arguments: ['@media_mpx.token_cache_pool_adapter']
+
+  media_mpx.event_subscriber:
+    class: Drupal\media_mpx\EventSubscriber\MediaMpxSubscriber
+    arguments: ['@messenger']
+    tags:
+      - { name: event_subscriber }
