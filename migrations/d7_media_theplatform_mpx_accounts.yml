@@ -1,8 +1,8 @@
 id: d7_media_theplatform_mpx_accounts
 label: mpx Accounts
-migration_group: media_theplatform_mpx
 migration_tags:
   - Drupal 7
+  - Configuration
 dependencies:
   - migrate_tools
 migration_dependencies:
