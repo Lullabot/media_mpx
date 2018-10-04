@@ -513,7 +513,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $property = substr($attribute_name, strlen('Media:'));
       if ($this->hasReflectedProperty($property, $this->mediaClass)) {
         $mpx_object = $this->getMpxObject($media);
-        $value = $this->getReflectedProperty($media, $attribute_name, $mpx_object);
+        $value = $this->getReflectedProperty($media, $property, $mpx_object);
       }
     }
     return $value;

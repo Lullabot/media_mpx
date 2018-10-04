@@ -40,3 +40,106 @@ function media_mpx_theme() {
     ],
   ];
 }
+
+/**
+ * Implements hook_migration_plugins_alter().
+ */
+function media_mpx_migration_plugins_alter(array &$migrations) {
+  // Add mappings for fields stored at mpx_video table.
+  foreach ($migrations as $migration_id => $migration) {
+    if ($migration['source']['plugin'] == 'media_mpx_entity_item') {
+      $migrations[$migration_id]['process']['name'] = [
+        'plugin' => 'get',
+        'source' => 'title',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_released_file_pids'] = [
+        'plugin' => 'get',
+        'source' => 'released_file_pids',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_main_released_file_pid'] = [
+        'plugin' => 'get',
+        'source' => 'default_released_file_pid',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_media_categories'] = [
+        'plugin' => 'get',
+        'source' => 'categories',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_title'] = [
+        'plugin' => 'get',
+        'source' => 'title',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_id'] = [
+        'plugin' => 'get',
+        'source' => 'id',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_guid'] = [
+        'plugin' => 'get',
+        'source' => 'guid',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_description'] = [
+        'plugin' => 'get',
+        'source' => 'description',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_author'] = [
+        'plugin' => 'get',
+        'source' => 'author',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_airdate'] = [
+        'plugin' => 'get',
+        'source' => 'airdate',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_available_date'] = [
+        'plugin' => 'get',
+        'source' => 'available_date',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_expiration_date'] = [
+        'plugin' => 'get',
+        'source' => 'expiration_date',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_keywords'] = [
+        'plugin' => 'get',
+        'source' => 'keywords',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_copyright'] = [
+        'plugin' => 'get',
+        'source' => 'copyright',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_related_link'] = [
+        'plugin' => 'get',
+        'source' => 'related_link',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_fab_rating'] = [
+        'plugin' => 'get',
+        'source' => 'fab_rating',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_fab_subratings'] = [
+        'plugin' => 'get',
+        'source' => 'fab_sub_ratings',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_mpaa_rating'] = [
+        'plugin' => 'get',
+        'source' => 'mpaa_rating',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_mpaa_subratings'] = [
+        'plugin' => 'get',
+        'source' => 'mpaa_sub_ratings',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_vchip_rating'] = [
+        'plugin' => 'get',
+        'source' => 'vchip_rating',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_vchip_subratings'] = [
+        'plugin' => 'get',
+        'source' => 'vchip_sub_ratings',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_exclude_countries'] = [
+        'plugin' => 'get',
+        'source' => 'exclude_countries',
+      ];
+      $migrations[$migration_id]['process']['field_mpx_countries'] = [
+        'plugin' => 'get',
+        'source' => 'countries',
+      ];
+    }
+  }
+}

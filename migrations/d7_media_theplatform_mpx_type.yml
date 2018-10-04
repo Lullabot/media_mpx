@@ -1,0 +1,25 @@
+id: d7_media_theplatform_mpx_type
+label: Creates MPX media bundles out of File Entity types
+migration_tags:
+  - Drupal 7
+  - Configuration
+source:
+  plugin: media_mpx_type
+  constants:
+    status: true
+    source: media_mpx_media
+    queue_thumbnail_downloads: true
+    mpx_field: field_mpx_url
+process:
+  id: type
+  label: account
+  status: constants/status
+  source: constants/source
+  queue_thumbnail_downloads: constants/queue_thumbnail_downloads
+  source_configuration/account:
+    plugin: migration_lookup
+    migration: d7_media_theplatform_mpx_accounts
+    source: id
+  source_configuration/source_field: constants/mpx_field
+destination:
+  plugin: 'entity:media_type'
