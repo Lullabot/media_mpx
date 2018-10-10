@@ -106,7 +106,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
       return $this->derivatives;
     }
 
-    $fields = $this->getFields();
+    $fields = $this->getFileFieldInstances();
 
     try {
       foreach ($types as $row) {
@@ -123,9 +123,11 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   }
 
   /**
+   * Get all the source file entity field instances.
+   *
    * @return array
    */
-  protected function getFields() {
+  protected function getFileFieldInstances() {
     $fields = [];
     try {
       $source_plugin = static::getSourcePlugin('d7_field_instance');
@@ -144,11 +146,11 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   }
 
   /**
+   * Get the derivative definitions for each source file entity field instance.
+   *
    * @param $base_plugin_definition
    * @param $row
    * @param $fields
-   *
-   * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
   protected function getDerivativeDefinitionsByRow($base_plugin_definition, $row, $fields) {
     /** @var \Drupal\migrate\Row $row */
@@ -172,6 +174,14 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
     $this->derivatives[$bundle_name] = $migration->getPluginDefinition();
   }
 
+  /**
+   * Process the given field instances on a given bundle from the source.
+   *
+   * @param \Drupal\migrate\Plugin\Migration $migration
+   * @param array $bundle_fields
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   */
   protected function processFieldsByBundle(Migration $migration, array $bundle_fields) {
     foreach ($bundle_fields as $field_name => $info) {
       try {
@@ -184,6 +194,10 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   }
 
   /**
+   * Create field plugins from the field info for the given migration.
+   *
+   * Attempt to use the field plugin manager.
+   *
    * @param string $field_name
    * @param array $info
    * @param \Drupal\migrate\Plugin\Migration $migration
@@ -202,6 +216,10 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   }
 
   /**
+   * Create field plugins from the field info for the given migration.
+   *
+   * Attempt to use the CCK plugin manager.
+   *
    * @param string $field_name
    * @param array $info
    * @param \Drupal\migrate\Plugin\Migration $migration
