@@ -7,7 +7,9 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Database\DatabaseExceptionWrapper;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Drupal\migrate\Exception\RequirementsException;
+use Drupal\migrate\Plugin\Migration;
 use Drupal\migrate\Plugin\MigrationDeriverTrait;
+use Drupal\migrate\Plugin\MigrationPluginManagerInterface;
 use Drupal\migrate_drupal\Plugin\MigrateCckFieldPluginManagerInterface;
 use Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -54,6 +56,13 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   protected $fieldPluginManager;
 
   /**
+   * The migration plugin manager service.
+   *
+   * @var \Drupal\migrate\Plugin\MigrationPluginManagerInterface
+   */
+  protected $migrationPluginManager;
+
+  /**
    * D7FileEntityItemDeriver constructor.
    *
    * @param string $base_plugin_id
@@ -62,11 +71,14 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    *   The CCK plugin manager.
    * @param \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface $field_manager
    *   The field plugin manager.
+   * @param \Drupal\migrate\Plugin\MigrationPluginManagerInterface $migration_plugin_manager
+   *   Migration plugin manager service.
    */
-  public function __construct($base_plugin_id, MigrateCckFieldPluginManagerInterface $cck_manager, MigrateFieldPluginManagerInterface $field_manager) {
+  public function __construct($base_plugin_id, MigrateCckFieldPluginManagerInterface $cck_manager, MigrateFieldPluginManagerInterface $field_manager, MigrationPluginManagerInterface $migration_plugin_manager) {
     $this->basePluginId = $base_plugin_id;
     $this->cckPluginManager = $cck_manager;
     $this->fieldPluginManager = $field_manager;
+    $this->migrationPluginManager = $migration_plugin_manager;
   }
 
   /**
@@ -76,7 +88,8 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
     return new static(
       $base_plugin_id,
       $container->get('plugin.manager.migrate.cckfield'),
-      $container->get('plugin.manager.migrate.field')
+      $container->get('plugin.manager.migrate.field'),
+      $container->get('plugin.manager.migration')
     );
   }
 
@@ -93,6 +106,26 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
       return $this->derivatives;
     }
 
+    $fields = $this->getFields();
+
+    try {
+      foreach ($types as $row) {
+        $this->getDerivativeDefinitionsByRow($base_plugin_definition, $row, $fields);
+      }
+    }
+    catch (DatabaseExceptionWrapper $e) {
+      // Once we begin iterating the source plugin it is possible that the
+      // source tables will not exist. This can happen when the
+      // MigrationPluginManager gathers up the migration definitions but we do
+      // not actually have a Drupal 7 source database.
+    }
+    return $this->derivatives;
+  }
+
+  /**
+   * @return array
+   */
+  protected function getFields() {
     $fields = [];
     try {
       $source_plugin = static::getSourcePlugin('d7_field_instance');
@@ -107,60 +140,87 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
     catch (RequirementsException $e) {
       // No fields, no problem. We can keep going.
     }
+    return $fields;
+  }
 
-    try {
-      foreach ($types as $row) {
-        /** @var \Drupal\migrate\Row $row */
-        $values = $base_plugin_definition;
-        $bundle_name = $row->getSourceProperty('type');
+  /**
+   * @param $base_plugin_definition
+   * @param $row
+   * @param $fields
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   */
+  protected function getDerivativeDefinitionsByRow($base_plugin_definition, $row, $fields) {
+    /** @var \Drupal\migrate\Row $row */
+    $values = $base_plugin_definition;
+    $bundle_name = $row->getSourceProperty('type');
 
-        // Create the migration derivative.
-        $values['source']['type'] = $bundle_name;
-        $values['label'] = t('@label (@type)', [
-          '@label' => $base_plugin_definition['label'],
-          '@type' => $bundle_name,
-        ]);
-        $values['destination']['bundle'] = $bundle_name;
+    // Create the migration derivative.
+    $values['source']['type'] = $bundle_name;
+    $values['label'] = t('@label (@type)', [
+      '@label' => $base_plugin_definition['label'],
+      '@type' => $bundle_name,
+    ]);
+    $values['destination']['bundle'] = $bundle_name;
 
-        /** @var \Drupal\migrate\Plugin\Migration $migration */
-        $migration = \Drupal::service('plugin.manager.migration')
-          ->createStubMigration($values);
-        if (isset($fields[$bundle_name])) {
-          foreach ($fields[$bundle_name] as $field_name => $info) {
-            $field_type = $info['type'];
-            try {
-              $plugin_id = $this->fieldPluginManager->getPluginIdFromFieldType($field_type, ['core' => 7], $migration);
-              if (!isset($this->fieldPluginCache[$field_type])) {
-                $this->fieldPluginCache[$field_type] = $this->fieldPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
-              }
-              $this->fieldPluginCache[$field_type]
-                ->processFieldValues($migration, $field_name, $info);
-            }
-            catch (PluginNotFoundException $ex) {
-              try {
-                $plugin_id = $this->cckPluginManager->getPluginIdFromFieldType($field_type, ['core' => 7], $migration);
-                if (!isset($this->cckPluginCache[$field_type])) {
-                  $this->cckPluginCache[$field_type] = $this->cckPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
-                }
-                $this->cckPluginCache[$field_type]
-                  ->processCckFieldValues($migration, $field_name, $info);
-              }
-              catch (PluginNotFoundException $ex) {
-                $migration->setProcessOfProperty($field_name, $field_name);
-              }
-            }
-          }
-        }
-        $this->derivatives[$bundle_name] = $migration->getPluginDefinition();
+    /** @var \Drupal\migrate\Plugin\Migration $migration */
+    $migration = $this->migrationPluginManager
+      ->createStubMigration($values);
+    if (isset($fields[$bundle_name])) {
+      $this->processFieldsByBundle($migration, $fields[$bundle_name]);
+    }
+    $this->derivatives[$bundle_name] = $migration->getPluginDefinition();
+  }
+
+  protected function processFieldsByBundle(Migration $migration, array $bundle_fields) {
+    foreach ($bundle_fields as $field_name => $info) {
+      try {
+        $this->createFieldPluginFromFieldPluginManager($field_name, $info, $migration);
+      }
+      catch (PluginNotFoundException $ex) {
+        $this->createFieldPluginFromCckPluginManager($field_name, $info, $migration);
       }
     }
-    catch (DatabaseExceptionWrapper $e) {
-      // Once we begin iterating the source plugin it is possible that the
-      // source tables will not exist. This can happen when the
-      // MigrationPluginManager gathers up the migration definitions but we do
-      // not actually have a Drupal 7 source database.
+  }
+
+  /**
+   * @param string $field_name
+   * @param array $info
+   * @param \Drupal\migrate\Plugin\Migration $migration
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function createFieldPluginFromFieldPluginManager(string $field_name, array $info, Migration $migration) {
+    $field_type = $info['type'];
+    $plugin_id = $this->fieldPluginManager->getPluginIdFromFieldType($field_type, ['core' => 7], $migration);
+    if (!isset($this->fieldPluginCache[$field_type])) {
+      $this->fieldPluginCache[$field_type] = $this->fieldPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
     }
-    return $this->derivatives;
+    $this->fieldPluginCache[$field_type]
+      ->processFieldValues($migration, $field_name, $info);
+  }
+
+  /**
+   * @param string $field_name
+   * @param array $info
+   * @param \Drupal\migrate\Plugin\Migration $migration
+   *
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   */
+  protected function createFieldPluginFromCckPluginManager(string $field_name, array $info, Migration $migration) {
+    $field_type = $info['type'];
+    try {
+      $plugin_id = $this->cckPluginManager->getPluginIdFromFieldType($field_type, ['core' => 7], $migration);
+      if (!isset($this->cckPluginCache[$field_type])) {
+        $this->cckPluginCache[$field_type] = $this->cckPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
+      }
+      $this->cckPluginCache[$field_type]
+        ->processCckFieldValues($migration, $field_name, $info);
+    }
+    catch (PluginNotFoundException $ex) {
+      $migration->setProcessOfProperty($field_name, $field_name);
+    }
   }
 
 }
