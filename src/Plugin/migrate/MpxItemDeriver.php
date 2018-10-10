@@ -10,6 +10,7 @@ use Drupal\migrate\Exception\RequirementsException;
 use Drupal\migrate\Plugin\Migration;
 use Drupal\migrate\Plugin\MigrationDeriverTrait;
 use Drupal\migrate\Plugin\MigrationPluginManagerInterface;
+use Drupal\migrate\Row;
 use Drupal\migrate_drupal\Plugin\MigrateCckFieldPluginManagerInterface;
 use Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -156,7 +157,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * @param array $fields
    *   Array of file field instances keyed by bundle and field name.
    */
-  protected function getDerivativeDefinitionsByRow($base_plugin_definition, $row, $fields) {
+  protected function getDerivativeDefinitionsByRow(array $base_plugin_definition, Row $row, array $fields) {
     /** @var \Drupal\migrate\Row $row */
     $values = $base_plugin_definition;
     $bundle_name = $row->getSourceProperty('type');
