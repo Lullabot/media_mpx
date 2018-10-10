@@ -126,6 +126,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * Get all the source file entity field instances.
    *
    * @return array
+   *   Array of file field instances keyed by bundle and field name.
    */
   protected function getFileFieldInstances() {
     $fields = [];
@@ -148,9 +149,12 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   /**
    * Get the derivative definitions for each source file entity field instance.
    *
-   * @param $base_plugin_definition
-   * @param $row
-   * @param $fields
+   * @param array $base_plugin_definition
+   *   The definition array of the base plugin.
+   * @param \Drupal\migrate\Row $row
+   *   Source row.
+   * @param array $fields
+   *   Array of file field instances keyed by bundle and field name.
    */
   protected function getDerivativeDefinitionsByRow($base_plugin_definition, $row, $fields) {
     /** @var \Drupal\migrate\Row $row */
@@ -178,7 +182,9 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * Process the given field instances on a given bundle from the source.
    *
    * @param \Drupal\migrate\Plugin\Migration $migration
+   *   Migration plugin.
    * @param array $bundle_fields
+   *   Array of fields for a given bundle keyed by field name.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
@@ -199,8 +205,11 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * Attempt to use the field plugin manager.
    *
    * @param string $field_name
+   *   Field name of the source field to process.
    * @param array $info
+   *   Field configuration for the field to process.
    * @param \Drupal\migrate\Plugin\Migration $migration
+   *   Migration plugin.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
@@ -221,8 +230,11 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * Attempt to use the CCK plugin manager.
    *
    * @param string $field_name
+   *   Field name of the source field to process.
    * @param array $info
+   *   Field configuration for the field to process.
    * @param \Drupal\migrate\Plugin\Migration $migration
+   *   Migration plugin.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginException
    */
