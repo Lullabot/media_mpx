@@ -16,7 +16,7 @@ use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ObjectListQuery;
 use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
-use Lullabot\Mpx\Player\Url;
+use Lullabot\Mpx\Service\Player\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -39,21 +39,21 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  private $entityTypeManager;
+  protected $entityTypeManager;
 
   /**
    * The creator used to load player factories.
    *
    * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
-  private $dataObjectFactoryCreator;
+  protected $dataObjectFactoryCreator;
 
   /**
    * The logger for mpx errors.
    *
    * @var \Drupal\media_mpx\MpxLogger
    */
-  private $mpxLogger;
+  protected $mpxLogger;
 
   /**
    * The system messenger for error reporting.
@@ -202,7 +202,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @return array
    *   The array of player options.
    */
-  private function fetchPlayerOptions(): array {
+  protected function fetchPlayerOptions(): array {
     $options = [];
     $bundle = $this->fieldDefinition->getTargetBundle();
     /** @var \Drupal\media\Entity\MediaType $type */
@@ -238,7 +238,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @param array &$element
    *   The render array.
    */
-  private function renderIframes(FieldItemListInterface $items, Player $player, array &$element) {
+  protected function renderIframes(FieldItemListInterface $items, Player $player, array &$element) {
     /** @var \Drupal\media\Entity\Media $entity */
     $entity = $items->getEntity();
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
