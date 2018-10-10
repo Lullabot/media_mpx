@@ -16,7 +16,7 @@ use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ObjectListQuery;
 use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
-use Lullabot\Mpx\Player\Url;
+use Lullabot\Mpx\Service\Player\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
