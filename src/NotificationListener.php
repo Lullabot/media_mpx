@@ -3,7 +3,6 @@
 namespace Drupal\media_mpx;
 
 use Drupal\Core\State\StateInterface;
-use Drupal\media\MediaSourceInterface;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use GuzzleHttp\Exception\ConnectException;
 use Lullabot\Mpx\DataService\DataServiceManager;
