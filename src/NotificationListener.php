@@ -108,14 +108,14 @@ class NotificationListener {
   /**
    * Return the current notification ID, or -1 if one is not set.
    *
-   * @param \Drupal\media\MediaSourceInterface $media_source
-   *   The media source the notification ID is for.
+   * @param string $media_type_id
+   *   The media type ID to import for.
    *
    * @return int
    *   The notification ID.
    */
-  public function getNotificationId(MediaSourceInterface $media_source): int {
-    $notification_key = $this->getNotificationKey($media_source);
+  public function getNotificationId(string $media_type_id): int {
+    $notification_key = $this->getNotificationKey($media_type_id);
     if (!$notification_id = $this->state->get($notification_key)) {
       // @todo Should we throw a warning?
       $notification_id = -1;
@@ -127,13 +127,13 @@ class NotificationListener {
   /**
    * Set the last processed notification id.
    *
-   * @param \Drupal\media\MediaSourceInterface $media_source
-   *   The media source the notification ID is for.
+   * @param string $media_type_id
+   *   The media type ID to import for.
    * @param \Lullabot\Mpx\DataService\Notification $notification
    *   The last notification that has been processed.
    */
-  public function setNotificationId(MediaSourceInterface $media_source, Notification $notification) {
-    $notification_key = $this->getNotificationKey($media_source);
+  public function setNotificationId(string $media_type_id, Notification $notification) {
+    $notification_key = $this->getNotificationKey($media_type_id);
     // @todo should this really be state?
     $this->state->set($notification_key, $notification->getId());
   }
@@ -141,14 +141,14 @@ class NotificationListener {
   /**
    * Return the notification key in the state system.
    *
-   * @param \Drupal\media\MediaSourceInterface $media_source
-   *   The media source to generate the key for.
+   * @param string $media_type_id
+   *   The media type ID to import for.
    *
    * @return string
    *   The notification key.
    */
-  private function getNotificationKey(MediaSourceInterface $media_source): string {
-    return $media_source->getPluginId() . '_notification_id';
+  private function getNotificationKey(string $media_type_id): string {
+    return $media_type_id . '_notification_id';
   }
 
 }
