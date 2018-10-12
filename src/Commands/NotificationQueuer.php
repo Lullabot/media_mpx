@@ -75,7 +75,7 @@ class NotificationQueuer extends DrushCommands {
     // First, we find the last notification ID.
     $media_type = $this->loadMediaType($media_type_id);
     $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $notification_id = $this->listener->getNotificationId($media_source);
+    $notification_id = $this->listener->getNotificationId($media_type_id);
 
     // Next, we fetch notifications, removing duplicates (such as multiple saves
     // of an mpx object in a row).
@@ -87,7 +87,7 @@ class NotificationQueuer extends DrushCommands {
     $this->queueNotifications($media_type, $notifications);
 
     // Let the next listen call start from where we left off.
-    $this->listener->setNotificationId($media_source, end($notifications));
+    $this->listener->setNotificationId($media_type_id, end($notifications));
 
     $this->io()->progressFinish();
   }
