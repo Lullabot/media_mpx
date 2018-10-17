@@ -10,6 +10,7 @@ process:
   mid: fid
   bundle: type
   name: filename
+  status: published
   field_mpx_url:
     plugin: get
     source: mpx_url
