@@ -1,2 +1,2 @@
-* Fix wrong variable breaking Media field mappings https://github.com/Lullabot/media_mpx/pull/62
-  * https://github.com/Lullabot/media_mpx/pull/62.diff
+* [MIGRATION] Set the status flag
+  * https://patch-diff.githubusercontent.com/raw/Lullabot/media_mpx/pull/71.diff
