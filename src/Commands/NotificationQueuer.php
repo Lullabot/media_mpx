@@ -5,15 +5,14 @@ namespace Drupal\media_mpx\Commands;
 use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
-use Drupal\media\Entity\Media;
 use Drupal\media\Entity\MediaType;
-use Drupal\media\MediaStorage;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
 use Drupal\media_mpx\NotificationListener;
 use Drush\Commands\DrushCommands;
 use Psr\Log\LoggerAwareTrait;
+use Lullabot\Mpx\DataService\Notification as MpxNotification;
 
 /**
  * Processes mpx notifications.
@@ -102,41 +101,44 @@ class NotificationQueuer extends DrushCommands {
   }
 
   /**
-   * Removes notifications that are older than the entities that reference their entries
+   * Removes notifications that are older than the entities that reference their entries.
    *
    * @param \Lullabot\Mpx\DataService\Notification[] $notifications
-   *  An array of notifications
+   *   An array of notifications.
    * @param string $media_type_id
-   *  The media type being imported
+   *   The media type being imported.
+   *
    * @return array
-   *  The filtered array
+   *   The filtered array.
+   *
    * @throws PluginException
-   *   The only way this could happen is if the media module was missing (thrown from getStorage call)
+   *   The only way this could happen is if the media module was missing (thrown from getStorage call).
    */
   private function filterByDate(array $notifications, string $media_type_id): array {
     /* @todo I borrowed this search code from the DataObjectImporter maybe there is a better place to publicly store
-     * this functionality */
+     * this functionality. */
 
-    /** @var MediaStorage $media_storage */
+    /** @var \Drupal\Media\MediaStorage $media_storage */
     $media_storage = \Drupal::entityManager()->getStorage('media');
-    /** @var MediaType $media_type */
+    /** @var \Drupal\Media\Entity\MediaType $media_type */
     $media_type = MediaType::load($media_type_id);
     $source = $media_type->getSource();
     $source_field = $source->getSourceFieldDefinition($media_type)->getName();
 
-    $notifications = array_filter($notifications, function (\Lullabot\Mpx\DataService\Notification $notification) use ($media_storage, $source_field) {
+    $notifications = array_filter($notifications, function (MpxNotification $notification)
+    use ($media_storage, $source_field) {
       $notificationDate = $notification->getEntry()->getUpdated()->format("U");
-      $notificationId = (string)$notification->getEntry()->getId();
+      $notificationId = (string) $notification->getEntry()->getId();
       $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
 
-      //the updates must have to do with something new so keep them included
+      // The updates must have to do with something new so keep them included.
       if (empty($entities)) {
         return TRUE;
       }
 
-      //If there exists an entity that hasn't been updated since the notification was updated keep the notification
+      // If there exists an entity that hasn't been updated since the notification was updated keep the notification.
       foreach ($entities as $entity) {
-        /** @var Media $entity */
+        /** @var \Drupal\Media\Entity\Media $entity */
         if ($entity->getChangedTime() < $notificationDate) {
           return TRUE;
         };
