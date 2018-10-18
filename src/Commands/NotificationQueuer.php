@@ -2,8 +2,11 @@
 
 namespace Drupal\media_mpx\Commands;
 
+use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\media\Entity\Media;
+use Drupal\media\MediaStorage;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
@@ -49,9 +52,9 @@ class NotificationQueuer extends DrushCommands {
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager interface.
    * @param \Drupal\Core\Queue\QueueFactory $queue_factory
+   *   The Drupal mpx notification listener.
    *   The factory to load the mpx notification queue.
    * @param \Drupal\media_mpx\NotificationListener $listener
-   *   The Drupal mpx notification listener.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
     $this->entityTypeManager = $entity_type_manager;
@@ -82,6 +85,7 @@ class NotificationQueuer extends DrushCommands {
     $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
     $notifications = $this->listener->listen($media_source, $notification_id);
     $notifications = $this->filterDuplicateNotifications($notifications);
+    //$notifications = $this->filterByDate($notifications);
 
     // Take the notifications and store them in the queue for processing later.
     $this->queueNotifications($media_type, $notifications);
@@ -90,6 +94,48 @@ class NotificationQueuer extends DrushCommands {
     $this->listener->setNotificationId($media_type_id, end($notifications));
 
     $this->io()->progressFinish();
+  }
+
+  /**
+   * Removes notifications that are older than the entities that reference their entries
+   *
+   * @param \Lullabot\Mpx\DataService\Notification[] $notifications
+   *  An array of notifications
+   * @param string $media_type_id
+   *  The media type being imported
+   * @return array
+   *  The filtered array
+   * @throws PluginException
+   *   The only way this could happen is if the media module was missing (thrown from getStorage call)
+   */
+  private function filterByDate(array $notifications, string $media_type_id): array {
+    /* @todo I borrowed this search code from the DataObjectImporter maybe there is a better place to publicly store
+     * this functionality */
+
+    /** @var MediaStorage $media_storage */
+    $media_storage = \Drupal::entityTypeManager()
+      ->getStorage('media');
+    /** @var MediaTypeInterface $media_type */
+    $media_type = $media_storage->getEntityType();
+    $source = $media_type->getSource();
+    $source_field = $source->getSourceFieldDefinition($media_type)->getName();
+
+    $notifications = array_filter($notifications, function (\Lullabot\Mpx\DataService\Notification $notification) use ($media_storage, $source_field) {
+      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
+      $entities = $media_storage->loadByProperties([$source_field => $notification->getEntry()->getId()]);
+
+      //If there exists an entity that hasn't been updated since the notification was updated keep the notification
+      foreach ($entities as $entity) {
+        /** @var Media $entity */
+        if ($entity->getChangedTime() < $notificationDate) {
+          return TRUE;
+        };
+      }
+
+      return FALSE;
+    });
+
+    return $notifications;
   }
 
   /**
