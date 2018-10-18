@@ -101,8 +101,7 @@ class NotificationQueuer extends DrushCommands {
   }
 
   /**
-   * Removes notifications that are older than the entities that reference
-   * their entries.
+   * Removes notifications that are older than the entities that reference them.
    *
    * @param \Lullabot\Mpx\DataService\Notification[] $notifications
    *   An array of notifications.
