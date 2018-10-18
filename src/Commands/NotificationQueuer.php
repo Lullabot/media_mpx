@@ -6,6 +6,7 @@ use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\Entity\Media;
+use Drupal\media\Entity\MediaType;
 use Drupal\media\MediaStorage;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
@@ -85,7 +86,11 @@ class NotificationQueuer extends DrushCommands {
     $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
     $notifications = $this->listener->listen($media_source, $notification_id);
     $notifications = $this->filterDuplicateNotifications($notifications);
-    //$notifications = $this->filterByDate($notifications);
+    $notifications = $this->filterByDate($notifications, $media_type_id);
+
+    if (empty($notifications)) {
+      return;
+    }
 
     // Take the notifications and store them in the queue for processing later.
     $this->queueNotifications($media_type, $notifications);
@@ -113,16 +118,21 @@ class NotificationQueuer extends DrushCommands {
      * this functionality */
 
     /** @var MediaStorage $media_storage */
-    $media_storage = \Drupal::entityTypeManager()
-      ->getStorage('media');
-    /** @var MediaTypeInterface $media_type */
-    $media_type = $media_storage->getEntityType();
+    $media_storage = \Drupal::entityManager()->getStorage('media');
+    /** @var MediaType $media_type */
+    $media_type = MediaType::load($media_type_id);
     $source = $media_type->getSource();
     $source_field = $source->getSourceFieldDefinition($media_type)->getName();
 
     $notifications = array_filter($notifications, function (\Lullabot\Mpx\DataService\Notification $notification) use ($media_storage, $source_field) {
       $notificationDate = $notification->getEntry()->getUpdated()->format("U");
-      $entities = $media_storage->loadByProperties([$source_field => $notification->getEntry()->getId()]);
+      $notificationId = (string)$notification->getEntry()->getId();
+      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
+
+      //the updates must have to do with something new so keep them included
+      if (empty($entities)) {
+        return TRUE;
+      }
 
       //If there exists an entity that hasn't been updated since the notification was updated keep the notification
       foreach ($entities as $entity) {
