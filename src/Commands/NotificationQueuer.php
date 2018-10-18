@@ -2,7 +2,6 @@
 
 namespace Drupal\media_mpx\Commands;
 
-use Drupal\Component\Plugin\Exception\PluginException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\Entity\MediaType;
@@ -55,6 +54,7 @@ class NotificationQueuer extends DrushCommands {
    *   The Drupal mpx notification listener.
    *   The factory to load the mpx notification queue.
    * @param \Drupal\media_mpx\NotificationListener $listener
+   *   The notification listener.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
     $this->entityTypeManager = $entity_type_manager;
@@ -101,7 +101,8 @@ class NotificationQueuer extends DrushCommands {
   }
 
   /**
-   * Removes notifications that are older than the entities that reference their entries.
+   * Removes notifications that are older than the entities that reference
+   * their entries.
    *
    * @param \Lullabot\Mpx\DataService\Notification[] $notifications
    *   An array of notifications.
@@ -111,12 +112,13 @@ class NotificationQueuer extends DrushCommands {
    * @return array
    *   The filtered array.
    *
-   * @throws PluginException
-   *   The only way this could happen is if the media module was missing (thrown from getStorage call).
+   * @throws \Drupal\Component\Plugin\Exception\PluginException
+   *   The only way this could happen is if the media module was missing
+   *   (thrown from getStorage call).
    */
   private function filterByDate(array $notifications, string $media_type_id): array {
-    /* @todo I borrowed this search code from the DataObjectImporter maybe there is a better place to publicly store
-     * this functionality. */
+    /* @todo I borrowed this search code from the DataObjectImporter
+     * maybe there is a better place to publicly store this functionality. */
 
     /** @var \Drupal\Media\MediaStorage $media_storage */
     $media_storage = \Drupal::entityManager()->getStorage('media');
@@ -125,8 +127,7 @@ class NotificationQueuer extends DrushCommands {
     $source = $media_type->getSource();
     $source_field = $source->getSourceFieldDefinition($media_type)->getName();
 
-    $notifications = array_filter($notifications, function (MpxNotification $notification)
-    use ($media_storage, $source_field) {
+    $notifications = array_filter($notifications, function (MpxNotification $notification) use ($media_storage, $source_field) {
       $notificationDate = $notification->getEntry()->getUpdated()->format("U");
       $notificationId = (string) $notification->getEntry()->getId();
       $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
@@ -136,7 +137,8 @@ class NotificationQueuer extends DrushCommands {
         return TRUE;
       }
 
-      // If there exists an entity that hasn't been updated since the notification was updated keep the notification.
+      /* If there exists an entity that hasn't been updated since the
+      notification was updated keep the notification. */
       foreach ($entities as $entity) {
         /** @var \Drupal\Media\Entity\Media $entity */
         if ($entity->getChangedTime() < $notificationDate) {
