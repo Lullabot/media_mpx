@@ -7,6 +7,7 @@
 
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
+use Drupal\media_mpx\Plugin\QueueWorker\ThumbnailDownloader;
 
 /**
  * Implements hook_help().
@@ -39,6 +40,15 @@ function media_mpx_theme() {
       ],
     ],
   ];
+}
+
+/**
+ * Implements hook_queue_info_alter().
+ */
+function media_mpx_queue_info_alter(&$queues) {
+  // Alter the queue so we can support recreating jobs if the thumbnail fails
+  // to download.
+  $queues['media_entity_thumbnail']['class'] = ThumbnailDownloader::class;
 }
 
 /**
