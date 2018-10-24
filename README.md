@@ -1,5 +1,24 @@
 # Media mpx for Drupal 8
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Requirements](#requirements)
+- [About the mpx name](#about-the-mpx-name)
+- [Metadata mapping support](#metadata-mapping-support)
+- [Video ingestion](#video-ingestion)
+- [Thumbnail integration](#thumbnail-integration)
+  - [Handling thumbnail errors](#handling-thumbnail-errors)
+- [Caching of mpx responses](#caching-of-mpx-responses)
+- [Limiting results during an mpx import](#limiting-results-during-an-mpx-import)
+  - [1. Altering import mpx queries](#1-altering-import-mpx-queries)
+  - [2. Altering ingested mpx objects](#2-altering-ingested-mpx-objects)
+- [Custom field support](#custom-field-support)
+- [Migrating from Media: thePlatform mpx](#migrating-from-media-theplatform-mpx)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 [![CircleCI](https://circleci.com/gh/Lullabot/media_mpx/tree/8.x-1.x.svg?style=svg)](https://circleci.com/gh/Lullabot/media_mpx/tree/8.x-1.x) [![Maintainability](https://api.codeclimate.com/v1/badges/69160a3010c6788be915/maintainability)](https://codeclimate.com/github/Lullabot/media_mpx/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/69160a3010c6788be915/test_coverage)](https://codeclimate.com/github/Lullabot/media_mpx/test_coverage)
 
 This module integrates [mpx for PHP](https://github.com/Lullabot/mpx-php) with
