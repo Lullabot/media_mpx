@@ -32,7 +32,7 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
       $media->updateQueuedThumbnail();
     }
     catch (MpxExceptionInterface $e) {
-      $message = sprintf('There was an error downloading the media entity %entity_id thumbnail from %mpx_id. The thumbnail will be retried later.', [
+      $message = sprintf('There was an error downloading the media entity %thumbnail from %. The thumbnail will be retried later.', [
         $media->id(),
         $media->getSource()->getSourceFieldValue($media),
       ]);
