@@ -2,7 +2,7 @@
 
 namespace Drupal\media_mpx\Plugin\QueueWorker;
 
-use Drupal\Core\Queue\RecreateException;
+use Drupal\Core\Queue\PostponeItemException;
 use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\media\Entity\Media;
 use Drupal\media\Plugin\QueueWorker\ThumbnailDownloader as CoreThumbnailDownloader;
@@ -40,8 +40,8 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
       // If core has been patched to support recreating a single queue item,
       // use that.
       // @see https://www.drupal.org/project/drupal/issues/1832818
-      if (!class_exists('\Drupal\Core\Queue\RecreateException')) {
-        throw new RecreateException($message, $e->getCode(), $e);
+      if (!class_exists('\Drupal\Core\Queue\PostponeItemException')) {
+        throw new PostponeItemException($message, $e->getCode(), $e);
       }
 
       // Otherwise, block the whole queue.

@@ -66,7 +66,7 @@ If an error occurs while downloading a thumbnail, Drupal will use the default
 thumbnail for a video. It will not try again later to download the correct
 thumbnail. To work around this, we replace Drupal's thumbnail downloader with
 our own. If the patch from
-[Allow a queue item to be postponed](https://www.drupal.org/project/drupal/issues/1832818#comment-12826680)
+[Allow a queue item to be postponed](https://www.drupal.org/project/drupal/issues/1832818#comment-12827934)
 is applied, individual items will be sent to the end of the queue to be tried
 later. Otherwise, queue processing will be suspended until the next cron or
 queue run.
