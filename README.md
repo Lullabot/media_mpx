@@ -90,6 +90,10 @@ is applied, individual items will be sent to the end of the queue to be tried
 later. Otherwise, queue processing will be suspended until the next cron or
 queue run.
 
+Note that there is not a corresponding Drush patch yet for it's `queue:run`
+command. If media thumbnails are processed with that command, do not use the
+above patch, or consider contributing a similar patch to Drush itself.
+
 ## Caching of mpx responses
 
 Unfortunately, mpx returns `Cache-control: no-cache` headers in every request.
