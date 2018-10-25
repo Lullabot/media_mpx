@@ -8,7 +8,6 @@ use GuzzleHttp\Exception\ConnectException;
 use Lullabot\Mpx\DataService\DataServiceManager;
 use Lullabot\Mpx\DataService\Notification;
 use Lullabot\Mpx\DataService\NotificationListener as MpxNotificationListener;
-use Lullabot\Mpx\Exception\ApiException;
 use Lullabot\Mpx\Exception\ClientException;
 use Psr\Log\LoggerInterface;
 
