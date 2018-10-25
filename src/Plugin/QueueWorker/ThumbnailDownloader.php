@@ -32,10 +32,7 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
       $media->updateQueuedThumbnail();
     }
     catch (MpxExceptionInterface $e) {
-      $message = sprintf('There was an error downloading the media entity %thumbnail from %. The thumbnail will be retried later.', [
-        $media->id(),
-        $media->getSource()->getSourceFieldValue($media),
-      ]);
+      $message = sprintf('There was an error downloading the media entity %c thumbnail from %s. The thumbnail will be retried later.', $media->id(), $media->getSource()->getSourceFieldValue($media));
 
       // If core has been patched to support recreating a single queue item,
       // use that.
