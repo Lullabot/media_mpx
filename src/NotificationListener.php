@@ -91,7 +91,7 @@ class NotificationListener {
     try {
       return $promise->wait();
     }
-    catch (ConnectException $e) {
+    catch (ConnectException | ClientException $e) {
       // This may be a timeout if no notifications are available. However, there
       // is no good method from the exception to determine if a timeout
       // occurred.
@@ -100,10 +100,6 @@ class NotificationListener {
         return [];
       }
 
-      // Some other connection exception occurred, so throw that up.
-      throw $e;
-    }
-    catch (ClientException $e) {
       if ($e->getCode() == 404) {
         $this->logger->warning(
           'The last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion of all videos.',
@@ -115,6 +111,7 @@ class NotificationListener {
         return $this->listen($media_source, -1);
       }
 
+      // Some other connection exception occurred, so throw that up.
       throw $e;
     }
   }
