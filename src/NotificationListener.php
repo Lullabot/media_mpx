@@ -8,6 +8,8 @@ use GuzzleHttp\Exception\ConnectException;
 use Lullabot\Mpx\DataService\DataServiceManager;
 use Lullabot\Mpx\DataService\Notification;
 use Lullabot\Mpx\DataService\NotificationListener as MpxNotificationListener;
+use Lullabot\Mpx\Exception\ApiException;
+use Lullabot\Mpx\Exception\ClientException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -100,6 +102,20 @@ class NotificationListener {
       }
 
       // Some other connection exception occurred, so throw that up.
+      throw $e;
+    }
+    catch (ClientException $e) {
+      if ($e->getCode() == 404) {
+        $this->logger->warning(
+          'The last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion of all videos.',
+          [
+            '%id' => $notification_id,
+            '%account' => $account->getPid(),
+          ]);
+
+        return $this->listen($media_source, -1);
+      }
+
       throw $e;
     }
   }
