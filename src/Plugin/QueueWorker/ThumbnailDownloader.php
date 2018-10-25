@@ -40,7 +40,7 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
       // If core has been patched to support recreating a single queue item,
       // use that.
       // @see https://www.drupal.org/project/drupal/issues/1832818
-      if (!class_exists('\Drupal\Core\Queue\PostponeItemException')) {
+      if (class_exists('\Drupal\Core\Queue\PostponeItemException')) {
         throw new PostponeItemException($message, $e->getCode(), $e);
       }
 
