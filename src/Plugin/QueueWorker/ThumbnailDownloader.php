@@ -5,6 +5,7 @@ namespace Drupal\media_mpx\Plugin\QueueWorker;
 use Drupal\Core\Queue\PostponeItemException;
 use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\media\Entity\Media;
+use Drupal\media\MediaInterface;
 use Drupal\media\Plugin\QueueWorker\ThumbnailDownloader as CoreThumbnailDownloader;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Lullabot\Mpx\Exception\MpxExceptionInterface;
@@ -21,13 +22,12 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
     // Drupal doesn't allow for individual media sources to define their
     // thumbnail downloader. Instead, if we are processing any other media item
     // we defer to core's implementation.
-    if (!$this->isMpxMediaItem($data)) {
+    $media = $this->getMedia($data);
+    if (!$this->isMpxMediaItem($media)) {
       parent::processItem($data);
       return;
     }
 
-    $media = $this->getMedia($data);
-    $media->save();
     try {
       $media->updateQueuedThumbnail();
     }
@@ -52,17 +52,16 @@ class ThumbnailDownloader extends CoreThumbnailDownloader {
   }
 
   /**
-   * Determine if the queue data is for an mpx media item.
+   * Determine if an entity is an mpx media item.
    *
-   * @param array $data
-   *   The queue data.
+   * @param \Drupal\media\MediaInterface|null $media
+   *   (optional) The media entity to check. Supports null so we can use this
+   *   with the return from loading an entity.
    *
    * @return bool
    *   TRUE if data references an mpx media entity, FALSE otherwise.
    */
-  private function isMpxMediaItem(array $data): bool {
-    /** @var \Drupal\media\Entity\Media $media */
-    $media = $this->getMedia($data);
+  private function isMpxMediaItem(MediaInterface $media = NULL): bool {
     return $media && $media->getSource() instanceof MpxMediaSourceInterface;
   }
 
