@@ -108,12 +108,8 @@ class NotificationQueuer extends DrushCommands {
    * @param string $media_type_id
    *   The media type being imported.
    *
-   * @return array
+   * @return \Lullabot\Mpx\DataService\Notification[]
    *   The filtered array.
-   *
-   * @throws \Drupal\Component\Plugin\Exception\PluginException
-   *   The only way this could happen is if the media module was missing
-   *   (thrown from getStorage call).
    */
   private function filterByDate(array $notifications, string $media_type_id): array {
     /* @todo I borrowed this search code from the DataObjectImporter
@@ -138,6 +134,7 @@ class NotificationQueuer extends DrushCommands {
 
       /* If there exists an entity that hasn't been updated since the
       notification was updated keep the notification. */
+      // @todo check for the use case where an entity was changed in drupal by a user
       foreach ($entities as $entity) {
         /** @var \Drupal\Media\Entity\Media $entity */
         if ($entity->getChangedTime() < $notificationDate) {
@@ -164,7 +161,7 @@ class NotificationQueuer extends DrushCommands {
    * @param \Lullabot\Mpx\DataService\Notification[] $notifications
    *   An array of notifications.
    *
-   * @return array
+   * @return \Lullabot\Mpx\DataService\Notification[]
    *   The filtered array.
    */
   private function filterDuplicateNotifications(array $notifications): array {
