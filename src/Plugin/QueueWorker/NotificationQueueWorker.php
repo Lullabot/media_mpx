@@ -109,8 +109,12 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
    *
    * @see https://github.com/guzzle/guzzle/pull/2001
    *
+   * @codingStandardsIgnoreStart
+   * https://www.drupal.org/project/coder/issues/2906931
+   *
    * @return \Generator
    *   A generator that yields promises to a loaded mpx media object.
+   * @codingStandardsIgnoreEnd
    */
   private function yieldLoads(array $notifications): \Generator {
     foreach ($notifications as $notification) {
