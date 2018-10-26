@@ -97,7 +97,7 @@ class MpxImporter extends DrushCommands {
 
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
     foreach ($results as $index => $mpx_media) {
-//      $this->dataObjectImporter->importItem($mpx_media, $media_type);
+      $this->dataObjectImporter->importItem($mpx_media, $media_type);
 
       $this->io()->progressAdvance();
       $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
