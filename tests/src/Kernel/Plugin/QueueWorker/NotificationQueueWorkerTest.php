@@ -5,6 +5,9 @@ namespace Drupal\Tests\media_mpx\Kernel\Plugin\QueueWorker;
 use Drupal\media_mpx\Notification;
 use Drupal\media_mpx_test\JsonResponse;
 use Drupal\Tests\media_mpx\Kernel\MediaMpxTestBase;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\Media\Media;
 use Lullabot\Mpx\DataService\Notification as MpxNotification;
@@ -39,6 +42,12 @@ class NotificationQueueWorkerTest extends MediaMpxTestBase {
     $this->handler->append(new JsonResponse(200, [], 'signin-success.json'));
     $this->handler->append(new JsonResponse(200, [], 'media-object.json'));
     $this->handler->append(new JsonResponse(200, [], 'media-object.json'));
+
+    // Mock an empty thumbnail return.
+    $thumbnail_handler = new MockHandler();
+    $thumbnail_handler->append(new Response(200));
+    $client = new Client(['handler' => $thumbnail_handler]);
+    $this->container->set('http_client', $client);
 
     // Load a media object into the cache.
     $factory = $this->container->get('media_mpx.data_object_factory_creator')->fromMediaSource($this->source);
