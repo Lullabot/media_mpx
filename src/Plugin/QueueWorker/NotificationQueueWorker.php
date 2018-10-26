@@ -4,6 +4,7 @@ namespace Drupal\media_mpx\Plugin\QueueWorker;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
+use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use function GuzzleHttp\Promise\each_limit;
@@ -85,28 +86,41 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
   public function processItem($data) {
     /* @var $data \Drupal\media_mpx\Notification[] */
 
-    $promises = [];
-    // While all notifications should have the same media type, we don't want to
-    // assume that.
-    $media_types = [];
+    // All notifications in the same queue item have the same media type.
+    // @see \Drupal\media_mpx\Commands\NotificationQueuer::queueNotifications.
+    $media_type = $data[0]->getMediaType();
 
-    // @todo convert this to a yield.
-    foreach ($data as $notification) {
+    // Process each request concurrently.
+    // @todo Handle individual request rejections by requeuing them to the
+    // bottom of the queue.
+    each_limit($this->yieldLoads($data), 10, function ($mpx_media) use ($media_type) {
+      $this->importer->importItem($mpx_media, $media_type);
+    })->wait();
+  }
+
+  /**
+   * Yield requests to load a media item.
+   *
+   * This is primarily for compatibility with an upstream Guzzle patch that
+   * fixes Curl's multi handler.
+   *
+   * @param \Drupal\media_mpx\Notification[] $notifications
+   *   The notifications to yield requests from.
+   *
+   * @see https://github.com/guzzle/guzzle/pull/2001
+   *
+   * @return \Generator
+   *   A generator that yields promises to a loaded mpx media object.
+   */
+  private function yieldLoads(array $notifications): \Generator {
+    foreach ($notifications as $notification) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $notification->getNotification()->getEntry();
 
       $media_source = $this->importer::loadMediaSource($notification->getMediaType());
       $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-      $promises[] = $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
-      $media_types[] = $notification->getMediaType();
+      yield $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
     }
-
-    // Process each request concurrently.
-    // @todo Handle individual request rejections by requeuing them to the
-    // bottom of the queue.
-    each_limit($promises, 10, function ($mpx_media, $index) use ($media_types) {
-      $this->importer->importItem($mpx_media, $media_types[$index]);
-    })->wait();
   }
 
 }
