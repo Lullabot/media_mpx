@@ -4,7 +4,6 @@ namespace Drupal\media_mpx\Plugin\QueueWorker;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
-use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use function GuzzleHttp\Promise\each_limit;
