@@ -259,6 +259,12 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       $element[$delta] = [
         '#type' => 'media_mpx_iframe',
         '#url' => (string) $url,
+        '#attributes' => [
+          'class' => [
+            'mpx-iframe',
+            'mpx-iframe-account--' . $source_plugin->getAccount()->id(),
+          ],
+        ],
       ];
     }
   }
