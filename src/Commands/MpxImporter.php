@@ -11,10 +11,10 @@ use Drupal\media_mpx\Event\ImportSelectEvent;
 use Drupal\media_mpx\MpxImportTask;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
+use Lullabot\Mpx\DataService\Fields;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 use Lullabot\Mpx\DataService\ObjectListQuery;
-use Lullabot\Mpx\DataService\QQuery\Fields;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
