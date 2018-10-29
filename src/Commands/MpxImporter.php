@@ -115,9 +115,8 @@ class MpxImporter extends DrushCommands {
 
     $results = $this->select($media_type, $query);
 
-    // @todo Support fetching the total results via ObjectList.
     $this->io()->title(dt('Importing @type media', ['@type' => $media_type_id]));
-    $this->io()->progressStart();
+    $this->io()->progressStart($this->getTotalCount($media_type, $query));
 
     $queue = $this->queueFactory->get(self::MEDIA_MPX_IMPORT_QUEUE);
 
@@ -126,7 +125,7 @@ class MpxImporter extends DrushCommands {
       $queue->createItem(new MpxImportTask($mpx_media->getId(), $media_type_id));
 
       $this->io()->progressAdvance();
-      $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
+      $this->logger()->info(dt('@type @uri has been queued to be imported.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
     }
 
     $this->io()->progressFinish();
@@ -192,6 +191,31 @@ class MpxImporter extends DrushCommands {
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
     $results = $factory->select($query, $media_source->getAccount());
     return $results;
+  }
+
+  /**
+   * Return the total number of results in a query.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type being queried for.
+   * @param \Lullabot\Mpx\DataService\ObjectListQuery|null $query
+   *   (optional) The object list query to filter mpx results by.
+   *
+   * @todo This should be an API in mpx-php.
+   *
+   * @return int
+   *   The total number of results.
+   */
+  private function getTotalCount(MediaTypeInterface $media_type, ObjectListQuery $query = NULL): int {
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
+    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
+    if (!$query) {
+      $query = new ObjectListQuery();
+    }
+    $event = new ImportSelectEvent($query, $media_source);
+    $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
+    $results = $factory->selectRequest($query, $media_source->getAccount());
+    return $results->wait()->getTotalResults();
   }
 
   /**
