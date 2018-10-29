@@ -82,8 +82,11 @@ class DataObjectImporter {
    *   The mpx object.
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to import to.
+   *
+   * @return \Drupal\media\MediaInterface[]
+   *   The array of media entities that were imported.
    */
-  public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type) {
+  public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type): array {
     // @todo Handle POST, PUT, Delete, etc.
     // Store an array of media items we touched, so we can clear out their
     // static cache.
@@ -106,7 +109,7 @@ class DataObjectImporter {
       $reset_ids[] = $media->id();
     }
 
-    $this->entityTypeManager->getStorage('media')->resetCache($reset_ids);
+    return $results;
   }
 
   /**
