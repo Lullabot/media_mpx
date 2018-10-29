@@ -4,12 +4,14 @@ namespace Drupal\media_mpx\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
+use Drupal\media\Entity\MediaType;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
 use Drupal\media_mpx\NotificationListener;
 use Drush\Commands\DrushCommands;
 use Psr\Log\LoggerAwareTrait;
+use Lullabot\Mpx\DataService\Notification as MpxNotification;
 
 /**
  * Processes mpx notifications.
@@ -49,9 +51,10 @@ class NotificationQueuer extends DrushCommands {
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager interface.
    * @param \Drupal\Core\Queue\QueueFactory $queue_factory
+   *   The Drupal mpx notification listener.
    *   The factory to load the mpx notification queue.
    * @param \Drupal\media_mpx\NotificationListener $listener
-   *   The Drupal mpx notification listener.
+   *   The notification listener.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
     $this->entityTypeManager = $entity_type_manager;
@@ -82,6 +85,11 @@ class NotificationQueuer extends DrushCommands {
     $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
     $notifications = $this->listener->listen($media_source, $notification_id);
     $notifications = $this->filterDuplicateNotifications($notifications);
+    $notifications = $this->filterByDate($notifications, $media_type_id);
+
+    if (empty($notifications)) {
+      return;
+    }
 
     // Take the notifications and store them in the queue for processing later.
     $this->queueNotifications($media_type, $notifications);
@@ -90,6 +98,54 @@ class NotificationQueuer extends DrushCommands {
     $this->listener->setNotificationId($media_type_id, end($notifications));
 
     $this->io()->progressFinish();
+  }
+
+  /**
+   * Removes notifications that are older than the entities that reference them.
+   *
+   * @param \Lullabot\Mpx\DataService\Notification[] $notifications
+   *   An array of notifications.
+   * @param string $media_type_id
+   *   The media type being imported.
+   *
+   * @return \Lullabot\Mpx\DataService\Notification[]
+   *   The filtered array.
+   */
+  private function filterByDate(array $notifications, string $media_type_id): array {
+    /* @todo I borrowed this search code from the DataObjectImporter
+     * maybe there is a better place to publicly store this functionality. */
+
+    /** @var \Drupal\Media\MediaStorage $media_storage */
+    $media_storage = \Drupal::entityManager()->getStorage('media');
+    /** @var \Drupal\Media\Entity\MediaType $media_type */
+    $media_type = MediaType::load($media_type_id);
+    $source = $media_type->getSource();
+    $source_field = $source->getSourceFieldDefinition($media_type)->getName();
+
+    $notifications = array_filter($notifications, function (MpxNotification $notification) use ($media_storage, $source_field) {
+      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
+      $notificationId = (string) $notification->getEntry()->getId();
+      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
+
+      // The updates must have to do with something new so keep them included.
+      if (empty($entities)) {
+        return TRUE;
+      }
+
+      /* If there exists an entity that hasn't been updated since the
+      notification was updated keep the notification. */
+      // @todo check for the use case where an entity was changed in drupal by a user
+      foreach ($entities as $entity) {
+        /** @var \Drupal\Media\Entity\Media $entity */
+        if ($entity->getChangedTime() < $notificationDate) {
+          return TRUE;
+        };
+      }
+
+      return FALSE;
+    });
+
+    return $notifications;
   }
 
   /**
@@ -105,7 +161,7 @@ class NotificationQueuer extends DrushCommands {
    * @param \Lullabot\Mpx\DataService\Notification[] $notifications
    *   An array of notifications.
    *
-   * @return array
+   * @return \Lullabot\Mpx\DataService\Notification[]
    *   The filtered array.
    */
   private function filterDuplicateNotifications(array $notifications): array {

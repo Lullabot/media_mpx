@@ -76,6 +76,7 @@ class MediaMpxServiceProvider implements ServiceProviderInterface, ServiceModifi
       'media_mpx.data_object_factory_creator',
       'media_mpx.data_object_importer',
       'event_dispatcher',
+      'queue',
     ];
     $definition = new Definition(MpxImporter::class, $this->reference($arguments));
     $definition->addTag('drush.command');

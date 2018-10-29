@@ -5,8 +5,12 @@
  * Module hooks for the media_mpx module.
  */
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
+use Drupal\media\MediaInterface;
 use Drupal\media_mpx\Plugin\QueueWorker\ThumbnailDownloader;
 
 /**
@@ -49,6 +53,19 @@ function media_mpx_queue_info_alter(&$queues) {
   // Alter the queue so we can support recreating jobs if the thumbnail fails
   // to download.
   $queues['media_entity_thumbnail']['class'] = ThumbnailDownloader::class;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access().
+ */
+function media_mpx_media_access(EntityInterface $entity, $operation, AccountInterface $account) {
+  if ($entity instanceof MediaInterface && $operation == 'view') {
+    /** @var \Drupal\media_mpx\Access\MediaAvailableAccess $access */
+    $access = \Drupal::service('media_mpx.media_available_access');
+    return $access->view($entity, $account);
+  }
+
+  return AccessResult::neutral();
 }
 
 /**
