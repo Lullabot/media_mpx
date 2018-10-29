@@ -8,6 +8,7 @@ use GuzzleHttp\Exception\ConnectException;
 use Lullabot\Mpx\DataService\DataServiceManager;
 use Lullabot\Mpx\DataService\Notification;
 use Lullabot\Mpx\DataService\NotificationListener as MpxNotificationListener;
+use Lullabot\Mpx\Exception\ClientException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -90,13 +91,24 @@ class NotificationListener {
     try {
       return $promise->wait();
     }
-    catch (ConnectException $e) {
+    catch (ConnectException | ClientException $e) {
       // This may be a timeout if no notifications are available. However, there
       // is no good method from the exception to determine if a timeout
       // occurred.
       if (strpos($e->getMessage(), 'cURL error 28') !== FALSE) {
         $this->logger->info('A timeout occurred while waiting for notifications. This is expected when no content is changing in mpx. No action is required.');
         return [];
+      }
+
+      if ($e->getCode() == 404) {
+        $this->logger->warning(
+          'The last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion of all videos.',
+          [
+            '%id' => $notification_id,
+            '%account' => $media_source->getAccount()->label(),
+          ]);
+
+        return $this->listen($media_source, -1);
       }
 
       // Some other connection exception occurred, so throw that up.

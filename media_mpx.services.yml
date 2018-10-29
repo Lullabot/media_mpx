@@ -106,3 +106,7 @@ services:
     arguments: ['@messenger']
     tags:
       - { name: event_subscriber }
+
+  media_mpx.media_available_access:
+    class: Drupal\media_mpx\Access\MediaAvailableAccess
+    arguments: ['@datetime.time']
