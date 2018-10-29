@@ -105,7 +105,7 @@ class NotificationListener {
           'The last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion of all videos.',
           [
             '%id' => $notification_id,
-            '%account' => $account->getPid(),
+            '%account' => $media_source->getAccount()->label(),
           ]);
 
         return $this->listen($media_source, -1);
