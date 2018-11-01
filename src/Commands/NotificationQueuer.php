@@ -199,8 +199,9 @@ class NotificationQueuer extends DrushCommands {
     foreach ($chunks as $chunk) {
       $items = [];
       foreach ($chunk as $notification) {
-        $this->logger()->debug(dt('Queuing @method notification for object @id', [
-          '@method' => $notification->getMethod(),
+        $this->logger()->debug(dt('Queuing @method notification at @time for object @id', [
+          '@method' => strtoupper($notification->getMethod()),
+          '@time' => $notification->getEntry()->getUpdated()->format('c'),
           '@id' => $notification->getEntry()->getId(),
         ]));
 
