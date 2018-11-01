@@ -3,12 +3,15 @@
 namespace Drupal\media_mpx\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Event\ImportSelectEvent;
+use Drupal\media_mpx\MpxImportTask;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
+use Lullabot\Mpx\DataService\Fields;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 use Lullabot\Mpx\DataService\ObjectListQuery;
@@ -28,6 +31,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 class MpxImporter extends DrushCommands {
 
   /**
+   * The name of the queue for notifications.
+   */
+  const MEDIA_MPX_IMPORT_QUEUE = 'media_mpx_importer';
+
+  /**
    * The entity type manager used to load entities.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
@@ -40,6 +48,13 @@ class MpxImporter extends DrushCommands {
    * @var \Drupal\media_mpx\DataObjectFactoryCreator
    */
   private $dataObjectFactoryCreator;
+
+  /**
+   * The factory to load the mpx notification queue.
+   *
+   * @var \Drupal\Core\Queue\QueueFactory
+   */
+  private $queueFactory;
 
   /**
    * The class to import mpx objects.
@@ -66,12 +81,15 @@ class MpxImporter extends DrushCommands {
    *   The class used to import mpx objects.
    * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $eventDispatcher
    *   The system event dispatcher.
+   * @param \Drupal\Core\Queue\QueueFactory $queue_factory
+   *   The factory to load the mpx notification queue.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher, QueueFactory $queue_factory) {
     $this->entityTypeManager = $entityTypeManager;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->dataObjectImporter = $dataObjectImporter;
     $this->eventDispatcher = $eventDispatcher;
+    $this->queueFactory = $queue_factory;
   }
 
   /**
@@ -89,18 +107,25 @@ class MpxImporter extends DrushCommands {
   public function import(string $media_type_id) {
     $media_type = $this->loadMediaType($media_type_id);
 
-    $results = $this->selectAll($media_type);
+    // Only return the media ids to add to the queue.
+    $field_query = new Fields();
+    $field_query->addField('id');
+    $query = new ObjectListQuery();
+    $query->add($field_query);
 
-    // @todo Support fetching the total results via ObjectList.
+    $results = $this->select($media_type, $query);
+
     $this->io()->title(dt('Importing @type media', ['@type' => $media_type_id]));
-    $this->io()->progressStart();
+    $this->io()->progressStart($this->getTotalCount($media_type, $query));
+
+    $queue = $this->queueFactory->get(self::MEDIA_MPX_IMPORT_QUEUE);
 
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
     foreach ($results as $index => $mpx_media) {
-      $this->dataObjectImporter->importItem($mpx_media, $media_type);
+      $queue->createItem(new MpxImportTask($mpx_media->getId(), $media_type_id));
 
       $this->io()->progressAdvance();
-      $this->logger()->info(dt('Imported @type @uri.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
+      $this->logger()->info(dt('@type @uri has been queued to be imported.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
     }
 
     $this->io()->progressFinish();
@@ -150,18 +175,47 @@ class MpxImporter extends DrushCommands {
    *
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to load items for.
+   * @param \Lullabot\Mpx\DataService\ObjectListQuery $query
+   *   An optional query to limit what is returned.
    *
    * @return \Lullabot\Mpx\DataService\ObjectListIterator
    *   An iterator over all retrieved media items.
    */
-  private function selectAll(MediaTypeInterface $media_type): ObjectListIterator {
+  private function select(MediaTypeInterface $media_type, ObjectListQuery $query = NULL): ObjectListIterator {
     $media_source = DataObjectImporter::loadMediaSource($media_type);
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    $query = new ObjectListQuery();
+    if (!$query) {
+      $query = new ObjectListQuery();
+    }
     $event = new ImportSelectEvent($query, $media_source);
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
     $results = $factory->select($query, $media_source->getAccount());
     return $results;
+  }
+
+  /**
+   * Return the total number of results in a query.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type being queried for.
+   * @param \Lullabot\Mpx\DataService\ObjectListQuery|null $query
+   *   (optional) The object list query to filter mpx results by.
+   *
+   * @todo This should be an API in mpx-php.
+   *
+   * @return int
+   *   The total number of results.
+   */
+  private function getTotalCount(MediaTypeInterface $media_type, ObjectListQuery $query = NULL): int {
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
+    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
+    if (!$query) {
+      $query = new ObjectListQuery();
+    }
+    $event = new ImportSelectEvent($query, $media_source);
+    $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
+    $results = $factory->selectRequest($query, $media_source->getAccount());
+    return $results->wait()->getTotalResults();
   }
 
   /**

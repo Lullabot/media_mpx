@@ -5,6 +5,7 @@ namespace Drupal\media_mpx;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\guzzle_cache\DrupalGuzzleCache;
+use Drupal\media\MediaInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Event\ImportEvent;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
@@ -81,8 +82,11 @@ class DataObjectImporter {
    *   The mpx object.
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to import to.
+   *
+   * @return \Drupal\media\MediaInterface[]
+   *   The array of media entities that were imported.
    */
-  public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type) {
+  public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type): array {
     // @todo Handle POST, PUT, Delete, etc.
     // Store an array of media items we touched, so we can clear out their
     // static cache.
@@ -98,34 +102,14 @@ class DataObjectImporter {
     $results = $event->getEntities();
 
     foreach ($results as $media) {
+      // @todo This can be replaced by calling $media->updateMetadata() when
+      // https://www.drupal.org/project/drupal/issues/2878119 is merged.
+      $this->updateMetadata($media);
       $media->save();
       $reset_ids[] = $media->id();
     }
 
-    $this->entityTypeManager->getStorage('media')->resetCache($reset_ids);
-  }
-
-  /**
-   * Inject a single mpx item into the response cache.
-   *
-   * @param \Lullabot\Mpx\DataService\ObjectInterface $item
-   *   The object being injected.
-   * @param array $service_info
-   *   The service definition from the media source plugin, containing a
-   *   'schema_version' key.
-   */
-  public function cacheItem(ObjectInterface $item, array $service_info) {
-    $query = [
-      'form' => 'cjson',
-      'schema' => $service_info['schema_version'],
-    ];
-    $encoded = \GuzzleHttp\json_encode($item->getJson());
-
-    $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
-    $request = new Request('GET', $uri, static::REQUEST_HEADERS);
-    $response_headers = $this->getResponseHeaders($encoded);
-    $response = new Response(200, $response_headers, $encoded);
-    $this->cache->cache($request, $response);
+    return $results;
   }
 
   /**
@@ -176,6 +160,116 @@ class DataObjectImporter {
       throw new \RuntimeException(dt('@type is not configured as a mpx Media source.', ['@type' => $media_type->id()]));
     }
     return $media_source;
+  }
+
+  /**
+   * Update the media entity overwriting fields with remote data.
+   *
+   * This code and all code called from it is adapted from an upstream patch.
+   * Since the upstream patch marks updateMetadata as internal, we copy the code
+   * here.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity to update.
+   *
+   * @see https://www.drupal.org/project/drupal/issues/2878119
+   */
+  protected function updateMetadata(MediaInterface $media): void {
+    foreach (array_keys($media->getTranslationLanguages()) as $langcode) {
+      $translation = $media->getTranslation($langcode);
+      $field_map = $media->bundle->entity->getFieldMap();
+      $source = $media->getSource();
+      foreach ($field_map as $attribute_name => $field_name) {
+        $media->set($field_name, $source->getMetadata($media, $attribute_name));
+      }
+      $this->updateThumbnail($media);
+
+      // If the media item does not have a title yet, get a default name from
+      // the metadata.
+      if ($translation->get('name')->isEmpty()) {
+        $media_source = $media->getSource();
+        $translation->setName($media_source->getMetadata($media, $media_source->getPluginDefinition()['default_name_metadata_attribute']));
+      }
+    }
+  }
+
+  /**
+   * Update the thumbnail for a media entity.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity to update.
+   *
+   * @see https://www.drupal.org/project/drupal/issues/2878119
+   */
+  protected function updateThumbnail(MediaInterface $media): void {
+    $source = $media->getSource();
+    $plugin_definition = $source->getPluginDefinition();
+
+    $thumbnail_uri = $source->getMetadata($media, $plugin_definition['thumbnail_uri_metadata_attribute']);
+
+    if (!$thumbnail_uri) {
+      return;
+    }
+
+    $values = [
+      'uri' => $thumbnail_uri,
+    ];
+
+    $file_storage = $this->entityTypeManager->getStorage('file');
+
+    $existing = $file_storage->loadByProperties($values);
+    if ($existing) {
+      $file = reset($existing);
+    }
+    else {
+      /** @var \Drupal\file\FileInterface $file */
+      $file = $file_storage->create($values);
+      if ($owner = $media->getOwner()) {
+        $file->setOwner($owner);
+      }
+      $file->setPermanent();
+      $file->save();
+    }
+    $media->thumbnail->target_id = $file->id();
+
+    // Set the thumbnail alt text, if available.
+    if (!empty($plugin_definition['thumbnail_alt_metadata_attribute'])) {
+      $media->thumbnail->alt = $source->getMetadata($media, $plugin_definition['thumbnail_alt_metadata_attribute']);
+    }
+    else {
+      $media->thumbnail->alt = $media->t('Thumbnail', [], ['langcode' => $media->langcode->value]);
+    }
+
+    // Set the thumbnail title, if available.
+    if (!empty($plugin_definition['thumbnail_title_metadata_attribute'])) {
+      $media->thumbnail->title = $source->getMetadata($media, $plugin_definition['thumbnail_title_metadata_attribute']);
+    }
+    else {
+      $media->thumbnail->title = $media->label();
+    }
+  }
+
+  /**
+   * Inject a single mpx item into the response cache.
+   *
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $item
+   *   The object being injected.
+   * @param array $service_info
+   *   The service definition from the media source plugin, containing a
+   *   'schema_version' key.
+   */
+  public function cacheItem(ObjectInterface $item, array $service_info) {
+    $query = [
+      'form' => 'cjson',
+      'schema' => $service_info['schema_version'],
+    ];
+    $encoded = \GuzzleHttp\json_encode($item->getJson());
+
+    $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
+    $request = new Request('GET', $uri, static::REQUEST_HEADERS);
+    $response_headers = $this->getResponseHeaders($encoded);
+    $response = new Response(200, $response_headers, $encoded);
+    $this->cache->cache($request, $response);
   }
 
   /**
