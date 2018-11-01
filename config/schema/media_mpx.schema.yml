@@ -57,3 +57,9 @@ field.formatter.settings.media_mpx_video:
     player:
       type: uri
       label: 'mpx Player'
+    auto_play:
+      type: boolean
+      label: 'Auto play'
+    play_all:
+      type: boolean
+      label: 'Play all'
