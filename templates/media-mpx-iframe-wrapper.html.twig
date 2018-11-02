@@ -1,0 +1,19 @@
+{#
+/**
+ * @file
+ * Display a wrapper with schema.org meta data for a video player
+ *
+ * Available variables:
+ * - attributes: An array of html attributes intended for the wrapping div.
+ * - meta: An array of meta data stored where the key is the itemprop and the value is the content.
+ * - content: The content that goes inside this wrapper.
+ */
+#}
+<div {{ attributes }}>
+  {% for prop, content in meta %}
+    <meta itemprop="{{ prop }}" content="{{ content }}" />
+  {% endfor %}
+  {% if content is not empty %}
+    {{ content }}
+  {% endif %}
+</div>
