@@ -256,10 +256,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
         continue;
       }
 
-      $thumbnail_url = $source_plugin->getMetadata($entity, 'thumbnail_uri');
-      if ($thumbnail_url) {
-        $thumbnail_url = file_create_url($thumbnail_url);
-      }
+      $thumbnail_url = file_create_url($source_plugin->getMetadata($entity, 'thumbnail_uri'));
 
       $element[$delta] = [
         '#type' => 'media_mpx_iframe_wrapper',
@@ -278,7 +275,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
 
       $mpx_media_files = $mpx_media->getContent();
 
-      if (is_array($mpx_media_files) && isset($mpx_media_files[0])) {
+      if (isset($mpx_media_files[0])) {
         $mpx_media_file = $mpx_media_files[0];
         $element[$delta]['#meta']['height'] = $mpx_media_file->getHeight();
         $element[$delta]['#meta']['width'] = $mpx_media_file->getWidth();
