@@ -306,8 +306,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       '#url' => (string) $url,
       '#attributes' => [
         'class' => [
-          'mpx-iframe',
-          'mpx-iframe-account--' . $source_plugin->getAccount()->id(),
+          'mpx-player',
+          'mpx-player-account--' . $source_plugin->getAccount()->id(),
         ],
       ],
     ];
