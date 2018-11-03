@@ -11,6 +11,8 @@ process:
   bundle: type
   name: filename
   status: published
+  created: mpx_created
+  changed: updated
   field_mpx_url:
     plugin: get
     source: mpx_url
