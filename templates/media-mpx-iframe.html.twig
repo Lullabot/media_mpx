@@ -2,6 +2,10 @@
 /**
  * @file
  * Display an iframe.
+ *
+ * Available variables:
+ * - attributes: An array of html attributes intended for the iframe.
+ * - url: The src of the iframe.
  */
 #}
 <iframe{{ attributes }}{% if url is not empty %} src="{{ url }}"{% endif %}></iframe>
