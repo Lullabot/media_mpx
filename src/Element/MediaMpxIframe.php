@@ -6,7 +6,7 @@ use Drupal\Core\Render\Element\RenderElement;
 use Drupal\Core\Template\Attribute;
 
 /**
- * Providers an element design for embedding iframes.
+ * Provides a render element for embedding iframes.
  *
  * @RenderElement("media_mpx_iframe")
  */
