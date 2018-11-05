@@ -84,20 +84,29 @@ class NotificationQueuer extends DrushCommands {
     // of an mpx object in a row).
     $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
     $notifications = $this->listener->listen($media_source, $notification_id);
+
+    // Keep track of the initial count of notifications so we can know if we
+    // filtered down to an empty array.
+    $initial_count = count($notifications);
+
+    // We need a reference to the last notification so we can set the last
+    // notification ID even if all notifications are filtered out.
+    $last_notification = end($notifications);
+
     $notifications = $this->filterDuplicateNotifications($notifications);
     $notifications = $this->filterByDate($notifications, $media_type_id);
 
-    if (empty($notifications)) {
-      return;
+    if (empty($notifications) && $initial_count) {
+      $this->io()->note(dt('All notifications were skipped as newer data has already been imported.'));
+    }
+    else {
+      // Take the notifications and store them in the queue for processing
+      // later.
+      $this->queueNotifications($media_type, $notifications);
     }
 
-    // Take the notifications and store them in the queue for processing later.
-    $this->queueNotifications($media_type, $notifications);
-
     // Let the next listen call start from where we left off.
-    $this->listener->setNotificationId($media_type_id, end($notifications));
-
-    $this->io()->progressFinish();
+    $this->listener->setNotificationId($media_type_id, $last_notification);
   }
 
   /**
@@ -210,6 +219,8 @@ class NotificationQueuer extends DrushCommands {
       $queue->createItem($items);
       $this->io()->progressAdvance();
     }
+
+    $this->io()->progressFinish();
   }
 
   /**
