@@ -362,10 +362,14 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * Build the URL for a player iframe.
    *
    * @param \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin
+   *   The source plugin associated with the media.
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The mpx media object.
    * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *   The player to build the URL for.
    *
-   * @return Url
+   * @return \Lullabot\Mpx\Service\Player\Url
+   *   The player URL.
    */
   private function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
