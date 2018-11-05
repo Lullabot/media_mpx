@@ -3,7 +3,7 @@
 namespace Drupal\media_mpx\Element;
 
 /**
- * Providers an element design for wrapping media iframes.
+ * Provides a render element for wrapping media iframes.
  *
  * @RenderElement("media_mpx_iframe_wrapper")
  */
