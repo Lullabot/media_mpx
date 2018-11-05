@@ -297,7 +297,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   }
 
   /**
-   * Adds the video specific details to schema.org metadata.
+   * Adds schema.org metadata from the first MediaFile.
    *
    * @param array $element
    *   The individual element to insert the metadata into.
