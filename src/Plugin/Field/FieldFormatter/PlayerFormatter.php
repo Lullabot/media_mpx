@@ -11,6 +11,7 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\Plugin\media\Source\Media;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\ObjectListQuery;
@@ -18,6 +19,8 @@ use Lullabot\Mpx\DataService\Player\Player;
 use Lullabot\Mpx\DataService\Sort;
 use Lullabot\Mpx\Service\Player\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
+use Drupal\media\Entity\Media as DrupalMedia;
 
 /**
  * Field formatter for an mpx player.
@@ -244,23 +247,98 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
     foreach ($items as $delta => $item) {
-      try {
-        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-        $mpx_media = $source_plugin->getMpxObject($entity);
-      }
-      catch (TransferException $e) {
-        // If this media item is missing, continue on to the next element.
-        $this->mpxLogger->logException($e);
-        continue;
-      }
-      $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-
-      // @todo What cache contexts or tags do we set?
-      $element[$delta] = [
-        '#type' => 'media_mpx_iframe',
-        '#url' => (string) $url,
-      ];
+      $element[$delta] = $this->buildWrapper($entity, $source_plugin, $player);
     }
+  }
+
+  /**
+   * Builds the render array for the wrapper.
+   *
+   * @param \Drupal\media\Entity\Media $entity
+   *   The media entity.
+   * @param \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin
+   *   The mpx source plugin.
+   * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *   The mpx player.
+   *
+   * @return array|null
+   *   The render array or null on an error.
+   */
+  private function buildWrapper(DrupalMedia $entity, Media $source_plugin, Player $player) {
+    try {
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+      $mpx_media = $source_plugin->getMpxObject($entity);
+    }
+    catch (TransferException $e) {
+      // If this media item is missing, continue on to the next element.
+      $this->mpxLogger->logException($e);
+      return NULL;
+    }
+
+    $thumbnail_url = file_create_url($source_plugin->getMetadata($entity, 'thumbnail_uri'));
+
+    $element = [
+      '#type' => 'media_mpx_iframe_wrapper',
+      '#attributes' => [
+        'class' => [
+          'mpx-iframe-wrapper',
+        ],
+      ],
+      '#meta' => [
+        'name' => $entity->label(),
+        'thumbnailUrl' => $thumbnail_url,
+        'uploadDate' => $mpx_media->getAvailableDate()->format(DATE_ISO8601),
+      ],
+      '#content' => $this->buildPlayer($source_plugin, $player, $mpx_media),
+    ];
+    $this->addMediaFileDetails($element, $mpx_media);
+
+    return $element;
+  }
+
+  /**
+   * Adds schema.org metadata from the first MediaFile.
+   *
+   * @param array $element
+   *   The individual element to insert the metadata into.
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The mpx media object.
+   */
+  private function addMediaFileDetails(array &$element, MpxMedia $mpx_media) {
+    $mpx_media_files = $mpx_media->getContent();
+
+    if (isset($mpx_media_files[0])) {
+      $mpx_media_file = $mpx_media_files[0];
+      $element['#meta']['height'] = $mpx_media_file->getHeight();
+      $element['#meta']['width'] = $mpx_media_file->getWidth();
+    }
+  }
+
+  /**
+   * Builds the render array of the media player.
+   *
+   * @param \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin
+   *   The media source plugin.
+   * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *   The media player.
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The media item.
+   *
+   * @return array
+   *   The render array.
+   */
+  private function buildPlayer(Media $source_plugin, Player $player, MpxMedia $mpx_media) {
+    $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+    return [
+      '#type' => 'media_mpx_iframe',
+      '#url' => (string) $url,
+      '#attributes' => [
+        'class' => [
+          'mpx-player',
+          'mpx-player-account--' . $source_plugin->getAccount()->id(),
+        ],
+      ],
+    ];
   }
 
 }

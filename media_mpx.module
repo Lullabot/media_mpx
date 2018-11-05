@@ -37,6 +37,13 @@ function media_mpx_help($route_name, RouteMatchInterface $route_match) {
  */
 function media_mpx_theme() {
   return [
+    'media_mpx_iframe_wrapper' => [
+      'variables' => [
+        'attributes' => [],
+        'meta' => [],
+        'content' => [],
+      ],
+    ],
     'media_mpx_iframe' => [
       'variables' => [
         'url' => '',
