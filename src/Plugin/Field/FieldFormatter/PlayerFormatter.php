@@ -257,9 +257,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @param \Drupal\media\Entity\Media $entity
    *   The media entity.
    * @param \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin
-   *   The MPX source plugin.
+   *   The mpx source plugin.
    * @param \Lullabot\Mpx\DataService\Player\Player $player
-   *   The MPX player.
+   *   The mpx player.
    *
    * @return array|null
    *   The render array or null on an error.
@@ -302,7 +302,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @param array $element
    *   The individual element to insert the metadata into.
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The MPX media object.
+   *   The mpx media object.
    */
   private function addMediaFileDetails(array &$element, MpxMedia $mpx_media) {
     $mpx_media_files = $mpx_media->getContent();

@@ -200,10 +200,10 @@ $config['media_mpx.media_mpx_user.mpx_lullabot']['password'] = 'SECRET';
 ## Interacting with the Video Player
 
 The video player for media objects will be rendered as an iframe which in
-turn utilizes a player from MPX. If this iframe needs to be interacted with
+turn utilizes a player from mpx. If this iframe needs to be interacted with
 through Drupal behaviours the following classes are added to the iframe.
  - `mpx-player`
  - `mpx-player-account--<Account Machine Name>`
- 
- Additional classes as well as other HTML attributes can be added to the iframe
- by modifying the render array for the `media_mpx_iframe` template.
+
+Additional classes as well as other HTML attributes can be added to the iframe
+by modifying the render array for the `media_mpx_iframe` template.
