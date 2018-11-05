@@ -287,9 +287,13 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       '#meta' => [
         'name' => $entity->label(),
         'thumbnailUrl' => $thumbnail_url,
+        'description' => $mpx_media->getDescription(),
         'uploadDate' => $mpx_media->getAvailableDate()->format(DATE_ISO8601),
+        'embedUrl' => (string) $this->buildUrl($source_plugin, $mpx_media, $player),
       ],
       '#content' => $this->buildPlayer($source_plugin, $player, $mpx_media),
+      '#entity' => $entity,
+      '#mpx_media' => $mpx_media,
     ];
     $this->addMediaFileDetails($element, $mpx_media);
 
@@ -309,6 +313,20 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
 
     if (isset($mpx_media_files[0])) {
       $mpx_media_file = $mpx_media_files[0];
+
+      // We want to recalculate the duration so seconds roll over into minutes
+      // and hours.
+      // @see https://php.net/manual/en/dateinterval.format.php#113204
+      $interval = new \DateInterval('PT' . round($mpx_media_file->getDuration()) . 'S');
+      $from = new \DateTime();
+      $to = clone $from;
+      $to->add($interval);
+      $diff = $from->diff($to);
+      foreach ($diff as $k => $v) {
+        $interval->$k = $v;
+      }
+
+      $element['#meta']['duration'] = ($interval)->format('PT%hH%iM%sS');
       $element['#meta']['height'] = $mpx_media_file->getHeight();
       $element['#meta']['width'] = $mpx_media_file->getWidth();
     }
@@ -328,10 +346,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *   The render array.
    */
   private function buildPlayer(Media $source_plugin, Player $player, MpxMedia $mpx_media) {
-    $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
     return [
       '#type' => 'media_mpx_iframe',
-      '#url' => (string) $url,
+      '#url' => (string) ($this->buildUrl($source_plugin, $mpx_media, $player)),
       '#attributes' => [
         'class' => [
           'mpx-player',
@@ -339,6 +356,20 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
         ],
       ],
     ];
+  }
+
+  /**
+   * Build the URL for a player iframe.
+   *
+   * @param \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   * @param \Lullabot\Mpx\DataService\Player\Player $player
+   *
+   * @return Url
+   */
+  private function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
+    $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+    return $url;
   }
 
 }
