@@ -297,10 +297,10 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   }
 
   /**
-   * Adds the video specific details to schema.org meta data.
+   * Adds the video specific details to schema.org metadata.
    *
    * @param array $element
-   *   The individual element to insert the meta data into.
+   *   The individual element to insert the metadata into.
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
    *   The MPX media object.
    */
