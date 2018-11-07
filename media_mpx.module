@@ -42,6 +42,8 @@ function media_mpx_theme() {
         'attributes' => [],
         'meta' => [],
         'content' => [],
+        'entity' => NULL,
+        'mpx_media' => NULL,
       ],
     ],
     'media_mpx_iframe' => [
