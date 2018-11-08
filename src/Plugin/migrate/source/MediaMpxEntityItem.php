@@ -31,6 +31,7 @@ class MediaMpxEntityItem extends FieldableEntity {
         'guid',
         'description',
         'released_file_pids',
+        'updated',
         'default_released_file_pid',
         'categories',
         'author',
@@ -50,6 +51,7 @@ class MediaMpxEntityItem extends FieldableEntity {
         'countries',
       ])
       ->orderBy('f.timestamp');
+    $query->addField('m', 'created', 'mpx_created');
     $query->innerJoin('mpx_video', 'm', 'f.fid = m.fid');
 
     // Filter by type, if configured.
