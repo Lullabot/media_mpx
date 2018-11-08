@@ -3,7 +3,7 @@
 namespace Drupal\Tests\media_mpx\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\DrupalSelenium2Driver;
-use Drupal\FunctionalJavascriptTests\JavascriptTestBase;
+use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use Drupal\media\Entity\MediaType;
 use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Entity\User;
@@ -14,7 +14,7 @@ use Drupal\media_mpx_test\JsonResponse;
  *
  * @group media_mpx
  */
-class FieldMapTest extends JavascriptTestBase {
+class FieldMapTest extends WebDriverTestBase {
 
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
