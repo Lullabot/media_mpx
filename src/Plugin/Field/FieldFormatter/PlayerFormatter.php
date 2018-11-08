@@ -348,8 +348,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    */
   private function buildPlayer(Media $source_plugin, Player $player, MpxMedia $mpx_media) {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-    $url->setAutoplay((bool) $this->getSetting('auto_play'));
-    $url->setPlayAll((bool) $this->getSetting('play_all'));
+    $url->setAutoplay($this->getSetting('auto_play'));
+    $url->setPlayAll($this->getSetting('play_all'));
     return [
       '#type' => 'media_mpx_iframe',
       '#url' => (string) $url,
