@@ -405,12 +405,14 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   private function buildMeta(DrupalMedia $entity, MpxMedia $mpx_media, Player $player): array {
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
+    $url = $this->buildUrl($source_plugin, $mpx_media, $player);
+    $url->setEmbed(TRUE);
     return [
       'name' => $entity->label(),
       'thumbnailUrl' => file_create_url($source_plugin->getMetadata($entity, 'thumbnail_uri')),
       'description' => $mpx_media->getDescription(),
       'uploadDate' => $mpx_media->getAvailableDate()->format(DATE_ISO8601),
-      'embedUrl' => (string) $this->buildUrl($source_plugin, $mpx_media, $player),
+      'embedUrl' => (string) $url,
     ];
   }
 
