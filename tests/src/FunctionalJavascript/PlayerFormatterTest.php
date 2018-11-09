@@ -114,7 +114,7 @@ class PlayerFormatterTest extends WebDriverTestBase {
     $this->getSession()->getPage()->fillField('mpx Media', 'http://data.media.theplatform.com/media/data/Media/2602559');
     $this->click('#edit-submit');
     $this->drupalGet('/media/1');
-    $this->assertSession()->responseContains('<iframe class="mpx-player mpx-player-account--' . $account->id() . '" src="https://player.theplatform.com/p/public-id/DemoPlayer/select/media/Zy1n9JQPy6hw"></iframe>');
+    $this->assertSession()->responseContains('<iframe class="mpx-player mpx-player-account--' . $account->id() . '" src="https://player.theplatform.com/p/public-id/DemoPlayer/select/media/Zy1n9JQPy6hw?autoPlay=false&amp;playAll=false"></iframe>');
   }
 
   /**

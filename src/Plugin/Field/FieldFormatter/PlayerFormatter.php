@@ -28,9 +28,9 @@ use Drupal\media\Entity\Media as DrupalMedia;
  * @todo This needs to only attach to mpx media types.
  *
  * @FieldFormatter(
- *   id="media_mpx_video",
+ *   id = "media_mpx_video",
  *   label = @Translation("mpx Video player"),
- *   field_types={
+ *   field_types = {
  *     "string"
  *   }
  * )
@@ -176,6 +176,21 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       '#title' => $this->t('mpx Player'),
       '#description' => $this->t('Select the mpx player to use for playing videos.'),
       '#options' => $options,
+      '#default_value' => $this->getSetting('player'),
+    ];
+
+    $elements['auto_play'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Auto play'),
+      '#description' => $this->t('Will automatically begin playback for the video on page load. See <a href="@url">mpx documentation</a> for details.', ['@url' => 'https://docs.theplatform.com/help/player-player-autoplay']),
+      '#default_value' => $this->getSetting('auto_play'),
+    ];
+
+    $elements['play_all'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Play all'),
+      '#description' => $this->t('Turn on playlist auto-advance for the player. See <a href="@url">mpx documentation</a> for more details.', ['@url' => 'https://docs.theplatform.com/help/player-player-playall']),
+      '#default_value' => $this->getSetting('play_all'),
     ];
 
     return $elements;
@@ -187,6 +202,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   public function settingsSummary() {
     // @todo Somehow cache the player title so we show that instead of the ID.
     $summary[] = $this->t('mpx Player: @title', ['@title' => $this->getSetting('player')]);
+    $summary[] = $this->t('Auto play: @auto_play', ['@auto_play' => $this->getSetting('auto_play') ? 'true' : 'false']);
+    $summary[] = $this->t('Play all : @play_all', ['@play_all' => $this->getSetting('play_all') ? 'true' : 'false']);
     return $summary;
   }
 
@@ -196,6 +213,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   public static function defaultSettings() {
     return [
       'player' => '',
+      'auto_play' => FALSE,
+      'play_all' => FALSE,
     ];
   }
 
@@ -365,6 +384,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    */
   private function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+    $url->setAutoplay($this->getSetting('auto_play'));
+    $url->setPlayAll($this->getSetting('play_all'));
     return $url;
   }
 
