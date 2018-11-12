@@ -283,7 +283,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @return array|null
    *   The render array or null on an error.
    */
-  private function buildWrapper(DrupalMedia $entity, Media $source_plugin, Player $player) {
+  protected function buildWrapper(DrupalMedia $entity, Media $source_plugin, Player $player) {
     try {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $source_plugin->getMpxObject($entity);
@@ -319,7 +319,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
    *   The mpx media object.
    */
-  private function addMediaFileDetails(array &$element, MpxMedia $mpx_media) {
+  protected function addMediaFileDetails(array &$element, MpxMedia $mpx_media) {
     $mpx_media_files = $mpx_media->getContent();
 
     if (isset($mpx_media_files[0])) {
@@ -356,7 +356,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @return array
    *   The render array.
    */
-  private function buildPlayer(Media $source_plugin, Player $player, MpxMedia $mpx_media) {
+  protected function buildPlayer(Media $source_plugin, Player $player, MpxMedia $mpx_media) {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
     $url->setAutoplay((bool) $this->getSetting('auto_play'));
     $url->setPlayAll((bool) $this->getSetting('play_all'));
@@ -385,7 +385,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @return \Lullabot\Mpx\Service\Player\Url
    *   The player URL.
    */
-  private function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
+  protected function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
     return $url;
   }
@@ -403,7 +403,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    * @return array
    *   An array of schema.org data.
    */
-  private function buildMeta(DrupalMedia $entity, MpxMedia $mpx_media, Player $player): array {
+  protected function buildMeta(DrupalMedia $entity, MpxMedia $mpx_media, Player $player): array {
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
     $url = $this->buildUrl($source_plugin, $mpx_media, $player);
