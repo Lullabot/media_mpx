@@ -8,6 +8,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
+use Lullabot\Mpx\DataService\DateTime\ConcreteDateTime;
 
 /**
  * Check the availability of an mpx media entity.
@@ -68,6 +69,18 @@ class MediaAvailableAccess {
 
     $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
     $calculator = new AvailabilityCalculator();
+
+    // Add cache max age based on availability dates.
+    $available_date = $mpx_object->getAvailableDate();
+    if ($available_date instanceof ConcreteDateTime &&
+      $now < $available_date->getDateTime()) {
+      $media->mergeCacheMaxAge($available_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+    }
+    $expiration_date = $mpx_object->getExpirationDate();
+    if ($expiration_date instanceof ConcreteDateTime &&
+      $now < $expiration_date->getDateTime()) {
+      $media->mergeCacheMaxAge($expiration_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+    }
 
     // We need to use forbid instead of allowing on available. Otherwise, if we
     // allow, Drupal will ignore other access controls like the published
