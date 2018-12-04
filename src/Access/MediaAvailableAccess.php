@@ -8,6 +8,8 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
+use Lullabot\Mpx\Exception\ClientException;
+use Lullabot\Mpx\Exception\ServerException;
 
 /**
  * Check the availability of an mpx media entity.
@@ -64,7 +66,22 @@ class MediaAvailableAccess {
     $source = $media->getSource();
 
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
-    $mpx_object = $source->getMpxObject($media);
+    try {
+      $mpx_object = $source->getMpxObject($media);
+    }
+    catch (ClientException $e) {
+      // The requested media was not found in mpx, so deny view access.
+      return AccessResult::forbidden('Requested media was not found in mpx.');
+    }
+    catch (ServerException $e) {
+      // The mpx server errored out for some reason, and as such we can't check
+      // availability, err on the side of caution and deny access.
+      $access = AccessResult::forbidden('Mpx server returned an error, could not validate availability');
+      // Set a cache max age of 15 minutes, allowing for a retry to happen when
+      // the mpx server is available for a more definitive access check.
+      $access->setCacheMaxAge(15 * 60);
+      return $access;
+    }
 
     $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
     $calculator = new AvailabilityCalculator();
