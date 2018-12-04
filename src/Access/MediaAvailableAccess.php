@@ -52,32 +52,18 @@ class MediaAvailableAccess {
    *   result is returned if the video is expired.
    */
   public function view(MediaInterface $media, AccountInterface $account) {
-    // If the media entity is not an mpx media object or you can edit the
-    // entity, don't apply availability rules.
-    if (!($media->getSource() instanceof Media) ||
-      $media->access('edit', $account)) {
+    // The media entity is not an mpx media object.
+    if (!($media->getSource() instanceof Media)) {
       return AccessResult::neutral();
     }
 
-    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source */
-    $source = $media->getSource();
+    // If you can edit an entity, don't apply availability rules.
+    if ($media->access('edit', $account)) {
+      return AccessResult::neutral();
+    }
 
-    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
     try {
-      $mpx_object = $source->getMpxObject($media);
-
-      $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
-      $calculator = new AvailabilityCalculator();
-
-      // We need to use forbid instead of allowing on available. Otherwise, if we
-      // allow, Drupal will ignore other access controls like the published
-      // status.
-      if ($calculator->isExpired($mpx_object, $now)) {
-        $access = AccessResult::forbidden('This video is not available.');
-      }
-      else {
-        $access = AccessResult::neutral();
-      }
+      $access = $this->mpxObjectViewAccess($media);
     }
     catch (ClientException $e) {
       // The requested media was not found in mpx, so deny view access.
@@ -92,6 +78,40 @@ class MediaAvailableAccess {
       $access->setCacheMaxAge(15 * 60);
     }
 
+    return $access;
+  }
+
+  /**
+   * Determine the view access of the given media by its availability.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity to check.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   View access result for the given MPX object.
+   *
+   * @throws \Lullabot\Mpx\Exception\ClientException
+   * @throws \Lullabot\Mpx\Exception\ServerException
+   */
+  protected function mpxObjectViewAccess(MediaInterface $media) {
+    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source */
+    $source = $media->getSource();
+
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
+    $mpx_object = $source->getMpxObject($media);
+
+    $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
+    $calculator = new AvailabilityCalculator();
+
+    // We need to use forbid instead of allowing on available. Otherwise, if
+    // we allow, Drupal will ignore other access controls like the published
+    // status.
+    if ($calculator->isExpired($mpx_object, $now)) {
+      $access = AccessResult::forbidden('This video is not available.');
+    }
+    else {
+      $access = AccessResult::neutral();
+    }
     return $access;
   }
 
