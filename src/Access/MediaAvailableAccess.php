@@ -8,6 +8,8 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\media\MediaInterface;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
+use Lullabot\Mpx\DataService\DateTime\ConcreteDateTime;
+use Lullabot\Mpx\DataService\Media\Media as MpxMedia;
 use Lullabot\Mpx\Exception\ClientException;
 use Lullabot\Mpx\Exception\ServerException;
 
@@ -103,6 +105,9 @@ class MediaAvailableAccess {
     $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
     $calculator = new AvailabilityCalculator();
 
+    // Add cache max age based on availability dates.
+    $this->mergeCacheMaxAge($mpx_object, $media);
+
     // We need to use forbid instead of allowing on available. Otherwise, if
     // we allow, Drupal will ignore other access controls like the published
     // status.
@@ -113,6 +118,28 @@ class MediaAvailableAccess {
       $access = AccessResult::neutral();
     }
     return $access;
+  }
+
+  /**
+   * Merge cache max age based on availability dates into media cache metadata.
+   *
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   Mpx media object.
+   * @param \Drupal\media\MediaInterface $media
+   *   Drupal media entity.
+   */
+  protected function mergeCacheMaxAge(MpxMedia $mpx_media, MediaInterface $media) {
+    $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
+    $available_date = $mpx_media->getAvailableDate();
+    if ($available_date instanceof ConcreteDateTime &&
+      $now < $available_date->getDateTime()) {
+      $media->mergeCacheMaxAge($available_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+    }
+    $expiration_date = $mpx_media->getExpirationDate();
+    if ($expiration_date instanceof ConcreteDateTime &&
+      $now < $expiration_date->getDateTime()) {
+      $media->mergeCacheMaxAge($expiration_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+    }
   }
 
 }
