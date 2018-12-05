@@ -8,3 +8,5 @@ Issue #94 Add cache max age based on video availability if relevant
  * https://patch-diff.githubusercontent.com/raw/Lullabot/media_mpx/pull/93.patch
 Issue #96 For the availability access check, handle error responses from mpx as access denied
  * https://patch-diff.githubusercontent.com/raw/Lullabot/media_mpx/pull/95.patch
+Issue #97 Really far out expiration dates can break that cause errors with caching
+ * https://patch-diff.githubusercontent.com/raw/Lullabot/media_mpx/pull/98.patch

@@ -23,6 +23,8 @@ use Lullabot\Mpx\Exception\ServerException;
  */
 class MediaAvailableAccess {
 
+  const MAX_AGE_TEN_YEARS = 10 * 365 * 24 * 60 * 60;
+
   /**
    * The system time service.
    *
@@ -133,12 +135,20 @@ class MediaAvailableAccess {
     $available_date = $mpx_media->getAvailableDate();
     if ($available_date instanceof ConcreteDateTime &&
       $now < $available_date->getDateTime()) {
-      $media->mergeCacheMaxAge($available_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+      $delta = $available_date->getDateTime()->getTimestamp() - $now->getTimestamp();
+      // Safe guard against radically far out dates. Set the max age to the min
+      // of the delta between the available date and now and ten years.
+      $max_age = min($delta, self::MAX_AGE_TEN_YEARS);
+      $media->mergeCacheMaxAge($max_age);
     }
     $expiration_date = $mpx_media->getExpirationDate();
     if ($expiration_date instanceof ConcreteDateTime &&
       $now < $expiration_date->getDateTime()) {
-      $media->mergeCacheMaxAge($expiration_date->getDateTime()->getTimestamp() - $now->getTimestamp());
+      $delta = $expiration_date->getDateTime()->getTimestamp() - $now->getTimestamp();
+      // Safe guard against radically far out dates. Set the max age to the min
+      // of the delta between the expiration date and now and ten years.
+      $max_age = min($delta, self::MAX_AGE_TEN_YEARS);
+      $media->mergeCacheMaxAge($max_age);
     }
   }
 
