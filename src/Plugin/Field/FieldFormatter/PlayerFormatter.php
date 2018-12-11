@@ -387,6 +387,8 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    */
   protected function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
     $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
+    $url->setAutoplay($this->getSetting('auto_play'));
+    $url->setPlayAll($this->getSetting('play_all'));
     return $url;
   }
 

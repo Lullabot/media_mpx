@@ -3,7 +3,7 @@
 namespace Drupal\Tests\media_mpx\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\DrupalSelenium2Driver;
-use Drupal\FunctionalJavascriptTests\JavascriptTestBase;
+use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use Drupal\media\Entity\MediaType;
 use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Entity\User;
@@ -14,7 +14,7 @@ use Drupal\media_mpx_test\JsonResponse;
  *
  * @group media_mpx
  */
-class CustomFieldMapTest extends JavascriptTestBase {
+class CustomFieldMapTest extends WebDriverTestBase {
 
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
@@ -124,7 +124,7 @@ class CustomFieldMapTest extends JavascriptTestBase {
     $this->getSession()->getPage()->fillField('Name', $this->randomString());
     $this->getSession()->getPage()->fillField('mpx Media', 'http://data.media.theplatform.com/media/data/Media/2602559');
     $this->click('#edit-submit');
-
+    $this->drupalGet('/media/1');
     $this->assertSession()->responseContains("The Adventures of Pixel the Cat");
   }
 

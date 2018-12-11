@@ -16,12 +16,9 @@
 defaults: &defaults
   docker:
     # specify the version you desire here (avoid latest except for testing)
-    - image: andrewberry/drupal_tests:0.3.4
+    - image: andrewberry/drupal_tests:0.4.0
 
-    # Use our fork until https://github.com/wernight/docker-phantomjs/pull/3 is
-    # merged.
-    # - image: wernight/phantomjs:2.1.1
-    - image: selenium/standalone-chrome-debug:3.7.1-beryllium
+    - image: selenium/standalone-chrome-debug:3.14.0-beryllium
 
     - image: mariadb:10.3
       environment:
@@ -88,7 +85,6 @@ unit_kernel_tests: &unit_kernel_tests
     - run:
         working_directory: /var/www/html
         command: |
-          cp modules/$CIRCLE_PROJECT_REPONAME/.circleci/test.sh .
           ./test.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -96,8 +92,9 @@ unit_kernel_tests: &unit_kernel_tests
     - store_artifacts:
         path: /var/www/html/artifacts
 
-# Run FunctionalJavascript tests. This command invokes the test-js.sh hook.
-js_tests: &js_tests
+# Run Drupal functional tests. This command invokes the test-functional.sh
+# hook.
+functional_tests: &functional_tests
   <<: *defaults
   steps:
     - attach_workspace:
@@ -108,8 +105,46 @@ js_tests: &js_tests
     - run:
         working_directory: /var/www/html
         command: |
-          cp modules/$CIRCLE_PROJECT_REPONAME/.circleci/test-js.sh .
-          ./test-js.sh $CIRCLE_PROJECT_REPONAME
+          ./test-functional.sh $CIRCLE_PROJECT_REPONAME
+
+    - store_test_results:
+        path: /var/www/html/artifacts/phpunit
+    - store_artifacts:
+        path: /var/www/html/artifacts
+
+# Run Drupal functional tests. This command invokes the test-functional-js.sh
+# hook.
+functional_js_tests: &functional_js_tests
+  <<: *defaults
+  steps:
+    - attach_workspace:
+        at: /var/www/html
+
+    - checkout
+
+    - run:
+        working_directory: /var/www/html
+        command: |
+          ./test-functional-js.sh $CIRCLE_PROJECT_REPONAME
+
+    - store_test_results:
+        path: /var/www/html/artifacts/phpunit
+    - store_artifacts:
+        path: /var/www/html/artifacts
+
+# Run Behat tests. This command invokes the behat.sh hook.
+behat_tests: &behat_tests
+  <<: *defaults
+  steps:
+    - attach_workspace:
+        at: /var/www/html
+
+    - checkout
+
+    - run:
+        working_directory: /var/www/html
+        command: |
+          ./behat.sh $CIRCLE_PROJECT_REPONAME
 
     - store_artifacts:
         path: /var/www/html/artifacts
@@ -156,10 +191,16 @@ jobs:
      <<: *update_dependencies
   run-unit-kernel-tests:
      <<: *unit_kernel_tests
-  run-js-tests:
-     <<: *js_tests
+  run-functional-tests:
+     <<: *functional_tests
+  run-functional-js-tests:
+     <<: *functional_js_tests
+  run-behat-tests:
+     <<: *behat_tests
   run-code-sniffer:
      <<: *code_sniffer
+  run-code-coverage:
+     <<: *code_coverage
 
 workflows:
   version: 2
@@ -171,12 +212,22 @@ workflows:
       - run-unit-kernel-tests:
           requires:
             - update-dependencies
-      - run-js-tests:
+      - run-functional-tests:
+          requires:
+            - update-dependencies
+      - run-functional-js-tests:
+          requires:
+            - update-dependencies
+      - run-behat-tests:
           requires:
             - update-dependencies
       - run-code-sniffer:
           requires:
             - update-dependencies
+      - run-code-coverage:
+          requires:
+            - update-dependencies
+            - run-unit-kernel-tests
 
   weekly:
     jobs:
@@ -184,12 +235,23 @@ workflows:
       - run-unit-kernel-tests:
           requires:
             - update-dependencies
-      - run-js-tests:
+      - run-functional-tests:
+          requires:
+            - update-dependencies
+      - run-functional-js-tests:
+          requires:
+            - update-dependencies
+      - run-behat-tests:
           requires:
             - update-dependencies
       - run-code-sniffer:
           requires:
             - update-dependencies
+      - run-code-coverage:
+          requires:
+            - update-dependencies
+            - run-unit-kernel-tests
+
     triggers:
       - schedule:
           # Run jobs every Monday morning at 12AM
