@@ -207,6 +207,11 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
       return $cache[$media->id()];
     }
 
+    // To avoid memory issues, reset the cache once it contains 100 elements.
+    if (count($cache) == 100) {
+      $cache = [];
+    }
+
     $id = $media->get($this->configuration['source_field'])->getString();
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($this);
 
