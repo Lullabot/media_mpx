@@ -95,7 +95,7 @@ class ClientFactory {
     return new Client($http_client);
   }
   
-  public function test() {
+  public function test($a, $b, $c, $d, $e, $f, $g) {
         $this->httpClientFactory = $httpClientFactory;
     $this->handlerStack = $handlerStack;
 
