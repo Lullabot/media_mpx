@@ -94,5 +94,118 @@ class ClientFactory {
     $http_client = $this->httpClientFactory->fromOptions($config);
     return new Client($http_client);
   }
+  
+  public function test() {
+        $this->httpClientFactory = $httpClientFactory;
+    $this->handlerStack = $handlerStack;
 
+    // This must be in the constructor, otherwise this will be added every time
+    // a new mpx client is created during a page request.
+    $this->handlerStack->push(Middleware::mpxErrors(), 'mpx_errors');
+
+    $cache = new DrupalGuzzleCache($cacheBackend);
+
+    $strategy = new DelegatingCacheStrategy();
+    $strategy->registerRequestMatcher(new MpxObjectRequestMatcher(), new MpxCacheStrategy($cache, 3600 * 24 * 30));
+
+    // Mpx returns no-caching headers, which in practice is horrible for
+    // performance. This cache strategy forces caching regardless of those
+    // headers. To force loading of an mpx object without clearing the whole
+    // cache, use the internal header defined at
+    // \Kevinrob\GuzzleCache\CacheMiddleware::HEADER_RE_VALIDATION.
+    $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+    
+        $this->httpClientFactory = $httpClientFactory;
+    $this->handlerStack = $handlerStack;
+
+    // This must be in the constructor, otherwise this will be added every time
+    // a new mpx client is created during a page request.
+    $this->handlerStack->push(Middleware::mpxErrors(), 'mpx_errors');
+
+    $cache = new DrupalGuzzleCache($cacheBackend);
+
+    $strategy = new DelegatingCacheStrategy();
+    $strategy->registerRequestMatcher(new MpxObjectRequestMatcher(), new MpxCacheStrategy($cache, 3600 * 24 * 30));
+
+    // Mpx returns no-caching headers, which in practice is horrible for
+    // performance. This cache strategy forces caching regardless of those
+    // headers. To force loading of an mpx object without clearing the whole
+    // cache, use the internal header defined at
+    // \Kevinrob\GuzzleCache\CacheMiddleware::HEADER_RE_VALIDATION.
+    $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+        $this->httpClientFactory = $httpClientFactory;
+    $this->handlerStack = $handlerStack;
+
+    // This must be in the constructor, otherwise this will be added every time
+    // a new mpx client is created during a page request.
+    $this->handlerStack->push(Middleware::mpxErrors(), 'mpx_errors');
+
+    $cache = new DrupalGuzzleCache($cacheBackend);
+
+    $strategy = new DelegatingCacheStrategy();
+    $strategy->registerRequestMatcher(new MpxObjectRequestMatcher(), new MpxCacheStrategy($cache, 3600 * 24 * 30));
+
+    // Mpx returns no-caching headers, which in practice is horrible for
+    // performance. This cache strategy forces caching regardless of those
+    // headers. To force loading of an mpx object without clearing the whole
+    // cache, use the internal header defined at
+    // \Kevinrob\GuzzleCache\CacheMiddleware::HEADER_RE_VALIDATION.
+    if (true) {
+          $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+      if (true) {
+            $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+        if (true) {
+              $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+      }
+    }
+    
+    $this->httpClientFactory = $httpClientFactory;
+    $this->handlerStack = $handlerStack;
+
+    // This must be in the constructor, otherwise this will be added every time
+    // a new mpx client is created during a page request.
+    $this->handlerStack->push(Middleware::mpxErrors(), 'mpx_errors');
+
+    $cache = new DrupalGuzzleCache($cacheBackend);
+
+    $strategy = new DelegatingCacheStrategy();
+    $strategy->registerRequestMatcher(new MpxObjectRequestMatcher(), new MpxCacheStrategy($cache, 3600 * 24 * 30));
+
+    // Mpx returns no-caching headers, which in practice is horrible for
+    // performance. This cache strategy forces caching regardless of those
+    // headers. To force loading of an mpx object without clearing the whole
+    // cache, use the internal header defined at
+    // \Kevinrob\GuzzleCache\CacheMiddleware::HEADER_RE_VALIDATION.
+    $this->handlerStack->push(
+      new CacheMiddleware(
+        $strategy
+      ),
+      'cache'
+    );
+  }
 }
