@@ -383,10 +383,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *   The player URL.
    */
   private function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
-    $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-    $url->setAutoplay($this->getSetting('auto_play'));
-    $url->setPlayAll($this->getSetting('play_all'));
-    return $url;
+    return (new Url($source_plugin->getAccount(), $player, $mpx_media))
+      ->withAutoplay($this->getSetting('auto_play'))
+      ->withPlayAll($this->getSetting('play_all'));
   }
 
   /**
@@ -405,14 +404,13 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   private function buildMeta(DrupalMedia $entity, MpxMedia $mpx_media, Player $player): array {
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
-    $url = $this->buildUrl($source_plugin, $mpx_media, $player);
-    $url->setEmbed(TRUE);
     return [
       'name' => $entity->label(),
       'thumbnailUrl' => file_create_url($source_plugin->getMetadata($entity, 'thumbnail_uri')),
       'description' => $mpx_media->getDescription(),
       'uploadDate' => $mpx_media->getAvailableDate()->format(DATE_ISO8601),
-      'embedUrl' => (string) $url,
+      'embedUrl' => (string) $this->buildUrl($source_plugin, $mpx_media, $player)
+        ->withEmbed(TRUE),
     ];
   }
 
