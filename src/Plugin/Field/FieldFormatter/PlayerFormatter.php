@@ -232,15 +232,14 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $type->getSource();
 
-    $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()
-      ->getUserEntity(), 'Player Data Service', 'Player', '1.6');
+    $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6', $source_plugin->getAccount());
     $query = new ObjectListQuery();
     $sort = new Sort();
     $sort->addSort('title');
     $query->setSort($sort);
 
     /** @var \Lullabot\Mpx\DataService\Player\Player[] $results */
-    $results = $factory->select($query, $source_plugin->getAccount());
+    $results = $factory->select($query);
 
     foreach ($results as $player) {
       if (!$player->getDisabled()) {
