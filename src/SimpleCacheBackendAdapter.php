@@ -205,17 +205,12 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
     }
 
     $cache->tags = $cache->tags ? explode(' ', $cache->tags) : [];
-    $cache->valid = TRUE;
 
     // Check if invalidateTags() has been called with any of the entry's tags.
     if (!$this->cache instanceof TaggableCacheItemPoolInterface) {
-      if (!$this->checksumProvider->isValid($cache->checksum, $cache->tags)) {
-        $cache->valid = FALSE;
+      if (!$this->checksumProvider->isValid($cache->checksum, $cache->tags) && !$allow_invalid) {
+        return FALSE;
       }
-    }
-
-    if (!$allow_invalid && !$cache->valid) {
-      return FALSE;
     }
 
     return $cache;
