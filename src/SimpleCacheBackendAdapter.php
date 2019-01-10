@@ -269,7 +269,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
 
     $cache->data = $data;
     return $cache;
-}
+  }
 
   /**
    * Convert an absolute expiry to a relative time from now.
