@@ -19,7 +19,8 @@
     "highwire/drupal-psr-16": "^1.0",
     "lullabot/mpx-php": "^0.8.2",
     "lullabot/drupal-symfony-lock": "^1.0",
-    "symfony/property-info": "^3.4"
+    "symfony/property-info": "^3.4",
+    "psr/simple-cache": "^1.0"
   },
   "require-dev": {
     "cweagans/composer-patches": "^1.6",
