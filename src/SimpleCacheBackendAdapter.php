@@ -323,12 +323,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
     foreach ($items as $item) {
       // $item is null if it could not be found, but it's an iterable so we
       // can't use array_filter().
-      if (!$item) {
-        continue;
-      }
-
-      $item = $this->prepareItem($item, $allow_invalid);
-      if ($item) {
+      if ($item && $item = $this->prepareItem($item, $allow_invalid)) {
         $ret[$item->cid] = $item;
       }
     }
