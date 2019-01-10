@@ -78,19 +78,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
 
     // $items can be an iterable and not just an array, so we can't use array_*
     // functions here.
-    $ret = [];
-    foreach ($items as $item) {
-      // $item is null if it could not be found, but it's an interable so we
-      // can't use array_filter().
-      if (!$item) {
-        continue;
-      }
-
-      $item = $this->prepareItem($item, $allow_invalid);
-      if ($item) {
-        $ret[$item->cid] = $item;
-      }
-    }
+    $ret = $this->prepareGetMultiple($items, $allow_invalid);
 
     $cids = array_diff($cids, array_keys($ret));
 
@@ -322,6 +310,34 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
       $keys[] = $this->keyFromCid($cid);
     }
     return $keys;
+  }
+
+  /**
+   * Generate the array of returns suitable for getMultiple().
+   *
+   * @param iterable $items
+   *   The iterable of cache items, including cache misses.
+   * @param bool $allow_invalid
+   *   Allow invalid items to be returned.
+   *
+   * @return \stdClass[]
+   *   An array of Drupal cache items.
+   */
+  private function prepareGetMultiple(iterable $items, $allow_invalid): array {
+    $ret = [];
+    foreach ($items as $item) {
+      // $item is null if it could not be found, but it's an iterable so we
+      // can't use array_filter().
+      if (!$item) {
+        continue;
+      }
+
+      $item = $this->prepareItem($item, $allow_invalid);
+      if ($item) {
+        $ret[$item->cid] = $item;
+      }
+    }
+    return $ret;
   }
 
 }
