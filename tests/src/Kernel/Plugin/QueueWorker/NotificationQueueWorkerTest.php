@@ -2,7 +2,6 @@
 
 namespace Drupal\Tests\media_mpx\Kernel\Plugin\QueueWorker;
 
-use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\media_mpx\Notification;
 use Drupal\media_mpx_test\JsonResponse;
 use Drupal\Tests\media_mpx\Kernel\MediaMpxTestBase;
