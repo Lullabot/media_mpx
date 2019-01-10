@@ -149,7 +149,7 @@ class MpxImporter extends DrushCommands {
 
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
     $query = new ObjectListQuery();
-    $request = $factory->selectRequest($query, $account);
+    $request = $factory->selectRequest($query);
     $list = $request->wait();
 
     // @todo Support fetching the total results via ObjectList.
@@ -189,7 +189,7 @@ class MpxImporter extends DrushCommands {
     }
     $event = new ImportSelectEvent($query, $media_source);
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
-    $results = $factory->select($query, $media_source->getAccount());
+    $results = $factory->select($query);
     return $results;
   }
 
@@ -214,7 +214,7 @@ class MpxImporter extends DrushCommands {
     }
     $event = new ImportSelectEvent($query, $media_source);
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
-    $results = $factory->selectRequest($query, $media_source->getAccount());
+    $results = $factory->selectRequest($query);
     return $results->wait()->getTotalResults();
   }
 
