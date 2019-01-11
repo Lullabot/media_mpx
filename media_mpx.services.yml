@@ -77,7 +77,7 @@ services:
   # are shared with all threads.
   cache.backend.media_mpx.chainedfast_http:
     class: Drupal\Core\Cache\ChainedFastBackendFactory
-    arguments: ['@settings', null, cache.backend.media_mpx.array_cache_pool]
+    arguments: ['@settings', null, 'cache.backend.media_mpx.array_cache_pool']
     calls:
       - [setContainer, ['@service_container']]
 
