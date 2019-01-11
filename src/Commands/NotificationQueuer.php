@@ -57,6 +57,7 @@ class NotificationQueuer extends DrushCommands {
    *   The notification listener.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
+    parent::__construct();
     $this->entityTypeManager = $entity_type_manager;
     $this->queueFactory = $queue_factory;
     $this->listener = $listener;
