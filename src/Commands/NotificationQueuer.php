@@ -133,6 +133,11 @@ class NotificationQueuer extends DrushCommands {
     $source_field = $source->getSourceFieldDefinition($media_type)->getName();
 
     $notifications = array_filter($notifications, function (MpxNotification $notification) use ($media_storage, $source_field) {
+      // Always keep delete notifications so we can log them.
+      if ($notification->getMethod() == 'delete') {
+        return TRUE;
+      }
+
       $notificationDate = $notification->getEntry()->getUpdated()->format("U");
       $notificationId = (string) $notification->getEntry()->getId();
       $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
@@ -176,8 +181,12 @@ class NotificationQueuer extends DrushCommands {
    */
   private function filterDuplicateNotifications(array $notifications): array {
     $seen_ids = [];
-    $notifications = array_filter($notifications, function ($notification) use (&$seen_ids) {
-      /** @var \Lullabot\Mpx\DataService\Notification $notification */
+    $notifications = array_filter($notifications, function (MpxNotification $notification) use (&$seen_ids) {
+      // Always keep delete notifications so we can log them.
+      if ($notification->getMethod() == 'delete') {
+        return TRUE;
+      }
+
       $id = (string) $notification->getEntry()->getId();
       if (isset($seen_ids[$id])) {
         return FALSE;
