@@ -6,6 +6,7 @@ use Drupal\media_mpx\Entity\UserInterface;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Lullabot\Mpx\DataService\DataObjectFactory as MpxDataObjectFactory;
 use Lullabot\Mpx\DataService\DataServiceManager;
+use Lullabot\Mpx\DataService\IdInterface;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**
@@ -61,13 +62,15 @@ class DataObjectFactoryCreator {
    *   The object type to load, such as 'Media'.
    * @param string $schema
    *   The schema version to use, such as '1.10'.
+   * @param \Lullabot\Mpx\DataService\IdInterface|null $account
+   *   (optional) An account to use as the account context for requests.
    *
    * @return \Lullabot\Mpx\DataService\DataObjectFactory
    *   A factory to load and query objects with.
    */
-  public function forObjectType(UserInterface $user, string $serviceName, string $objectType, string $schema): MpxDataObjectFactory {
+  public function forObjectType(UserInterface $user, string $serviceName, string $objectType, string $schema, IdInterface $account = NULL): MpxDataObjectFactory {
     $service = $this->manager->getDataService($serviceName, $objectType, $schema);
-    $client = $this->authenticatedClientFactory->fromUser($user);
+    $client = $this->authenticatedClientFactory->fromUser($user, $account);
     return new MpxDataObjectFactory($service, $client, $this->metadataCache);
   }
 
@@ -86,7 +89,7 @@ class DataObjectFactoryCreator {
     }
 
     $user = $media_source->getAccount()->getUserEntity();
-    return $this->forObjectType($user, $service_info['service_name'], $service_info['object_type'], $service_info['schema_version']);
+    return $this->forObjectType($user, $service_info['service_name'], $service_info['object_type'], $service_info['schema_version'], $media_source->getAccount());
   }
 
   /**
