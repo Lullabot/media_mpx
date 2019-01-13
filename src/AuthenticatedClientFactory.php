@@ -73,4 +73,19 @@ class AuthenticatedClientFactory {
     return $this->fromSession($session, $account);
   }
 
+  /**
+   * Create a session for an account and return an authenticated client.
+   *
+   * @param \Drupal\media_mpx\AccountInterface $account
+   *   An account to use as the account context for requests.
+   *
+   * @return \Lullabot\Mpx\AuthenticatedClient
+   *   A new authenticated client.
+   */
+  public function fromAccount(AccountInterface $account): AuthenticatedClient {
+    $user = $account->getUserEntity();
+    $session = $this->userSessionFactory->fromUser($user);
+    return $this->fromSession($session, $account);
+  }
+
 }

@@ -80,7 +80,7 @@ class NotificationListener {
   public function listen(MpxMediaSourceInterface $media_source, int $notification_id): array {
     $account = $media_source->getAccount();
 
-    $client = $this->authenticatedClientFactory->fromUser($account->getUserEntity());
+    $client = $this->authenticatedClientFactory->fromAccount($account);
     $definition = $media_source->getPluginDefinition()['media_mpx'];
     $service = $this->dataServiceManager->getDataService($definition['service_name'], $definition['object_type'], $definition['schema_version']);
     // @todo Client ID needs to be configured somehow.

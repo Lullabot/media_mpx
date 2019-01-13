@@ -145,7 +145,6 @@ class MpxImporter extends DrushCommands {
     $media_type = $this->loadMediaType($media_type_id);
 
     $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $account = $media_source->getAccount();
 
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
     $query = new ObjectListQuery();
