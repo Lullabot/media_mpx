@@ -94,6 +94,14 @@ class NotificationQueuer extends DrushCommands {
     // notification ID even if all notifications are filtered out.
     $last_notification = end($notifications);
 
+    // Check to see if there were no notifications and we got a sync response.
+    // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
+    if ($initial_count === 1 && $last_notification->isSyncResponse()) {
+      $this->logger()->info(dt('All notifications have been processed.'));
+      $this->listener->setNotificationId($media_type_id, $last_notification);
+      return;
+    }
+
     $notifications = $this->filterDuplicateNotifications($notifications);
     $notifications = $this->filterByDate($notifications, $media_type_id);
 
