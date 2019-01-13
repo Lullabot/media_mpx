@@ -66,10 +66,25 @@ services:
     class: Drupal\media_mpx\ClientFactory
     arguments: ['@media_mpx.http_handler_stack', '@http_client_factory', '@cache.media_mpx_http']
 
+  # Defines an array or memory cache that supports a limit on the number of
+  # items.
+  cache.backend.media_mpx.array_cache_pool:
+    class: Drupal\media_mpx\ArrayCachePoolFactory
+    arguments: ['@datetime.time', '@cache_tags.invalidator.checksum', 100]
+
+  # Use the above array cache on top of the normal HTTP request cache. We use
+  # the ChainedFastBackend cache so any invalidations on the consistent cache
+  # are shared with all threads.
+  cache.backend.media_mpx.chainedfast_http:
+    class: Drupal\Core\Cache\ChainedFastBackendFactory
+    arguments: ['@settings', null, 'cache.backend.media_mpx.array_cache_pool']
+    calls:
+      - [setContainer, ['@service_container']]
+
   cache.media_mpx_http:
     class: Drupal\Core\Cache\CacheBackendInterface
     tags:
-      - { name: cache.bin }
+      - { name: cache.bin , default_backend: cache.backend.media_mpx.chainedfast_http}
     factory: cache_factory:get
     arguments: [media_mpx_http]
 
@@ -79,22 +94,47 @@ services:
     public: false
     arguments: ['@lock']
 
+  # Factory for the \Drupal\Core\Cache\BackendChain class. Core does not ship
+  # with a factory for this class as it no longer uses this class itself.
+  # However, for the metadata cache (which holds the information Symfony uses
+  # to deserialize responses) we do not need a consistent cache since only a
+  # code change can invalidate the cache. Note that using ChainedFastBackend
+  # for the metadata cache incurs a significant performance hit, as every
+  # single call to invalidate cache tags invalidates the whole fast cache.
+  cache.backend.media_mpx.array_backend_chain:
+    class: Drupal\media_mpx\ArrayBackendChainFactory
+    arguments: ['@settings']
+    calls:
+      - [setContainer, ['@service_container']]
+
   # The mpx-php library implements PSR-6, but there is only a PSR-16 cache
   # adapter for Drupal. We use Symfony to bridge PSR-16 to PSR-6.
-  media_mpx.simple_cache_backend:
+  cache.media_mpx_metadata:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin, default_backend: cache.backend.media_mpx.array_backend_chain }
+    factory: cache_factory:get
+    arguments: [media_mpx_metadata]
+
+  media_mpx.simple_cache_backend_default:
     class: HighWire\DrupalPSR16\Cache
     public: false
     arguments: ['@cache.default']
 
+  media_mpx.simple_cache_backend_metadata:
+    class: HighWire\DrupalPSR16\Cache
+    public: false
+    arguments: ['@cache.media_mpx_metadata']
+
   media_mpx.token_cache_pool_adapter:
     class: Symfony\Component\Cache\Adapter\SimpleCacheAdapter
     public: false
-    arguments: ['@media_mpx.simple_cache_backend', 'media_mpx_token']
+    arguments: ['@media_mpx.simple_cache_backend_default', 'media_mpx_token']
 
   media_mpx.metadata_cache_pool_adapter:
     class: Symfony\Component\Cache\Adapter\SimpleCacheAdapter
     public: false
-    arguments: ['@media_mpx.simple_cache_backend', 'media_mpx_metadata']
+    arguments: ['@media_mpx.simple_cache_backend_metadata', 'media_mpx_metadata']
 
   media_mpx.token_cache_pool:
     class: Lullabot\Mpx\TokenCachePool
