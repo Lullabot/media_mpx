@@ -17,7 +17,7 @@
     "drupal/guzzle_cache": "^2.0",
     "symfony/cache": "^3.4",
     "highwire/drupal-psr-16": "^1.0",
-    "lullabot/mpx-php": "^0.9.0",
+    "lullabot/mpx-php": "^0.10.0",
     "lullabot/drupal-symfony-lock": "^1.0",
     "symfony/property-info": "^3.4"
   },
