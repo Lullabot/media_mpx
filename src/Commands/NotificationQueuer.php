@@ -5,6 +5,7 @@ namespace Drupal\media_mpx\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\Entity\MediaType;
+use Drupal\Media\MediaStorage;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
@@ -137,36 +138,10 @@ class NotificationQueuer extends DrushCommands {
     $media_storage = \Drupal::entityManager()->getStorage('media');
     /** @var \Drupal\Media\Entity\MediaType $media_type */
     $media_type = MediaType::load($media_type_id);
-    $source = $media_type->getSource();
-    $source_field = $source->getSourceFieldDefinition($media_type)->getName();
+    $source_field = $media_type->getSource()
+      ->getSourceFieldDefinition($media_type)->getName();
 
-    $notifications = array_filter($notifications, function (MpxNotification $notification) use ($media_storage, $source_field) {
-      // Always keep delete notifications so we can log them.
-      if ($notification->getMethod() == 'delete') {
-        return TRUE;
-      }
-
-      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
-      $notificationId = (string) $notification->getEntry()->getId();
-      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
-
-      // The updates must have to do with something new so keep them included.
-      if (empty($entities)) {
-        return TRUE;
-      }
-
-      /* If there exists an entity that hasn't been updated since the
-      notification was updated keep the notification. */
-      // @todo check for the use case where an entity was changed in drupal by a user
-      foreach ($entities as $entity) {
-        /** @var \Drupal\Media\Entity\Media $entity */
-        if ($entity->getChangedTime() < $notificationDate) {
-          return TRUE;
-        };
-      }
-
-      return FALSE;
-    });
+    $notifications = array_filter($notifications, $this->dateFilterCallback($media_storage, $source_field));
 
     return $notifications;
   }
@@ -261,6 +236,48 @@ class NotificationQueuer extends DrushCommands {
       throw new \InvalidArgumentException(dt('The media type @type does not exist.', ['@type' => $media_type_id]));
     }
     return $media_type;
+  }
+
+  /**
+   * Returns a callback to filter older notifications.
+   *
+   * @param \Drupal\Media\MediaStorage $media_storage
+   *   The media storage service.
+   * @param string $source_field
+   *   The media source field id.
+   *
+   * @return \Closure
+   *   An array_filter() callback.
+   */
+  private function dateFilterCallback(MediaStorage $media_storage, string $source_field): \Closure {
+    return function (MpxNotification $notification) use ($media_storage, $source_field) {
+      // Always keep delete notifications so we can log them.
+      if ($notification->getMethod() == 'delete') {
+        return TRUE;
+      }
+
+      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
+      $notificationId = (string) $notification->getEntry()->getId();
+      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
+
+      // The updates must have to do with something new so keep them included.
+      if (empty($entities)) {
+        return TRUE;
+      }
+
+      // If there exists an entity that hasn't been updated since the
+      // notification was updated keep the notification.
+      // @todo Check for the use case where an entity was changed in Drupal by a
+      // user.
+      foreach ($entities as $entity) {
+        /** @var \Drupal\Media\Entity\Media $entity */
+        if ($entity->getChangedTime() < $notificationDate) {
+          return TRUE;
+        };
+      }
+
+      return FALSE;
+    };
   }
 
 }
