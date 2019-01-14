@@ -69,6 +69,11 @@ class NotificationQueuer extends DrushCommands {
    *
    * @param string $media_type_id
    *   The media type ID to import for.
+   * @param array $options
+   *   An array of command options.
+   *
+   * @option once Only process a single notification.
+   * @option reset Restarts from the earliest available notification.
    *
    * @usage media_mpx-listen mpx_video
    *   Listen for notifications for the mpx_video media type.
@@ -76,47 +81,12 @@ class NotificationQueuer extends DrushCommands {
    * @command media_mpx:listen
    * @aliases mpxl
    */
-  public function listen($media_type_id) {
-    // First, we find the last notification ID.
-    $media_type = $this->loadMediaType($media_type_id);
-    $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $notification_id = $this->listener->getNotificationId($media_type_id);
-
-    // Next, we fetch notifications, removing duplicates (such as multiple saves
-    // of an mpx object in a row).
-    $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
-    $notifications = $this->listener->listen($media_source, $notification_id);
-
-    // Keep track of the initial count of notifications so we can know if we
-    // filtered down to an empty array.
-    $initial_count = count($notifications);
-
-    // We need a reference to the last notification so we can set the last
-    // notification ID even if all notifications are filtered out.
-    $last_notification = end($notifications);
-
-    // Check to see if there were no notifications and we got a sync response.
-    // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
-    if ($initial_count === 1 && $last_notification->isSyncResponse()) {
-      $this->logger()->info(dt('All notifications have been processed.'));
-      $this->listener->setNotificationId($media_type_id, $last_notification);
-      return;
+  public function listen($media_type_id, array $options = ['once' => FALSE, 'reset' => FALSE]) {
+    if ($options['reset']) {
+      $this->listener->resetNotificationId($media_type_id);
     }
 
-    $notifications = $this->filterDuplicateNotifications($notifications);
-    $notifications = $this->filterByDate($notifications, $media_type_id);
-
-    if (empty($notifications) && $initial_count) {
-      $this->io()->note(dt('All notifications were skipped as newer data has already been imported.'));
-    }
-    else {
-      // Take the notifications and store them in the queue for processing
-      // later.
-      $this->queueNotifications($media_type, $notifications);
-    }
-
-    // Let the next listen call start from where we left off.
-    $this->listener->setNotificationId($media_type_id, $last_notification);
+    $this->doListen($media_type_id, $options['once']);
   }
 
   /**
@@ -278,6 +248,66 @@ class NotificationQueuer extends DrushCommands {
 
       return FALSE;
     };
+  }
+
+  /**
+   * Execute listening for notifications.
+   *
+   * @param string $media_type_id
+   *   The media type to listen for.
+   * @param bool $once
+   *   (optional) Run once instead of until all notifications are available.
+   */
+  private function doListen($media_type_id, bool $once = FALSE): void {
+    $more_to_consume = TRUE;
+
+    while ($more_to_consume) {
+      // First, we find the last notification ID.
+      $media_type = $this->loadMediaType($media_type_id);
+      $media_source = DataObjectImporter::loadMediaSource($media_type);
+
+      $notification_id = $this->listener->getNotificationId($media_type_id);
+
+      // Next, we fetch notifications, removing duplicates (such as multiple
+      // saves of an mpx object in a row).
+      $this->io()
+        ->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
+      $notifications = $this->listener->listen($media_source, $notification_id);
+
+      // Keep track of the initial count of notifications so we can know if we
+      // filtered down to an empty array.
+      $initial_count = count($notifications);
+
+      // We need a reference to the last notification so we can set the last
+      // notification ID even if all notifications are filtered out.
+      $last_notification = end($notifications);
+
+      // Check to see if there were no notifications and we got a sync response.
+      // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
+      if ($initial_count === 1 && $last_notification->isSyncResponse()) {
+        $this->logger()->info(dt('All notifications have been processed.'));
+        $more_to_consume = FALSE;
+      }
+      else {
+        $notifications = $this->filterDuplicateNotifications($notifications);
+        $notifications = $this->filterByDate($notifications, $media_type_id);
+
+        if (empty($notifications) && $initial_count) {
+          $this->io()
+            ->note(dt('All notifications were skipped as newer data has already been imported.'));
+        }
+        else {
+          // Take the notifications and store them in the queue for processing
+          // later.
+          $this->queueNotifications($media_type, $notifications);
+        }
+
+        $more_to_consume = $more_to_consume && !$once;
+      }
+
+      // Let the next listen call start from where we left off.
+      $this->listener->setNotificationId($media_type_id, $last_notification);
+    }
   }
 
 }
