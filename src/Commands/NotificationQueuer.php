@@ -289,24 +289,37 @@ class NotificationQueuer extends DrushCommands {
         $more_to_consume = FALSE;
       }
       else {
-        $notifications = $this->filterDuplicateNotifications($notifications);
-        $notifications = $this->filterByDate($notifications, $media_type_id);
-
-        if (empty($notifications) && $initial_count) {
-          $this->io()
-            ->note(dt('All notifications were skipped as newer data has already been imported.'));
-        }
-        else {
-          // Take the notifications and store them in the queue for processing
-          // later.
-          $this->queueNotifications($media_type, $notifications);
-        }
+        $this->filterAndQueue($media_type, $notifications);
 
         $more_to_consume = $more_to_consume && !$once;
       }
 
       // Let the next listen call start from where we left off.
       $this->listener->setNotificationId($media_type_id, $last_notification);
+    }
+  }
+
+  /**
+   * Filter duplicate notifications and queue the remainder.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to queue notifications for.
+   * @param \Lullabot\Mpx\DataService\Notification[] $notifications
+   *   An array of notifications.
+   */
+  private function filterAndQueue(MediaTypeInterface $media_type, array $notifications): void {
+    $initial_count = count($notifications);
+    $notifications = $this->filterDuplicateNotifications($notifications);
+    $notifications = $this->filterByDate($notifications, $media_type->id());
+
+    if (empty($notifications) && $initial_count) {
+      $this->io()
+        ->note(dt('All notifications were skipped as newer data has already been imported.'));
+    }
+    else {
+      // Take the notifications and store them in the queue for processing
+      // later.
+      $this->queueNotifications($media_type, $notifications);
     }
   }
 
