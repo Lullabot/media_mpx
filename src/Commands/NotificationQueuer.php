@@ -72,7 +72,7 @@ class NotificationQueuer extends DrushCommands {
    * @param array $options
    *   An array of command options.
    *
-   * @option once Only process a single notification.
+   * @option once Only process a single notification response.
    * @option reset Restarts from the earliest available notification.
    *
    * @usage media_mpx-listen mpx_video
@@ -256,7 +256,7 @@ class NotificationQueuer extends DrushCommands {
    * @param string $media_type_id
    *   The media type to listen for.
    * @param bool $once
-   *   (optional) Run once instead of until all notifications are available.
+   *   (optional) Run once instead of until all notifications are processed.
    */
   private function doListen($media_type_id, bool $once = FALSE): void {
     $more_to_consume = TRUE;
