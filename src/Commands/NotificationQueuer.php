@@ -260,12 +260,13 @@ class NotificationQueuer extends DrushCommands {
    */
   private function doListen($media_type_id, bool $once = FALSE): void {
     $more_to_consume = TRUE;
+    $notifications_to_queue = [];
+
+    $media_type = $this->loadMediaType($media_type_id);
+    $media_source = DataObjectImporter::loadMediaSource($media_type);
 
     while ($more_to_consume) {
       // First, we find the last notification ID.
-      $media_type = $this->loadMediaType($media_type_id);
-      $media_source = DataObjectImporter::loadMediaSource($media_type);
-
       $notification_id = $this->listener->getNotificationId($media_type_id);
 
       // Next, we fetch notifications, removing duplicates (such as multiple
@@ -285,29 +286,33 @@ class NotificationQueuer extends DrushCommands {
       // Check to see if there were no notifications and we got a sync response.
       // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
       if ($initial_count === 1 && $last_notification->isSyncResponse()) {
-        $this->logger()->info(dt('All notifications have been processed.'));
+        $this->logger()->info(dt('All notifications have been retrieved.'));
         $more_to_consume = FALSE;
       }
       else {
-        $notifications = $this->filterDuplicateNotifications($notifications);
-        $notifications = $this->filterByDate($notifications, $media_type_id);
+        // Take the notifications and store them in the queue for processing
+        // later.
+        $notifications_to_queue = array_merge($notifications_to_queue, $notifications);
+        $notifications_to_queue = $this->filterDuplicateNotifications($notifications_to_queue);
+        $notifications_to_queue = $this->filterByDate($notifications_to_queue, $media_type_id);
+        $this->logger()->debug(dt('@count notifications are waiting to be queued.', ['@count' => count($notifications_to_queue)]));
 
-        if (empty($notifications) && $initial_count) {
-          $this->io()
-            ->note(dt('All notifications were skipped as newer data has already been imported.'));
-        }
-        else {
-          // Take the notifications and store them in the queue for processing
-          // later.
-          $this->queueNotifications($media_type, $notifications);
-        }
-
-        $more_to_consume = $more_to_consume && !$once;
+        $more_to_consume = !$once;
       }
 
       // Let the next listen call start from where we left off.
       $this->listener->setNotificationId($media_type_id, $last_notification);
     }
+
+    if (!empty($notifications_to_queue)) {
+      $this->logger()->info(dt('Queuing @count notifications.', ['@count' => count($notifications_to_queue)]));
+      $this->queueNotifications($media_type, $notifications_to_queue);
+    }
+    else {
+      $this->io()
+        ->note(dt('No notifications resulted in imported data.'));
+    }
+
   }
 
 }
