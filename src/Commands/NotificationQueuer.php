@@ -290,8 +290,7 @@ class NotificationQueuer extends DrushCommands {
       }
       else {
         $this->filterAndQueue($media_type, $notifications);
-
-        $more_to_consume = $more_to_consume && !$once;
+        $more_to_consume = !$once;
       }
 
       // Let the next listen call start from where we left off.
