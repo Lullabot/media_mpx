@@ -274,17 +274,13 @@ class NotificationQueuer extends DrushCommands {
         ->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
       $notifications = $this->listener->listen($media_source, $notification_id);
 
-      // Keep track of the initial count of notifications so we can know if we
-      // filtered down to an empty array.
-      $initial_count = count($notifications);
-
       // We need a reference to the last notification so we can set the last
       // notification ID even if all notifications are filtered out.
       $last_notification = end($notifications);
 
       // Check to see if there were no notifications and we got a sync response.
       // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
-      if ($initial_count === 1 && $last_notification->isSyncResponse()) {
+      if ($last_notification->isSyncResponse()) {
         $this->logger()->info(dt('All notifications have been processed.'));
         $more_to_consume = FALSE;
       }
