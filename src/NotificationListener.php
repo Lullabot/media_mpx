@@ -150,6 +150,17 @@ class NotificationListener {
   }
 
   /**
+   * Reset the notification ID to restart from the earliest notification.
+   *
+   * @param string $media_type_id
+   *   The media type ID to reset notifications for.
+   */
+  public function resetNotificationId(string $media_type_id): void {
+    $notification_key = $this->getNotificationKey($media_type_id);
+    $this->state->delete($notification_key);
+  }
+
+  /**
    * Return the notification key in the state system.
    *
    * @param string $media_type_id
