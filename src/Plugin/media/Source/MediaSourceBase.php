@@ -18,6 +18,7 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\CachingPhpDocExtractor;
 use Lullabot\Mpx\DataService\CustomFieldManager;
+use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -249,19 +250,9 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    */
   protected function getReflectedProperty(MediaInterface $media, string $attribute_name, $mpx_object) {
     $method = 'get' . ucfirst($attribute_name);
-    try {
-      $value = $mpx_object->$method();
-    }
-    catch (\TypeError $e) {
-      // @todo The optional value was not set.
-      // Remove this when https://github.com/Lullabot/mpx-php/issues/95 is
-      // fixed.
-      return parent::getMetadata($media, $attribute_name);
-    }
+    $value = $mpx_object->$method();
 
-    // @todo Is this the best way to handle complex values like dates and
-    // sub-objects?
-    if ($value instanceof \DateTime) {
+    if ($value instanceof \DateTime || $value instanceof DateTimeFormatInterface) {
       $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
     }
 
