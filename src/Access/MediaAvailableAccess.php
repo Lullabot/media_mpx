@@ -202,7 +202,7 @@ class MediaAvailableAccess {
    */
   private function getDateTime(MediaInterface $media, string $field_name): DateTimeFormatInterface {
     $fieldItemList = $media->get($field_name);
-    $date = !$fieldItemList->isEmpty() ? new ConcreteDateTime(\DateTime::createFromFormat(DateTimeItemInterface::DATETIME_STORAGE_FORMAT, $fieldItemList->value)) : new NullDateTime();
+    $date = !$fieldItemList->isEmpty() ? new ConcreteDateTime(\DateTime::createFromFormat('U', $fieldItemList->value)) : new NullDateTime();
     return $date;
   }
 
