@@ -5,3 +5,5 @@ BR-6856: Hack date conversion to map to unix timestamps instead of datetimes
 Issue #108: Use mapped dates when calculating media availability
  * https://github.com/Lullabot/media_mpx/pull/108.diff
  * We also hack the patch to work with unix timestamps
+Support ingesting FeedConfigs as entities #109
+ * https://github.com/Lullabot/media_mpx/pull/109.diff
