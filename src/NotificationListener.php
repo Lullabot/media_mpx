@@ -102,8 +102,9 @@ class NotificationListener {
 
       if ($e->getCode() == 404) {
         $this->logger->warning(
-          'The last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion of all videos.',
+          'The %object_type last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion.',
           [
+            '%object_type' => $service->getAnnotation()->getObjectType(),
             '%id' => $notification_id,
             '%account' => $media_source->getAccount()->label(),
           ]);
