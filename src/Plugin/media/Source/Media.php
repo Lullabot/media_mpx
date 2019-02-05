@@ -41,16 +41,6 @@ use Psr\Log\LoggerInterface;
 class Media extends MediaSourceBase implements MediaSourceInterface {
 
   /**
-   * The path to the thumbnails directory.
-   *
-   * Normally this would be a class constant, but file_prepare_directory()
-   * requires the string to be passed by reference.
-   *
-   * @var string
-   */
-  private $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
-
-  /**
    * The discovered class that is used for mpx Media objects.
    *
    * @var string
@@ -283,71 +273,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   }
 
   /**
-   * Download a thumbnail to the local file system.
-   *
-   * @param \Drupal\media\MediaInterface $media
-   *   The media entity being accessed.
-   * @param string $attribute_name
-   *   The metadata attribute being accessed.
-   *
-   * @return string
-   *   The existing thumbnail, or the newly downloaded thumbnail.
-   */
-  private function downloadThumbnail(MediaInterface $media, string $attribute_name) {
-    try {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxObject($media);
-
-      $thumbnailUrl = $mpx_media->getDefaultThumbnailUrl();
-      $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
-      if (!file_exists($local_uri)) {
-        $directory = dirname($local_uri);
-        file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
-        $thumbnail = $this->httpClient->request('GET', $thumbnailUrl);
-        file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
-      }
-
-      return $local_uri;
-    }
-    catch (TransferException $e) {
-      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-      $mpx_media = $this->getMpxObject($media);
-      // @todo Can this somehow deeplink to the mpx console?
-      $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_media->getId()))
-        ->toString();
-      $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
-        '@title' => $media->label(),
-        '@code' => $e->getCode(),
-        '@message' => $e->getMessage(),
-        'link' => $link,
-      ]);
-      return parent::getMetadata($media, $attribute_name);
-    }
-  }
-
-  /**
-   * Return the alt tag for a thumbnail.
-   *
-   * While mpx has support for thumbnail descriptions, in practice they do not
-   * look to be filled with useful text. Instead, we default to using the media
-   * label, and if that is not available we fall back to the media title.
-   *
-   * @param \Drupal\media\MediaInterface $media
-   *   The media entity being processed.
-   *
-   * @return string
-   *   The thumbnail alt text.
-   */
-  private function thumbnailAlt(MediaInterface $media) {
-    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-    $mpx_media = $this->getMpxObject($media);
-    if (!empty($media->label())) {
-      return $media->label();
-    }
-    return $mpx_media->getTitle();
-  }
-
-  /**
    * Return a metadata value for a custom field.
    *
    * @param \Drupal\media\MediaInterface $media
@@ -441,7 +366,23 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $value = NULL;
     switch ($attribute_name) {
       case 'thumbnail_uri':
-        $value = $this->downloadThumbnail($media, $attribute_name);
+        /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
+        $mpx_object = $this->getMpxObject($media);
+
+        try {
+          return $this->downloadThumbnail($mpx_object);
+        }
+        catch (TransferException $e) {
+          // @todo Can this somehow deeplink to the mpx console?
+          $link = Link::fromTextAndUrl($this->t('link to mpx object'), Url::fromUri($mpx_object->getId()))
+            ->toString();
+          $this->logger->error('An error occurred while downloading the thumbnail for @title: HTTP @code @message', [
+            '@title' => $mpx_object->getTitle(),
+            '@code' => $e->getCode(),
+            '@message' => $e->getMessage(),
+            'link' => $link,
+          ]);
+        }
         break;
 
       case 'thumbnail_alt':
