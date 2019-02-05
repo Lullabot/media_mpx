@@ -5,6 +5,7 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 use Lullabot\Mpx\DataService\Feeds\FeedConfig as MpxFeedConfig;
+use Lullabot\Mpx\Exception\ClientException;
 
 /**
  * Media source for mpx FeedConfig items.
@@ -56,17 +57,29 @@ class FeedConfig extends MediaSourceBase implements MediaSourceInterface {
     if (!$media->get($source_field->getName())->isEmpty()) {
       switch ($attribute_name) {
         case 'thumbnail_uri':
+          // Unlike the rest of the mpx API, these IDs are numeric and don't
+          // include the host name.
+          $factory = $this->dataObjectFactoryCreator->forObjectType($this->getAccount()->getUserEntity(), 'Media Data Service', 'Media', '1.10');
+
           /** @var \Lullabot\Mpx\DataService\Feeds\FeedConfig $feed */
           $feed = $this->getMpxObject($media);
           $pinned_ids = $feed->getPinnedIds();
-          if ($first_video_numeric_id = reset($pinned_ids)) {
-            // Unlike the rest of the mpx API, these IDs are numeric and don't
-            // include the host name.
-            $factory = $this->dataObjectFactoryCreator->forObjectType($this->getAccount()->getUserEntity(), 'Media Data Service', 'Media', '1.10');
-            $video = $factory->loadByNumericId($first_video_numeric_id)->wait();
+          foreach ($pinned_ids as $video_id) {
 
-            return $this->downloadThumbnail($video);
+            try {
+              $video = $factory->loadByNumericId($video_id)->wait();
+              return $this->downloadThumbnail($video);
+            }
+            catch (ClientException $e) {
+              // Mpx doesn't removed pinned videos from feeds if the video is
+              // deleted. In that case, we go on to the next video to find a
+              // thumbnail.
+              if ($e->getCode() != 404) {
+                throw $e;
+              }
+            }
           }
+
           break;
 
         case 'thumbnail_alt':
