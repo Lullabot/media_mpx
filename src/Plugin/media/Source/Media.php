@@ -5,9 +5,12 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\media\Entity\MediaType;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
@@ -64,6 +67,16 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $dataServiceManager = $dataObjectFactory->getDataServiceManager();
     $this->mediaClass = $dataServiceManager->getDataService($service_info['service_name'], $service_info['object_type'], $service_info['schema_version'])->getClass();
     $this->mediaFileClass = $dataServiceManager->getDataService($service_info['service_name'], 'MediaFile', $service_info['schema_version'])->getClass();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultConfiguration() {
+    return parent::defaultConfiguration() + [
+      'media_image_bundle' => NULL,
+      'media_image_field' => NULL,
+    ];
   }
 
   /**
@@ -458,6 +471,133 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       }
     }
     return $value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildConfigurationForm($form, $form_state);
+
+    $form['media_image_bundle'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Media image bundle'),
+      '#default_value' => $this->getConfiguration()['media_image_bundle'],
+      '#options' => $this->getImageMediaBundles(),
+      '#empty_option' => $this->t('- Select - '),
+      '#description' => $this->t('To have the thumbnail mapped to a media entity rather than an unmanaged file (the default) choose a media type and field to map the thumbnail to.'),
+      '#ajax' => [
+        'callback' => [$this, 'mediaImageBundleOnChange'],
+        'event' => 'change',
+        'wrapper' => 'media-image-field',
+      ]
+    ];
+
+    if (!empty($this->getConfiguration()['media_image_bundle'])) {
+      $form['media_image_field'] = $this->getMediaImageFieldElement($this->getConfiguration()['media_image_bundle']);
+    }
+    else {
+      $form['placeholder_media_image_field'] = [
+        '#markup' => '<div id="media-image-field"></div>',
+      ];
+    }
+
+    return $form;
+  }
+
+  /**
+   * AJAX callback for when the media bundle changes.
+   *
+   * Used to update the field selection.
+   *
+   * @param array $form
+   *   The form array.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The render array to render in place of the media image fields spot.
+   */
+  public function mediaImageBundleOnChange(array &$form, FormStateInterface $form_state) {
+    if ($media_image_bundle = $form_state->getValue(['source_configuration', 'media_image_bundle'])) {
+      $element = $this->getMediaImageFieldElement($media_image_bundle);
+    }
+    else {
+      $element = [
+        '#markup' => '<div id="media-image-field"></div>',
+      ];
+    }
+    return $element;
+  }
+
+  /**
+   * Get a list of media bundles that could be used to save an image.
+   *
+   * @return array
+   *   Array of media bundle labels keyed by bundle id, suitable for use in a
+   *   #type => select return array.
+   */
+  protected function getImageMediaBundles() {
+    // Get all media bundles.
+    $bundles = $this->entityTypeManager->getStorage('media_type')->loadMultiple();
+
+    $bundles = array_filter($bundles, function (MediaType $bundle) {
+      // Filter out any bundles that are use the same source plugin. That would be
+      // silly.
+      if ($bundle->getSource()->getPluginId() === $this->getPluginId()) {
+        return FALSE;
+      }
+      // Filter out any bundles that don't have a suitable image field. Also
+      // silly.
+      return !empty($this->getImageFieldsForMediaBundle($bundle->id()));
+    });
+
+    return array_map(function (MediaType $bundle) {
+      return $bundle->label();
+    }, $bundles);
+  }
+
+  /**
+   * Build a select element from image fields on the given media bundle.
+   *
+   * @param string $media_bundle_id
+   *   Media bundle id for the media bundle we want a list of image field
+   *   options for.
+   *
+   * @return array
+   *   Form API select element to choose an image field of the given media
+   *   bundle.
+   */
+  protected function getMediaImageFieldElement($media_bundle_id) {
+    return [
+      '#type' => 'select',
+      '#title' => $this->t('Media image field'),
+      '#default_value' => $this->getConfiguration()['media_image_field'],
+      '#options' => $this->getImageFieldsForMediaBundle($media_bundle_id),
+      '#description' => $this->t('Select an image field from the selected media bundle.'),
+      '#prefix' => '<div id="media-image-field">',
+      '#suffix' => '</div>',
+      '#required' => TRUE,
+    ];
+  }
+
+  /**
+   * Get a list of image fields on the given bundle.
+   *
+   * @param string $media_bundle_id
+   *   Image bundle id.
+   *
+   * @return array
+   *   Array of image fields keyed by field name.
+   */
+  protected function getImageFieldsForMediaBundle($media_bundle_id) {
+    $image_field_options = [];
+    foreach ($this->entityFieldManager->getFieldDefinitions('media', $media_bundle_id) as $field_name => $field) {
+      if (!($field instanceof BaseFieldDefinition) && $field->getType() == 'image') {
+        $image_field_options[$field_name] = sprintf('%s (%s)', $field->getLabel(), $field_name);
+      }
+    }
+    return $image_field_options;
   }
 
 }
