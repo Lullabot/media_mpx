@@ -76,6 +76,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     return parent::defaultConfiguration() + [
       'media_image_bundle' => NULL,
       'media_image_field' => NULL,
+      'media_image_entity_reference_field' => NULL,
     ];
   }
 
@@ -478,13 +479,14 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
+    /** @var \Drupal\media\MediaInterface $entity */
+    $entity = $form_state->getFormObject()->getEntity();
 
     $form['media_image_bundle'] = [
       '#type' => 'select',
       '#title' => $this->t('Media image bundle'),
       '#default_value' => $this->getConfiguration()['media_image_bundle'],
       '#options' => $this->getImageMediaBundles(),
-      '#empty_option' => $this->t('- Select - '),
       '#description' => $this->t('To have the thumbnail mapped to a media entity rather than an unmanaged file (the default) choose a media type and field to map the thumbnail to.'),
       '#ajax' => [
         'callback' => [$this, 'mediaImageBundleOnChange'],
@@ -501,6 +503,20 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
         '#markup' => '<div id="media-image-field"></div>',
       ];
     }
+
+    $form['media_image_entity_reference_field'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Media image entity reference field'),
+      '#default_value' => $this->getConfiguration()['media_image_entity_reference_field'],
+      '#options' => $this->getMediaImageEntityReferenceFieldOptions($entity->id()),
+      '#empty_option' => $this->t('- Create -'),
+      '#description' => $this->t('Select the field to use to store the entity reference to the created media entity.'),
+      '#states' => [
+        'invisible' => [
+          ':input[name="source_configuration[media_image_bundle]"]' => ['value' => ''],
+        ],
+      ],
+    ];
 
     return $form;
   }
@@ -582,7 +598,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   }
 
   /**
-   * Get a list of image fields on the given bundle.
+   * Get a list of image fields on the given media bundle.
    *
    * @param string $media_bundle_id
    *   Image bundle id.
@@ -593,11 +609,127 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
   protected function getImageFieldsForMediaBundle($media_bundle_id) {
     $image_field_options = [];
     foreach ($this->entityFieldManager->getFieldDefinitions('media', $media_bundle_id) as $field_name => $field) {
-      if (!($field instanceof BaseFieldDefinition) && $field->getType() == 'image') {
+      if (!($field instanceof BaseFieldDefinition) && $field->getType() === 'image') {
         $image_field_options[$field_name] = sprintf('%s (%s)', $field->getLabel(), $field_name);
       }
     }
     return $image_field_options;
   }
+
+  /**
+   * Get a list of entity reference fields for the media type form.
+   *
+   * @return string[]
+   *   A list of media image entity reference field options for the media type
+   *   form.
+   */
+  protected function getMediaImageEntityReferenceFieldOptions() {
+    $options = [];
+    foreach ($this->entityFieldManager->getFieldStorageDefinitions('media') as $field_name => $field) {
+      if (!$field->isBaseField() &&
+        $field->getType() === 'entity_reference' &&
+        $field->getSetting('target_type') === 'media') {
+        $options[$field_name] = sprintf('%s (%s)', $field->getLabel(), $field_name);
+      }
+    }
+    return $options;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+    parent::submitConfigurationForm($form, $form_state);
+
+    // If a media bundle and field is chosen to map the thumbnail to, and no
+    // entity reference field was chosen, create an entity reference field.
+    $configuration = $this->getConfiguration();
+    if (!empty($configuration['media_image_bundle']) &&
+      !empty($configuration['media_image_field']) &&
+      empty($this->configuration['media_image_entity_reference_field'])) {
+      $field_storage = $this->createMediaImageEntityReferenceFieldStorage();
+      $field_storage->save();
+      $this->configuration['media_image_entity_reference_field'] = $field_storage->getName();
+    }
+  }
+
+  protected function createMediaImageEntityReferenceFieldStorage() {
+    return $this->entityTypeManager
+      ->getStorage('field_storage_config')
+      ->create([
+        'entity_type' => 'media',
+        'field_name' => $this->getMediaImageEntityReferenceFieldName(),
+        'type' => 'entity_reference',
+        'settings' => [
+          'target_type' => 'media',
+        ],
+      ]);
+  }
+
+  protected function getMediaImageEntityReferenceFieldStorage() {
+    // Nothing to do if no media image entity reference field is configured yet.
+    $field = $this->configuration['media_image_entity_reference_field'];
+    if ($field) {
+      // Even if we do know the name of the media image entity reference field,
+      // there's no guarantee that it exists.
+      $fields = $this->entityFieldManager->getFieldStorageDefinitions('media');
+      return isset($fields[$field]) ? $fields[$field] : NULL;
+    }
+  }
+
+  protected function getMediaImageEntityReferenceFieldDefinition(MediaType $media_type) {
+    // Nothing to do if no media image entity reference field is configured yet.
+    $field = $this->configuration['media_image_entity_reference_field'];
+    if ($field) {
+      // Even if we do know the name of the media image entity reference field,
+      // there is no guarantee that it already exists.
+      $fields = $this->entityFieldManager->getFieldDefinitions('media', $media_type->id());
+      return isset($fields[$field]) ? $fields[$field] : NULL;
+    }
+    return NULL;
+  }
+
+  protected function createMediaImageEntityReferenceField(MediaType $media_type) {
+    $storage = $this->getMediaImageEntityReferenceFieldStorage() ?: $this->createMediaImageEntityReferenceFieldStorage();
+    return $this->entityTypeManager
+      ->getStorage('field_config')
+      ->create([
+        'field_storage' => $storage,
+        'bundle' => $media_type->id(),
+        'label' => $this->t('Media image'),
+        'required' => FALSE,
+      ]);
+  }
+
+  protected function getMediaImageEntityReferenceFieldName() {
+    $base_id = 'field_media_image_reference';
+    $tries = 0;
+    $storage = $this->entityTypeManager->getStorage('field_storage_config');
+
+    // Iterate at least once, until no field with the generated ID is found.
+    do {
+      $id = $base_id;
+      // If we've tried before, increment and append the suffix.
+      if ($tries) {
+        $id .= '_' . $tries;
+      }
+      $field = $storage->load('media.' . $id);
+      $tries++;
+    } while ($field);
+
+    return $id;
+  }
+
+  public function getMediaImageEntityReferenceFieldValue(MediaInterface $media) {
+    $field = $this->configuration['media_image_entity_reference_field'];
+    if (empty($field)) {
+      throw new \RuntimeException('Media image entity reference field is not defined.');
+    }
+
+    /** @var \Drupal\Core\Field\FieldItemInterface $field_item */
+    $field_item = $media->get($field)->first();
+    return $field_item->{$field_item->mainPropertyName()};
+  }
+
 
 }
