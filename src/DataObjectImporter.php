@@ -5,6 +5,7 @@ namespace Drupal\media_mpx;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\guzzle_cache\DrupalGuzzleCache;
+use Drupal\media\Entity\Media;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Event\ImportEvent;
@@ -203,6 +204,7 @@ class DataObjectImporter {
    */
   protected function updateThumbnail(MediaInterface $media): void {
     $source = $media->getSource();
+    $source_configuration = $source->getConfiguration();
     $plugin_definition = $source->getPluginDefinition();
 
     $thumbnail_uri = $source->getMetadata($media, $plugin_definition['thumbnail_uri_metadata_attribute']);
@@ -211,12 +213,61 @@ class DataObjectImporter {
       return;
     }
 
+    $file = $this->saveThumbnailAsFile($media, $thumbnail_uri);
+    if ($source->doSaveThumbnailAsMedia()) {
+      $media_image = Media::create([
+        'bundle' => $source_configuration['media_image_bundle'],
+        'name' => $file->label(),
+        $source_configuration['media_image_field'] => [
+          ['target_id' => $file->id()],
+        ],
+      ]);
+      $media_image->save();
+      $media->{$source_configuration['media_image_entity_reference_field']} = [
+        ['target_id' => $media_image->id()],
+      ];
+      $media->save();
+    }
+    else {
+      $media->thumbnail->target_id = $file->id();
+
+      // Set the thumbnail alt text, if available.
+      if (!empty($plugin_definition['thumbnail_alt_metadata_attribute'])) {
+        $media->thumbnail->alt = $source->getMetadata($media, $plugin_definition['thumbnail_alt_metadata_attribute']);
+      }
+      else {
+        $media->thumbnail->alt = $media->t('Thumbnail', [], ['langcode' => $media->langcode->value]);
+      }
+
+      // Set the thumbnail title, if available.
+      if (!empty($plugin_definition['thumbnail_title_metadata_attribute'])) {
+        $media->thumbnail->title = $source->getMetadata($media, $plugin_definition['thumbnail_title_metadata_attribute']);
+      }
+      else {
+        $media->thumbnail->title = $media->label();
+      }
+    }
+  }
+
+  /**
+   * Save the given thumbnail URI as a managed file.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being updated.
+   * @param string $thumbnail_uri
+   *   URI to the thumbnail.
+   *
+   * @return \Drupal\file\FileInterface
+   *   File entity that was saved for the given thumbnail URI.
+   */
+  protected function saveThumbnailAsFile(MediaInterface $media, $thumbnail_uri) {
     $values = [
       'uri' => $thumbnail_uri,
     ];
 
     $file_storage = $this->entityTypeManager->getStorage('file');
 
+    /** @var \Drupal\file\FileInterface[] $existing */
     $existing = $file_storage->loadByProperties($values);
     if ($existing) {
       $file = reset($existing);
@@ -230,23 +281,8 @@ class DataObjectImporter {
       $file->setPermanent();
       $file->save();
     }
-    $media->thumbnail->target_id = $file->id();
 
-    // Set the thumbnail alt text, if available.
-    if (!empty($plugin_definition['thumbnail_alt_metadata_attribute'])) {
-      $media->thumbnail->alt = $source->getMetadata($media, $plugin_definition['thumbnail_alt_metadata_attribute']);
-    }
-    else {
-      $media->thumbnail->alt = $media->t('Thumbnail', [], ['langcode' => $media->langcode->value]);
-    }
-
-    // Set the thumbnail title, if available.
-    if (!empty($plugin_definition['thumbnail_title_metadata_attribute'])) {
-      $media->thumbnail->title = $source->getMetadata($media, $plugin_definition['thumbnail_title_metadata_attribute']);
-    }
-    else {
-      $media->thumbnail->title = $media->label();
-    }
+    return $file;
   }
 
   /**
