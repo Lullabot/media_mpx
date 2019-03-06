@@ -4,7 +4,9 @@ namespace Drupal\media_mpx;
 
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\file\FileInterface;
 use Drupal\guzzle_cache\DrupalGuzzleCache;
+use Drupal\media\Entity\Media;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Event\ImportEvent;
@@ -202,6 +204,7 @@ class DataObjectImporter {
    * @see https://www.drupal.org/project/drupal/issues/2878119
    */
   protected function updateThumbnail(MediaInterface $media): void {
+    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source */
     $source = $media->getSource();
     $plugin_definition = $source->getPluginDefinition();
 
@@ -211,12 +214,43 @@ class DataObjectImporter {
       return;
     }
 
+    $file = $this->createFileForThumbnail($media, $thumbnail_uri);
+
+    // Always reference the thumbnail file via the default thumbnail field on
+    // media. This way anything depending on that relationship can continue to
+    // do so.
+    $this->referenceThumbnailAsFile($media, $file);
+
+    // If the media source is configured to save the thumbnail as a media
+    // entity, create the media image entity and reference the file from it.
+    if ($source->doSaveThumbnailAsMedia()) {
+      $this->referenceThumbnailAsMedia($media, $file);
+    }
+  }
+
+  /**
+   * Return a file entity for the given URI.
+   *
+   * URI is assumed to be a public URI for an image already on disk. If there is
+   * already a file entity for the URI it's returned, otherwise one is created
+   * and returned.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being updated.
+   * @param string $thumbnail_uri
+   *   URI to the thumbnail. Must be a public URI.
+   *
+   * @return \Drupal\file\FileInterface
+   *   File entity that was either created or found for the given thumbnail URI.
+   */
+  protected function createFileForThumbnail(MediaInterface $media, $thumbnail_uri) {
     $values = [
       'uri' => $thumbnail_uri,
     ];
 
     $file_storage = $this->entityTypeManager->getStorage('file');
 
+    /** @var \Drupal\file\FileInterface[] $existing */
     $existing = $file_storage->loadByProperties($values);
     if ($existing) {
       $file = reset($existing);
@@ -230,22 +264,143 @@ class DataObjectImporter {
       $file->setPermanent();
       $file->save();
     }
-    $media->thumbnail->target_id = $file->id();
 
-    // Set the thumbnail alt text, if available.
+    return $file;
+  }
+
+  /**
+   * Reference the thumbnail using as an image media entity.
+   *
+   * As defined by the source plugin for the given media.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   * @param \Drupal\file\FileInterface $file
+   *   Thumbnail file entity.
+   *
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+  protected function referenceThumbnailAsMedia(MediaInterface $media, FileInterface $file) {
+    $source = $media->getSource();
+    $source_configuration = $source->getConfiguration();
+
+    $media_image = $this->getExistingMediaImageEntityForFile($media, $file);
+    if (!$media_image) {
+      // Save a media entity for the thumbnail image.
+      $media_image = Media::create([
+        'bundle' => $source_configuration['media_image_bundle'],
+        'name' => $file->label(),
+        $source_configuration['media_image_field'] => [
+          [
+            'target_id' => $file->id(),
+            'alt' => $this->getThumbnailAltForMedia($media),
+            'title' => $this->getThumbnailTitleForMedia($media),
+          ],
+        ],
+      ]);
+      $media_image->save();
+    }
+    // Set a reference to the newly saved thumbnail media entity on the video
+    // media entity.
+    $media->{$source_configuration['media_image_entity_reference_field']} = [
+      ['target_id' => $media_image->id()],
+    ];
+  }
+
+  /**
+   * Look up an existing media image file for the given mpx media and thumbnail.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   * @param \Drupal\file\FileInterface $file
+   *   Thumbnail file entity.
+   *
+   * @return \Drupal\media\MediaInterface|null
+   *   The media entity for the file that already exists according to the
+   *   source configuration for the given mpx media.
+   */
+  protected function getExistingMediaImageEntityForFile(MediaInterface $media, FileInterface $file) {
+    $source = $media->getSource();
+    $source_configuration = $source->getConfiguration();
+
+    // Look up whether we already have a media entity corresponding to the given
+    // file.
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $media_query = $media_storage->getQuery();
+    $existing = $media_query->condition('bundle', $source_configuration['media_image_bundle'])
+      ->condition("{$source_configuration['media_image_field']}.target_id", $file->id())
+      ->execute();
+    if ($existing) {
+      /** @var \Drupal\media\MediaInterface $media_image */
+      $media_image = $media_storage->load(reset($existing));
+      return $media_image;
+    }
+    else {
+      return NULL;
+    }
+  }
+
+  /**
+   * Reference the thumbnail using the default thumbnail file entity reference.
+   *
+   * Using the thumbnail field defined for all media types by core. This just
+   * sets the thumbnail field on the given mpx media and assumes that the caller
+   * will save the changes.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   * @param \Drupal\file\FileInterface $file
+   *   Thumbnail file entity.
+   */
+  protected function referenceThumbnailAsFile(MediaInterface $media, FileInterface $file) {
+    $media->thumbnail = [
+      [
+        'target_id' => $file->id(),
+        'alt' => $this->getThumbnailAltForMedia($media),
+        'title' => $this->getThumbnailTitleForMedia($media),
+      ],
+    ];
+  }
+
+  /**
+   * Get the alt text for the given mpx video's thumbnail.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   *
+   * @return string
+   *   Thumbnail alt text.
+   */
+  protected function getThumbnailAltForMedia(MediaInterface $media) {
+    $source = $media->getSource();
+    $plugin_definition = $source->getPluginDefinition();
+
     if (!empty($plugin_definition['thumbnail_alt_metadata_attribute'])) {
-      $media->thumbnail->alt = $source->getMetadata($media, $plugin_definition['thumbnail_alt_metadata_attribute']);
+      return $source->getMetadata($media, $plugin_definition['thumbnail_alt_metadata_attribute']);
     }
     else {
-      $media->thumbnail->alt = $media->t('Thumbnail', [], ['langcode' => $media->langcode->value]);
+      return $media->t('Thumbnail', [], ['langcode' => $media->langcode->value]);
     }
+  }
 
-    // Set the thumbnail title, if available.
+  /**
+   * Get the title text for the given mpx video's thumbnail.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   *
+   * @return string
+   *   Thumbnail title text.
+   */
+  protected function getThumbnailTitleForMedia(MediaInterface $media) {
+    $source = $media->getSource();
+    $plugin_definition = $source->getPluginDefinition();
+
     if (!empty($plugin_definition['thumbnail_title_metadata_attribute'])) {
-      $media->thumbnail->title = $source->getMetadata($media, $plugin_definition['thumbnail_title_metadata_attribute']);
+      return $source->getMetadata($media, $plugin_definition['thumbnail_title_metadata_attribute']);
     }
     else {
-      $media->thumbnail->title = $media->label();
+      return $media->label();
     }
   }
 
