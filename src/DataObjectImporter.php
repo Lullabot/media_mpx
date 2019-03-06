@@ -10,7 +10,6 @@ use Drupal\media\Entity\Media;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Event\ImportEvent;
-use Drupal\media_mpx\Plugin\media\Source\Media as MpxMediaSource;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use function GuzzleHttp\Psr7\build_query;
 use GuzzleHttp\Psr7\Request;
