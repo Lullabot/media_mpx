@@ -539,6 +539,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    /** @var \Drupal\Core\Form\SubformState $form_state */
     $form = parent::buildConfigurationForm($form, $form_state);
     /** @var \Drupal\media\MediaTypeInterface $entity */
     $entity = $form_state->getFormObject()->getEntity();
@@ -557,11 +558,25 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       ],
     ];
 
-    if (!empty($this->getConfiguration()['media_image_bundle'])) {
-      $form['media_image_field'] = $this->getMediaImageFieldElement($this->getConfiguration()['media_image_bundle']);
+    // For some reason because $form_state is a SubFormState object, we can't
+    // get the current value of sub-form elements directly from it on an AJAX
+    // request. Thus we have to work through the complete form state, which is
+    // awkward b/c now we're coupled to the parent form's structure, which is
+    // the whole point of SubForm's. To be fair, the #states API (used below)
+    // is also coupled to the parent form structure.
+    // @see https://www.drupal.org/project/drupal/issues/2798261
+    $complete_form_state = $form_state->getCompleteFormState();
+    if ($complete_form_state->isProcessingInput()) {
+      $media_image_bundle = $complete_form_state->getValue(['source_configuration', 'media_image_bundle']);
     }
     else {
-      $form['placeholder_media_image_field'] = [
+      $media_image_bundle = $this->getConfiguration()['media_image_bundle'];
+    }
+    if ($media_image_bundle) {
+      $form['media_image_field'] = $this->getMediaImageFieldElement($media_image_bundle);
+    }
+    else {
+      $form['media_image_field'] = [
         '#markup' => '<div id="media-mpx-media-image-field"></div>',
       ];
     }
@@ -597,15 +612,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
    *   The render array to render in place of the media image fields spot.
    */
   public function mediaImageBundleOnChange(array &$form, FormStateInterface $form_state) {
-    if ($media_image_bundle = $form_state->getValue(['source_configuration', 'media_image_bundle'])) {
-      $element = $this->getMediaImageFieldElement($media_image_bundle);
-    }
-    else {
-      $element = [
-        '#markup' => '<div id="media-mpx-media-image-field"></div>',
-      ];
-    }
-    return $element;
+    return $form['source_dependent']['source_configuration']['media_image_field'];
   }
 
   /**
