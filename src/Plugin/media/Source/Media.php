@@ -573,7 +573,16 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       $media_image_bundle = $this->getConfiguration()['media_image_bundle'];
     }
     if ($media_image_bundle) {
-      $form['media_image_field'] = $this->getMediaImageFieldElement($media_image_bundle);
+      $form['media_image_field'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Media image field'),
+        '#default_value' => $this->getConfiguration()['media_image_field'],
+        '#options' => $this->getImageFieldsForMediaBundle($media_image_bundle),
+        '#description' => $this->t('Select an image field from the selected media bundle.'),
+        '#prefix' => '<div id="media-mpx-media-image-field">',
+        '#suffix' => '</div>',
+        '#required' => TRUE,
+      ];
     }
     else {
       $form['media_image_field'] = [
@@ -640,30 +649,6 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     return array_map(function (MediaType $bundle) {
       return $bundle->label();
     }, $bundles);
-  }
-
-  /**
-   * Build a select element from image fields on the given media bundle.
-   *
-   * @param string $media_bundle_id
-   *   Media bundle id for the media bundle we want a list of image field
-   *   options for.
-   *
-   * @return array
-   *   Form API select element to choose an image field of the given media
-   *   bundle.
-   */
-  protected function getMediaImageFieldElement($media_bundle_id) {
-    return [
-      '#type' => 'select',
-      '#title' => $this->t('Media image field'),
-      '#default_value' => $this->getConfiguration()['media_image_field'],
-      '#options' => $this->getImageFieldsForMediaBundle($media_bundle_id),
-      '#description' => $this->t('Select an image field from the selected media bundle.'),
-      '#prefix' => '<div id="media-mpx-media-image-field">',
-      '#suffix' => '</div>',
-      '#required' => TRUE,
-    ];
   }
 
   /**
