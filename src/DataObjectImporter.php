@@ -216,11 +216,15 @@ class DataObjectImporter {
 
     $file = $this->createFileForThumbnail($media, $thumbnail_uri);
 
+    // Always reference the thumbnail file via the default thumbnail field on
+    // media. This way anything depending on that relationship can continue to
+    // do so.
+    $this->referenceThumbnailAsFile($media, $file);
+
+    // If the media source is configured to save the thumbnail as a media
+    // entity, create the media image entity and reference the file from it.
     if ($source->doSaveThumbnailAsMedia()) {
       $this->referenceThumbnailAsMedia($media, $file);
-    }
-    else {
-      $this->referenceThumbnailAsFile($media, $file);
     }
   }
 
@@ -280,17 +284,8 @@ class DataObjectImporter {
     $source = $media->getSource();
     $source_configuration = $source->getConfiguration();
 
-    // Look up whether we already have a media entity corresponding to the given
-    // file.
-    $media_storage = $this->entityTypeManager->getStorage('media');
-    $media_query = $media_storage->getQuery();
-    $existing = $media_query->condition('bundle', $source_configuration['media_image_bundle'])
-      ->condition("{$source_configuration['media_image_field']}.target_id", $file->id())
-      ->execute();
-    if ($existing) {
-      $media_image = $media_storage->load(reset($existing));
-    }
-    else {
+    $media_image = $this->getExistingMediaImageEntityForFile($media, $file);
+    if (!$media_image) {
       // Save a media entity for the thumbnail image.
       $media_image = Media::create([
         'bundle' => $source_configuration['media_image_bundle'],
@@ -310,6 +305,39 @@ class DataObjectImporter {
     $media->{$source_configuration['media_image_entity_reference_field']} = [
       ['target_id' => $media_image->id()],
     ];
+  }
+
+  /**
+   * Look up an existing media image file for the given mpx media and thumbnail.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   Mpx video media entity.
+   * @param \Drupal\file\FileInterface $file
+   *   Thumbnail file entity.
+   *
+   * @return \Drupal\media\MediaInterface|null
+   *   The media entity for the file that already exists according to the
+   *   source configuration for the given mpx media.
+   */
+  protected function getExistingMediaImageEntityForFile(MediaInterface $media, FileInterface $file) {
+    $source = $media->getSource();
+    $source_configuration = $source->getConfiguration();
+
+    // Look up whether we already have a media entity corresponding to the given
+    // file.
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $media_query = $media_storage->getQuery();
+    $existing = $media_query->condition('bundle', $source_configuration['media_image_bundle'])
+      ->condition("{$source_configuration['media_image_field']}.target_id", $file->id())
+      ->execute();
+    if ($existing) {
+      /** @var \Drupal\media\MediaInterface $media_image */
+      $media_image = $media_storage->load(reset($existing));
+      return $media_image;
+    }
+    else {
+      return NULL;
+    }
   }
 
   /**
