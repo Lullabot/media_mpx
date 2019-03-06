@@ -620,8 +620,8 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $bundles = $this->entityTypeManager->getStorage('media_type')->loadMultiple();
 
     $bundles = array_filter($bundles, function (MediaType $bundle) {
-      // Filter out any bundles that are use the same source plugin. That would
-      // be silly.
+      // Filter out any bundles that use this source plugin. That would be
+      // silly.
       if ($bundle->getSource()->getPluginId() === $this->getPluginId()) {
         return FALSE;
       }
