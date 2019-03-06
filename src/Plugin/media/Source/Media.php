@@ -553,7 +553,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       '#ajax' => [
         'callback' => [$this, 'mediaImageBundleOnChange'],
         'event' => 'change',
-        'wrapper' => 'media-image-field',
+        'wrapper' => 'media-mpx-media-image-field',
       ],
     ];
 
@@ -562,7 +562,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
     else {
       $form['placeholder_media_image_field'] = [
-        '#markup' => '<div id="media-image-field"></div>',
+        '#markup' => '<div id="media-mpx-media-image-field"></div>',
       ];
     }
 
@@ -602,7 +602,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     }
     else {
       $element = [
-        '#markup' => '<div id="media-image-field"></div>',
+        '#markup' => '<div id="media-mpx-media-image-field"></div>',
       ];
     }
     return $element;
@@ -653,7 +653,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       '#default_value' => $this->getConfiguration()['media_image_field'],
       '#options' => $this->getImageFieldsForMediaBundle($media_bundle_id),
       '#description' => $this->t('Select an image field from the selected media bundle.'),
-      '#prefix' => '<div id="media-image-field">',
+      '#prefix' => '<div id="media-mpx-media-image-field">',
       '#suffix' => '</div>',
       '#required' => TRUE,
     ];
