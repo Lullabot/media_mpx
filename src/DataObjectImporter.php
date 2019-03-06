@@ -298,6 +298,9 @@ class DataObjectImporter {
           ],
         ],
       ]);
+      if ($owner = $media->getOwner()) {
+        $media_image->setOwner($owner);
+      }
       $media_image->save();
     }
     // Set a reference to the newly saved thumbnail media entity on the video
