@@ -280,19 +280,31 @@ class DataObjectImporter {
     $source = $media->getSource();
     $source_configuration = $source->getConfiguration();
 
-    // Save a media entity for the thumbnail image.
-    $media_image = Media::create([
-      'bundle' => $source_configuration['media_image_bundle'],
-      'name' => $file->label(),
-      $source_configuration['media_image_field'] => [
-        [
-          'target_id' => $file->id(),
-          'alt' => $this->getThumbnailAltForMedia($media),
-          'title' => $this->getThumbnailTitleForMedia($media),
+    // Look up whether we already have a media entity corresponding to the given
+    // file.
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $media_query = $media_storage->getQuery();
+    $existing = $media_query->condition('bundle', $source_configuration['media_image_bundle'])
+      ->condition("{$source_configuration['media_image_field']}.target_id", $file->id())
+      ->execute();
+    if ($existing) {
+      $media_image = $media_storage->load(reset($existing));
+    }
+    else {
+      // Save a media entity for the thumbnail image.
+      $media_image = Media::create([
+        'bundle' => $source_configuration['media_image_bundle'],
+        'name' => $file->label(),
+        $source_configuration['media_image_field'] => [
+          [
+            'target_id' => $file->id(),
+            'alt' => $this->getThumbnailAltForMedia($media),
+            'title' => $this->getThumbnailTitleForMedia($media),
+          ],
         ],
-      ],
-    ]);
-    $media_image->save();
+      ]);
+      $media_image->save();
+    }
     // Set a reference to the newly saved thumbnail media entity on the video
     // media entity.
     $media->{$source_configuration['media_image_entity_reference_field']} = [
