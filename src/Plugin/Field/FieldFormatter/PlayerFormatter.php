@@ -11,6 +11,7 @@ use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\PlayerMetadata;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Psr7\Uri;
@@ -294,6 +295,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
       return NULL;
     }
 
+    $meta = new PlayerMetadata($entity, $mpx_media, $this->buildUrl($source_plugin, $mpx_media, $player));
     $element = [
       '#type' => 'media_mpx_iframe_wrapper',
       '#attributes' => [
@@ -301,7 +303,7 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
           'mpx-iframe-wrapper',
         ],
       ],
-      '#meta' => $this->buildMeta($entity, $mpx_media, $player),
+      '#meta' => $meta->toArray(),
       '#content' => $this->buildPlayer($source_plugin, $player, $mpx_media),
       '#entity' => $entity,
       '#mpx_media' => $mpx_media,
@@ -383,37 +385,10 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    *   The player URL.
    */
   protected function buildUrl(Media $source_plugin, MpxMedia $mpx_media, Player $player): Url {
-    $url = new Url($source_plugin->getAccount(), $player, $mpx_media);
-    $url->setAutoplay($this->getSetting('auto_play'));
-    $url->setPlayAll($this->getSetting('play_all'));
+    $url = (new Url($source_plugin->getAccount(), $player, $mpx_media))
+      ->withAutoplay($this->getSetting('auto_play'))
+      ->withPlayAll($this->getSetting('play_all'));
     return $url;
-  }
-
-  /**
-   * Build the metadata keys for schema.org tags.
-   *
-   * @param \Drupal\media\Entity\Media $entity
-   *   The media entity being rendered.
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
-   *   The mpx media object.
-   * @param \Lullabot\Mpx\DataService\Player\Player $player
-   *   The player being rendered.
-   *
-   * @return array
-   *   An array of schema.org data.
-   */
-  protected function buildMeta(DrupalMedia $entity, MpxMedia $mpx_media, Player $player): array {
-    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
-    $source_plugin = $entity->getSource();
-    $url = $this->buildUrl($source_plugin, $mpx_media, $player);
-    $url->setEmbed(TRUE);
-    return [
-      'name' => $entity->label(),
-      'thumbnailUrl' => file_create_url($source_plugin->getMetadata($entity, 'thumbnail_uri')),
-      'description' => $mpx_media->getDescription(),
-      'uploadDate' => $mpx_media->getAvailableDate()->format(DATE_ISO8601),
-      'embedUrl' => (string) $url,
-    ];
   }
 
 }
