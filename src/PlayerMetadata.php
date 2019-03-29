@@ -34,7 +34,6 @@ class PlayerMetadata {
    */
   protected $playerUrl;
 
-
   /**
    * Constructs a PlayerMetadata object.
    *
