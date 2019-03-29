@@ -6,7 +6,10 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
+use Drupal\media_mpx\MpxLogger;
+use GuzzleHttp\Exception\TransferException;
 use function GuzzleHttp\Promise\each_limit;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -47,6 +50,20 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
   protected $importer;
 
   /**
+   * A specialized logger for mpx errors.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  protected $mpxLogger;
+
+  /**
+   * The system logger to log failed imports.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * NotificationQueueWorker constructor.
    *
    * @param array $configuration
@@ -59,11 +76,17 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
    *   The factory used to load a complete mpx object.
    * @param \Drupal\media_mpx\DataObjectImporter $importer
    *   The class used to import the mpx data into Drupal.
+   * @param \Drupal\media_mpx\MpxLogger $mpx_logger
+   *   The mpx error specific logger.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   The system logger.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $importer) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $importer, MpxLogger $mpx_logger, LoggerInterface $logger) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->importer = $importer;
+    $this->mpxLogger = $mpx_logger;
+    $this->logger = $logger;
   }
 
   /**
@@ -75,7 +98,9 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $plugin_id,
       $plugin_definition,
       $container->get('media_mpx.data_object_factory_creator'),
-      $container->get('media_mpx.data_object_importer')
+      $container->get('media_mpx.data_object_importer'),
+      $container->get('media_mpx.exception_logger'),
+      $container->get('logger.channel.media_mpx')
     );
   }
 
@@ -94,6 +119,16 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     // bottom of the queue.
     each_limit($this->yieldLoads($data), 10, function ($mpx_media) use ($media_type) {
       $this->importer->importItem($mpx_media, $media_type);
+    }, function ($reason) {
+      if ($reason instanceof TransferException) {
+        $this->mpxLogger->logException($reason);
+      }
+      elseif ($reason instanceof \Exception) {
+        $this->watchdogException($reason);
+      }
+      else {
+        $this->logger->error('An error occurred processing an mpx notification: %reason', ['%reason' => (string) $reason]);
+      }
     })->wait();
   }
 
@@ -124,6 +159,39 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
       yield $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
     }
+  }
+
+  /**
+   * Logs an exception.
+   *
+   * @param \Exception $exception
+   *   The exception that is going to be logged.
+   * @param string $message
+   *   The message to store in the log.
+   * @param array $variables
+   *   Array of variables to replace in the message on display or
+   *   NULL if message is already translated or not possible to
+   *   translate.
+   * @param int $severity
+   *   The severity of the message, as per RFC 3164.
+   * @param string $link
+   *   A link to associate with the message.
+   *
+   * @see \Drupal\Core\Utility\Error::decodeException()
+   */
+  private function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
+    // Use a default value if $message is not set.
+    if (empty($message)) {
+      $message = '%type: @message in %function (line %line of %file).';
+    }
+
+    if ($link) {
+      $variables['link'] = $link;
+    }
+
+    $variables += Error::decodeException($exception);
+
+    $this->logger->log($severity, $message, $variables);
   }
 
 }

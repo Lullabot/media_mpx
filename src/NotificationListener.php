@@ -80,7 +80,7 @@ class NotificationListener {
   public function listen(MpxMediaSourceInterface $media_source, int $notification_id): array {
     $account = $media_source->getAccount();
 
-    $client = $this->authenticatedClientFactory->fromUser($account->getUserEntity());
+    $client = $this->authenticatedClientFactory->fromAccount($account);
     $definition = $media_source->getPluginDefinition()['media_mpx'];
     $service = $this->dataServiceManager->getDataService($definition['service_name'], $definition['object_type'], $definition['schema_version']);
     // @todo Client ID needs to be configured somehow.
@@ -147,6 +147,17 @@ class NotificationListener {
     $notification_key = $this->getNotificationKey($media_type_id);
     // @todo should this really be state?
     $this->state->set($notification_key, $notification->getId());
+  }
+
+  /**
+   * Reset the notification ID to restart from the earliest notification.
+   *
+   * @param string $media_type_id
+   *   The media type ID to reset notifications for.
+   */
+  public function resetNotificationId(string $media_type_id): void {
+    $notification_key = $this->getNotificationKey($media_type_id);
+    $this->state->delete($notification_key);
   }
 
   /**

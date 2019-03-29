@@ -2,7 +2,7 @@
 
 namespace Drupal\media_mpx\Plugin\migrate\source;
 
-use Drupal\paragraphs\Plugin\migrate\source\DrupalSqlBase;
+use Drupal\migrate_drupal\Plugin\migrate\source\DrupalSqlBase;
 
 /**
  * Mpx Type source plugin.

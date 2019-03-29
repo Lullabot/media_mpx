@@ -5,6 +5,7 @@ namespace Drupal\media_mpx\Commands;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\Entity\MediaType;
+use Drupal\Media\MediaStorage;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Notification;
@@ -57,6 +58,7 @@ class NotificationQueuer extends DrushCommands {
    *   The notification listener.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, QueueFactory $queue_factory, NotificationListener $listener) {
+    parent::__construct();
     $this->entityTypeManager = $entity_type_manager;
     $this->queueFactory = $queue_factory;
     $this->listener = $listener;
@@ -67,6 +69,11 @@ class NotificationQueuer extends DrushCommands {
    *
    * @param string $media_type_id
    *   The media type ID to import for.
+   * @param array $options
+   *   An array of command options.
+   *
+   * @option once Only process a single notification response.
+   * @option reset Restarts from the earliest available notification.
    *
    * @usage media_mpx-listen mpx_video
    *   Listen for notifications for the mpx_video media type.
@@ -74,39 +81,12 @@ class NotificationQueuer extends DrushCommands {
    * @command media_mpx:listen
    * @aliases mpxl
    */
-  public function listen($media_type_id) {
-    // First, we find the last notification ID.
-    $media_type = $this->loadMediaType($media_type_id);
-    $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $notification_id = $this->listener->getNotificationId($media_type_id);
-
-    // Next, we fetch notifications, removing duplicates (such as multiple saves
-    // of an mpx object in a row).
-    $this->io()->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
-    $notifications = $this->listener->listen($media_source, $notification_id);
-
-    // Keep track of the initial count of notifications so we can know if we
-    // filtered down to an empty array.
-    $initial_count = count($notifications);
-
-    // We need a reference to the last notification so we can set the last
-    // notification ID even if all notifications are filtered out.
-    $last_notification = end($notifications);
-
-    $notifications = $this->filterDuplicateNotifications($notifications);
-    $notifications = $this->filterByDate($notifications, $media_type_id);
-
-    if (empty($notifications) && $initial_count) {
-      $this->io()->note(dt('All notifications were skipped as newer data has already been imported.'));
-    }
-    else {
-      // Take the notifications and store them in the queue for processing
-      // later.
-      $this->queueNotifications($media_type, $notifications);
+  public function listen($media_type_id, array $options = ['once' => FALSE, 'reset' => FALSE]) {
+    if ($options['reset']) {
+      $this->listener->resetNotificationId($media_type_id);
     }
 
-    // Let the next listen call start from where we left off.
-    $this->listener->setNotificationId($media_type_id, $last_notification);
+    $this->doListen($media_type_id, $options['once']);
   }
 
   /**
@@ -128,31 +108,10 @@ class NotificationQueuer extends DrushCommands {
     $media_storage = \Drupal::entityManager()->getStorage('media');
     /** @var \Drupal\Media\Entity\MediaType $media_type */
     $media_type = MediaType::load($media_type_id);
-    $source = $media_type->getSource();
-    $source_field = $source->getSourceFieldDefinition($media_type)->getName();
+    $source_field = $media_type->getSource()
+      ->getSourceFieldDefinition($media_type)->getName();
 
-    $notifications = array_filter($notifications, function (MpxNotification $notification) use ($media_storage, $source_field) {
-      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
-      $notificationId = (string) $notification->getEntry()->getId();
-      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
-
-      // The updates must have to do with something new so keep them included.
-      if (empty($entities)) {
-        return TRUE;
-      }
-
-      /* If there exists an entity that hasn't been updated since the
-      notification was updated keep the notification. */
-      // @todo check for the use case where an entity was changed in drupal by a user
-      foreach ($entities as $entity) {
-        /** @var \Drupal\Media\Entity\Media $entity */
-        if ($entity->getChangedTime() < $notificationDate) {
-          return TRUE;
-        };
-      }
-
-      return FALSE;
-    });
+    $notifications = array_filter($notifications, $this->dateFilterCallback($media_storage, $source_field));
 
     return $notifications;
   }
@@ -175,8 +134,12 @@ class NotificationQueuer extends DrushCommands {
    */
   private function filterDuplicateNotifications(array $notifications): array {
     $seen_ids = [];
-    $notifications = array_filter($notifications, function ($notification) use (&$seen_ids) {
-      /** @var \Lullabot\Mpx\DataService\Notification $notification */
+    $notifications = array_filter($notifications, function (MpxNotification $notification) use (&$seen_ids) {
+      // Always keep delete notifications so we can log them.
+      if ($notification->getMethod() == 'delete') {
+        return TRUE;
+      }
+
       $id = (string) $notification->getEntry()->getId();
       if (isset($seen_ids[$id])) {
         return FALSE;
@@ -243,6 +206,116 @@ class NotificationQueuer extends DrushCommands {
       throw new \InvalidArgumentException(dt('The media type @type does not exist.', ['@type' => $media_type_id]));
     }
     return $media_type;
+  }
+
+  /**
+   * Returns a callback to filter older notifications.
+   *
+   * @param \Drupal\Media\MediaStorage $media_storage
+   *   The media storage service.
+   * @param string $source_field
+   *   The media source field id.
+   *
+   * @return \Closure
+   *   An array_filter() callback.
+   */
+  private function dateFilterCallback(MediaStorage $media_storage, string $source_field): \Closure {
+    return function (MpxNotification $notification) use ($media_storage, $source_field) {
+      // Always keep delete notifications so we can log them.
+      if ($notification->getMethod() == 'delete') {
+        return TRUE;
+      }
+
+      $notificationDate = $notification->getEntry()->getUpdated()->format("U");
+      $notificationId = (string) $notification->getEntry()->getId();
+      $entities = $media_storage->loadByProperties([$source_field => $notificationId]);
+
+      // The updates must have to do with something new so keep them included.
+      if (empty($entities)) {
+        return TRUE;
+      }
+
+      // If there exists an entity that hasn't been updated since the
+      // notification was updated keep the notification.
+      // @todo Check for the use case where an entity was changed in Drupal by a
+      // user.
+      foreach ($entities as $entity) {
+        /** @var \Drupal\Media\Entity\Media $entity */
+        if ($entity->getChangedTime() < $notificationDate) {
+          return TRUE;
+        };
+      }
+
+      return FALSE;
+    };
+  }
+
+  /**
+   * Execute listening for notifications.
+   *
+   * @param string $media_type_id
+   *   The media type to listen for.
+   * @param bool $once
+   *   (optional) Run once instead of until all notifications are processed.
+   */
+  private function doListen($media_type_id, bool $once = FALSE): void {
+    $more_to_consume = TRUE;
+
+    while ($more_to_consume) {
+      // First, we find the last notification ID.
+      $media_type = $this->loadMediaType($media_type_id);
+      $media_source = DataObjectImporter::loadMediaSource($media_type);
+
+      $notification_id = $this->listener->getNotificationId($media_type_id);
+
+      // Next, we fetch notifications, removing duplicates (such as multiple
+      // saves of an mpx object in a row).
+      $this->io()
+        ->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
+      $notifications = $this->listener->listen($media_source, $notification_id);
+
+      // We need a reference to the last notification so we can set the last
+      // notification ID even if all notifications are filtered out.
+      $last_notification = end($notifications);
+
+      // Check to see if there were no notifications and we got a sync response.
+      // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
+      if ($last_notification->isSyncResponse()) {
+        $this->logger()->info(dt('All notifications have been processed.'));
+        $more_to_consume = FALSE;
+      }
+      else {
+        $this->filterAndQueue($media_type, $notifications);
+        $more_to_consume = !$once;
+      }
+
+      // Let the next listen call start from where we left off.
+      $this->listener->setNotificationId($media_type_id, $last_notification);
+    }
+  }
+
+  /**
+   * Filter duplicate notifications and queue the remainder.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to queue notifications for.
+   * @param \Lullabot\Mpx\DataService\Notification[] $notifications
+   *   An array of notifications.
+   */
+  private function filterAndQueue(MediaTypeInterface $media_type, array $notifications): void {
+    $initial_count = count($notifications);
+    $notifications = $this->filterDuplicateNotifications($notifications);
+    $notifications = $this->filterByDate($notifications, $media_type->id());
+
+    if (empty($notifications) && $initial_count) {
+      $this->io()
+        ->note(dt('All notifications were skipped as newer data has already been imported.'));
+    }
+    else {
+      // Take the notifications and store them in the queue for processing
+      // later.
+      $this->queueNotifications($media_type, $notifications);
+    }
   }
 
 }
