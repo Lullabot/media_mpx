@@ -278,6 +278,14 @@ class NotificationQueuer extends DrushCommands {
       // notification ID even if all notifications are filtered out.
       $last_notification = end($notifications);
 
+      // We did not receive any notifications, connection may have timed out.
+      if (!$last_notification) {
+        $this->io()->note(dt('Connection to MPX has timed out.'));
+        $this->logger()->info(dt('Connection to MPX has timed out.'));
+        $more_to_consume = FALSE;
+        continue;
+      }
+
       // Check to see if there were no notifications and we got a sync response.
       // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
       if ($last_notification->isSyncResponse()) {
