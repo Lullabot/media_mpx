@@ -284,19 +284,21 @@ class NotificationQueuer extends DrushCommands {
         $this->logger()->info(dt('Connection to MPX has timed out.'));
         $more_to_consume = FALSE;
       }
-      // Check to see if there were no notifications and we got a sync response.
-      // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
-      elseif ($last_notification->isSyncResponse()) {
-        $this->logger()->info(dt('All notifications have been processed.'));
-        $more_to_consume = FALSE;
-      }
       else {
-        $this->filterAndQueue($media_type, $notifications);
-        $more_to_consume = !$once;
-      }
+        // Check to see if there were no notifications and we got a sync response.
+        // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
+        if ($last_notification->isSyncResponse()) {
+          $this->logger()->info(dt('All notifications have been processed.'));
+          $more_to_consume = FALSE;
+        }
+        else {
+          $this->filterAndQueue($media_type, $notifications);
+          $more_to_consume = !$once;
+        }
 
-      // Let the next listen call start from where we left off.
-      $this->listener->setNotificationId($media_type_id, $last_notification);
+        // Let the next listen call start from where we left off.
+        $this->listener->setNotificationId($media_type_id, $last_notification);
+      }
     }
   }
 
