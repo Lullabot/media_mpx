@@ -259,9 +259,8 @@ class NotificationQueuer extends DrushCommands {
    *   (optional) Run once instead of until all notifications are processed.
    */
   private function doListen($media_type_id, bool $once = FALSE): void {
-    $more_to_consume = TRUE;
 
-    while ($more_to_consume) {
+    do {
       // First, we find the last notification ID.
       $media_type = $this->loadMediaType($media_type_id);
       $media_source = DataObjectImporter::loadMediaSource($media_type);
@@ -273,9 +272,7 @@ class NotificationQueuer extends DrushCommands {
       $this->io()
         ->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
       $notifications = $this->listener->listen($media_source, $notification_id);
-
-      $more_to_consume = $this->processNotifications($notifications, $media_type, $once);
-    }
+    } while ($this->processNotifications($notifications, $media_type, $once));
   }
 
   /**
