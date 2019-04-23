@@ -291,8 +291,7 @@ class NotificationQueuer extends DrushCommands {
   private function processNotifications(array $notifications, MediaTypeInterface $media_type, bool $once = FALSE): bool {
     // We did not receive any notifications, connection may have timed out.
     if (empty($notifications)) {
-      $this->logger()->info(dt('Connection to MPX has timed out.'));
-      $this->io()->note(dt('Connection to MPX has timed out.'));
+      $this->io()->note(dt('Connection to mpx has timed out.'));
       return FALSE;
     }
 
@@ -303,7 +302,7 @@ class NotificationQueuer extends DrushCommands {
     // Check to see if there were no notifications and we got a sync response.
     // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
     if ($last_notification->isSyncResponse()) {
-      $this->logger()->info(dt('All notifications have been processed.'));
+      $this->io()->note(dt('All notifications have been processed.'));
       $more_to_consume = FALSE;
     }
     else {
