@@ -119,6 +119,10 @@ class MediaAvailableAccess {
     else {
       $access = AccessResult::neutral();
     }
+    // Since access is tied to the availability dates, add media as a cacheable
+    // dependency so that downstream code can always incorporate it, whether
+    // the media is being shown or not.
+    $access->addCacheableDependency($media);
     return $access;
   }
 
