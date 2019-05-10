@@ -127,21 +127,23 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
 
     /** @var \Drupal\media\Entity\Media $entity */
     $entity = $items->getEntity();
-    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
-    $source_plugin = $entity->getSource();
+    if ($entity) {
+      /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
+      $source_plugin = $entity->getSource();
 
-    // @todo Cache this.
-    $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6');
+      // @todo Cache this.
+      $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6');
 
-    try {
-      $player = $factory->load(new Uri($this->getSetting('player')))->wait();
+      try {
+        $player = $factory->load(new Uri($this->getSetting('player')))->wait();
+      }
+      catch (TransferException $e) {
+        // If we can't load a player, we can't render any elements.
+        $this->mpxLogger->logException($e);
+        return $element;
+      }
+      $this->renderIframes($items, $player, $element);
     }
-    catch (TransferException $e) {
-      // If we can't load a player, we can't render any elements.
-      $this->mpxLogger->logException($e);
-      return $element;
-    }
-    $this->renderIframes($items, $player, $element);
 
     return $element;
   }
@@ -228,23 +230,25 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
   protected function fetchPlayerOptions(): array {
     $options = [];
     $bundle = $this->fieldDefinition->getTargetBundle();
-    /** @var \Drupal\media\Entity\MediaType $type */
-    $type = $this->entityTypeManager->getStorage('media_type')->load($bundle);
-    /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
-    $source_plugin = $type->getSource();
+    if ($bundle) {
+      /** @var \Drupal\media\Entity\MediaType $type */
+      $type = $this->entityTypeManager->getStorage('media_type')->load($bundle);
+      /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
+      $source_plugin = $type->getSource();
 
-    $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6', $source_plugin->getAccount());
-    $query = new ObjectListQuery();
-    $sort = new Sort();
-    $sort->addSort('title');
-    $query->setSort($sort);
+      $factory = $this->dataObjectFactoryCreator->forObjectType($source_plugin->getAccount()->getUserEntity(), 'Player Data Service', 'Player', '1.6', $source_plugin->getAccount());
+      $query = new ObjectListQuery();
+      $sort = new Sort();
+      $sort->addSort('title');
+      $query->setSort($sort);
 
-    /** @var \Lullabot\Mpx\DataService\Player\Player[] $results */
-    $results = $factory->select($query);
+      /** @var \Lullabot\Mpx\DataService\Player\Player[] $results */
+      $results = $factory->select($query);
 
-    foreach ($results as $player) {
-      if (!$player->getDisabled()) {
-        $options[(string) $player->getId()] = $player->getTitle();
+      foreach ($results as $player) {
+        if (!$player->getDisabled()) {
+          $options[(string) $player->getId()] = $player->getTitle();
+        }
       }
     }
     return $options;
