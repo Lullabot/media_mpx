@@ -150,3 +150,16 @@ services:
   media_mpx.media_available_access:
     class: Drupal\media_mpx\Access\MediaAvailableAccess
     arguments: ['@datetime.time']
+
+  media_mpx.repository.mpx_media_types:
+    class: Drupal\media_mpx\Repository\MpxMediaType
+    arguments: ['@entity_type.manager']
+
+  media_mpx.service.queue_video_imports:
+    class: Drupal\media_mpx\Service\QueueVideoImports
+    arguments:
+      - '@media_mpx.repository.mpx_media_types'
+      - '@logger.channel.media_mpx'
+      - '@event_dispatcher'
+      - '@media_mpx.data_object_factory_creator'
+      - '@queue'
