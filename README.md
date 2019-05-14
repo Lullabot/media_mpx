@@ -11,6 +11,7 @@
 - [Thumbnail integration](#thumbnail-integration)
   - [Handling thumbnail errors](#handling-thumbnail-errors)
 - [Caching of mpx responses](#caching-of-mpx-responses)
+- [Media access and availability calculations](#media-access-and-availability-calculations)
 - [Limiting results during an mpx import](#limiting-results-during-an-mpx-import)
   - [1. Altering import mpx queries](#1-altering-import-mpx-queries)
   - [2. Altering ingested mpx objects](#2-altering-ingested-mpx-objects)
