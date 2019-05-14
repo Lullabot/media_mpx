@@ -18,7 +18,7 @@ use Lullabot\Mpx\DataService\Range;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Class QueueVideoImports.
+ * Queues MpxImportTask items to be processed by background processes.
  *
  * @package Drupal\media_mpx\Service
  */

@@ -7,4 +7,4 @@ namespace Drupal\media_mpx\Exception;
  *
  * @package Drupal\media_mpx\Exception
  */
-class MediaTypeDoesNotExistException extends \Exception {}
+class MediaTypeDoesNotExistException extends \RuntimeException {}

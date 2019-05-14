@@ -32,6 +32,15 @@ class QueueContentsForm extends FormBase {
   /**
    * {@inheritdoc}
    */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('media_mpx.repository.mpx_media_types')
+    );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildForm(array $form, FormStateInterface $form_state) {
     $mpx_media_types = $this->mpxMediaTypeRepository->findAllTypes();
     $options = [];
@@ -41,13 +50,13 @@ class QueueContentsForm extends FormBase {
 
     $form['mpx_video_types'] = [
       '#type' => 'checkboxes',
-      '#title' => t('mpx Video Types'),
+      '#title' => $this->t('mpx Video Types'),
       '#options' => $options,
       '#required' => TRUE,
     ];
     $form['queue'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Queue selected Video Types'),
+      '#value' => $this->t('Import videos'),
     ];
 
     return $form;
@@ -60,9 +69,9 @@ class QueueContentsForm extends FormBase {
     $types = array_filter(array_values($form_state->getValue('mpx_video_types')));
 
     $batch_builder = new BatchBuilder();
-    $batch_builder->setTitle(t('MPX Video Imports Queueing'))
+    $batch_builder->setTitle($this->t('Finding mpx videos to import'))
       ->setFinishCallback([$this, 'batchFinished'])
-      ->setInitMessage(t('Starting Queueing Process.'));
+      ->setInitMessage($this->t('Queueing mpx videos for background imports.'));
 
     foreach ($types as $type) {
       $batch_builder->addOperation([$this, 'batchedQueueItemsForMediaType'], ['media_type_id' => $type]);
@@ -86,6 +95,10 @@ class QueueContentsForm extends FormBase {
   public function batchedQueueItemsForMediaType(string $media_type_id, array &$context) {
     /* @var \Drupal\media_mpx\Service\QueueVideoImports $queue_service */
     $queue_service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
+
+    // Mpx responses might be a bit heavy, so limit batches size to 200. Don't
+    // want php running out of memory.
+    // @see vendor/lullabot/mpx-php/src/DataService/ObjectListQuery.php
     $batch_size = 200;
 
     if (empty($context['sandbox'])) {
@@ -104,7 +117,7 @@ class QueueContentsForm extends FormBase {
     );
 
     $response = $queue_service->execute($request);
-    $context = $this->updateContextArrayFromResponse($media_type_id, $context, $response, $batch_size);
+    $this->updateContextArrayFromResponse($media_type_id, $context, $response, $batch_size);
   }
 
   /**
@@ -131,7 +144,7 @@ class QueueContentsForm extends FormBase {
     $context['results']['errors'] += $response->getErrors();
     $context['sandbox']['progress'] += $response->getVideosQueued();
     $context['sandbox']['last_index'] = $context['sandbox']['last_index'] + $batch_size;
-    $context['message'] = t('Queued @progress %type items out of @total.', [
+    $context['message'] = $this->t('Queued @progress %type items out of @total.', [
       '@progress' => $context['sandbox']['progress'],
       '@total'    => $total_items,
       '%type'     => $media_type_id,
@@ -149,24 +162,22 @@ class QueueContentsForm extends FormBase {
    *   An array with the count of successful and errored queue operations.
    */
   public function batchFinished(bool $success, array $results) {
-    $finished_message = t('Finished with errors.');
-    $messenger = \Drupal::messenger();
+    $finished_message = $this->t('Finished with errors.');
 
     if ($success) {
-      $finished_message = \Drupal::translation()->formatPlural(
-        $results['success'],
-        'One mpx item queue.',
-        '@count mpx items queued for updates.');
+      $finished_message = $this->formatPlural($results['success'],
+        'One mpx item queued.',
+        '@count mpx items queued for updates. Imports will continue in the background.');
     }
 
-    $messenger->addMessage($finished_message);
+    $this->messenger()->addMessage($finished_message);
 
     if ($results['errors'] > 0) {
-      $errors_message = \Drupal::translation()->formatPlural(
+      $errors_message = $this->formatPlural(
         $results['errors'],
-        'One mpx item could not be queued (check logs for details).',
-        '@count mpx items could not be queued for updates (check logs for details).');
-      $messenger->addError($errors_message);
+        'One mpx item could not be queued. Check logs for details.',
+        '@count mpx items could not be queued for updates. Check logs for details.');
+      $this->messenger()->addError($errors_message);
     }
   }
 
@@ -175,15 +186,6 @@ class QueueContentsForm extends FormBase {
    */
   public function getFormId() {
     return 'media_mpx_asset_sync_queue';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('media_mpx.repository.mpx_media_types')
-    );
   }
 
 }

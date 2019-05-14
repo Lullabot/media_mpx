@@ -7,4 +7,4 @@ namespace Drupal\media_mpx\Exception;
  *
  * @package Drupal\media_mpx\Exception
  */
-class MediaTypeNotAssociatedWithMpxException extends \Exception {}
+class MediaTypeNotAssociatedWithMpxException extends \LogicException {}
