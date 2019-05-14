@@ -6,6 +6,7 @@ use Drupal\Core\State\StateInterface;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use GuzzleHttp\Exception\ConnectException;
 use Lullabot\Mpx\DataService\DataServiceManager;
+use Lullabot\Mpx\DataService\DiscoveredDataService;
 use Lullabot\Mpx\DataService\Notification;
 use Lullabot\Mpx\DataService\NotificationListener as MpxNotificationListener;
 use Lullabot\Mpx\Exception\ClientException;
@@ -101,15 +102,7 @@ class NotificationListener {
       }
 
       if ($e->getCode() == 404) {
-        $this->logger->warning(
-          'The %object_type last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion.',
-          [
-            '%object_type' => $service->getAnnotation()->getObjectType(),
-            '%id' => $notification_id,
-            '%account' => $media_source->getAccount()->label(),
-          ]);
-
-        return $this->listen($media_source, -1);
+        return $this->resetStaleNotificationId($media_source, $notification_id, $service);
       }
 
       // Some other connection exception occurred, so throw that up.
@@ -172,6 +165,31 @@ class NotificationListener {
    */
   private function getNotificationKey(string $media_type_id): string {
     return $media_type_id . '_notification_id';
+  }
+
+  /**
+   * Reset notifications when the current ID is stale.
+   *
+   * @param \Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface $media_source
+   *   The media source to reset notifications for.
+   * @param int $notification_id
+   *   The stale notification ID.
+   * @param \Lullabot\Mpx\DataService\DiscoveredDataService $service
+   *   The data service notifications are being listened for.
+   *
+   * @return \Lullabot\Mpx\DataService\Notification[]
+   *   An array of notifications.
+   */
+  private function resetStaleNotificationId(MpxMediaSourceInterface $media_source, int $notification_id, DiscoveredDataService $service): array {
+    $this->logger->warning(
+      'The %object_type last notification ID %id for %account is older than 7 days and is too old to fetch notifications. The last notification ID has been reset to re-start ingestion.',
+      [
+        '%object_type' => $service->getAnnotation()->getObjectType(),
+        '%id' => $notification_id,
+        '%account' => $media_source->getAccount()->label(),
+      ]);
+
+    return $this->listen($media_source, -1);
   }
 
 }
