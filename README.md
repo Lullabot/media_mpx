@@ -112,6 +112,16 @@ $factory->load('http://data.media.theplatform.com/media/data/Media/2602559', ['h
 Note that this will incur a significant performance hit on the order of 500ms
 or more, so use this option sparingly and rely on cached data where possible.
 
+## Media access and availability calculations
+
+Access to a mpx media entity is calculated using the mpx available and
+expiration dates. By default, after a site cache clear those videos will
+need to be re-fetched from mpx to have up-to-date availability dates. To
+improve performance, map the available and expiration dates to Date / Time
+fields. If available, those fields will be used to calculate access
+permissions. For details, see the
+[MediaAvailableAccess](src/Access/MediaAvailableAccess.php) class.
+
 ## Limiting results during an mpx import
 
 Sometimes sites will want to add code to alter how data is imported into
