@@ -4,6 +4,7 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
+use Lullabot\Mpx\DataService\DataObjectFactory;
 use Lullabot\Mpx\DataService\Feeds\FeedConfig as MpxFeedConfig;
 use Lullabot\Mpx\Exception\ClientException;
 
@@ -85,15 +86,26 @@ class FeedConfig extends MediaSourceBase implements MediaSourceInterface {
    *   The thumbnail URL, or NULL if one cannot be found.
    */
   private function getThumbnailUri(MediaInterface $media): ?string {
-    // Unlike the rest of the mpx API, these IDs are numeric and don't
-    // include the host name.
-    $factory = $this->dataObjectFactoryCreator->forObjectType($this->getAccount()->getUserEntity(), 'Media Data Service', 'Media', '1.10');
-
     /** @var \Lullabot\Mpx\DataService\Feeds\FeedConfig $feed */
     $feed = $this->getMpxObject($media);
     $pinned_ids = $feed->getPinnedIds();
-    foreach ($pinned_ids as $video_id) {
+    return $this->getFirstValidThumbnail($pinned_ids);
+  }
 
+  /**
+   * Return the first valid thumbnail URI if one exists.
+   *
+   * @param int[] $pinned_ids
+   *   An array of pinned video IDs.
+   *
+   * @return string|null
+   *   The thumbnail URL, or NULL if one cannot be found.
+   */
+  private function getFirstValidThumbnail(array $pinned_ids) {
+    // Unlike the rest of the mpx API, these IDs are numeric and don't
+    // include the host name.
+    $factory = $this->dataObjectFactoryCreator->forObjectType($this->getAccount()->getUserEntity(), 'Media Data Service', 'Media', '1.10');
+    foreach ($pinned_ids as $video_id) {
       try {
         $video = $factory->loadByNumericId($video_id)->wait();
         return $this->downloadThumbnail($video);
