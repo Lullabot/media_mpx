@@ -4,7 +4,6 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
-use Lullabot\Mpx\DataService\DataObjectFactory;
 use Lullabot\Mpx\DataService\Feeds\FeedConfig as MpxFeedConfig;
 use Lullabot\Mpx\Exception\ClientException;
 
@@ -89,34 +88,38 @@ class FeedConfig extends MediaSourceBase implements MediaSourceInterface {
     /** @var \Lullabot\Mpx\DataService\Feeds\FeedConfig $feed */
     $feed = $this->getMpxObject($media);
     $pinned_ids = $feed->getPinnedIds();
-    return $this->getFirstValidThumbnail($pinned_ids);
+    // Unlike the rest of the mpx API, these IDs are numeric and don't
+    // include the host name.
+    foreach ($pinned_ids as $video_id) {
+      if ($thumbnail = $this->fetchFromPinnedId($video_id)) {
+        return $thumbnail;
+      }
+    }
+
+    return NULL;
   }
 
   /**
-   * Return the first valid thumbnail URI if one exists.
+   * Fetch a thumbnail for a pinned video.
    *
-   * @param int[] $pinned_ids
-   *   An array of pinned video IDs.
+   * @param int $video_id
+   *   The video ID to load.
    *
    * @return string|null
    *   The thumbnail URL, or NULL if one cannot be found.
    */
-  private function getFirstValidThumbnail(array $pinned_ids) {
-    // Unlike the rest of the mpx API, these IDs are numeric and don't
-    // include the host name.
+  private function fetchFromPinnedId(int $video_id) {
     $factory = $this->dataObjectFactoryCreator->forObjectType($this->getAccount()->getUserEntity(), 'Media Data Service', 'Media', '1.10');
-    foreach ($pinned_ids as $video_id) {
-      try {
-        $video = $factory->loadByNumericId($video_id)->wait();
-        return $this->downloadThumbnail($video);
-      }
-      catch (ClientException $e) {
-        // Mpx doesn't removed pinned videos from feeds if the video is
-        // deleted. In that case, we go on to the next video to find a
-        // thumbnail.
-        if ($e->getCode() != 404) {
-          throw $e;
-        }
+    try {
+      $video = $factory->loadByNumericId($video_id)->wait();
+      return $this->downloadThumbnail($video);
+    }
+    catch (ClientException $e) {
+      // Mpx doesn't removed pinned videos from feeds if the video is
+      // deleted. In that case, we go on to the next video to find a
+      // thumbnail.
+      if ($e->getCode() != 404) {
+        throw $e;
       }
     }
 
