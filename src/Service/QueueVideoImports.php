@@ -11,6 +11,7 @@ use Drupal\media_mpx\Event\ImportSelectEvent;
 use Drupal\media_mpx\MpxImportTask;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Lullabot\Mpx\DataService\Fields;
+use Lullabot\Mpx\DataService\Media\Media;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 use Lullabot\Mpx\DataService\ObjectListQuery;
 use Lullabot\Mpx\DataService\Range;
@@ -40,13 +41,6 @@ class QueueVideoImports {
   private $eventDispatcher;
 
   /**
-   * The factory to load the mpx notification queue.
-   *
-   * @var \Drupal\Core\Queue\QueueFactory
-   */
-  private $queueFactory;
-
-  /**
    * The Data Object Factory Creator.
    *
    * @var \Drupal\media_mpx\DataObjectFactoryCreator
@@ -61,13 +55,20 @@ class QueueVideoImports {
   private $mpxMediaTypeRepository;
 
   /**
+   * The queue to use for mpx video imports.
+   *
+   * @var \Drupal\Core\Queue\QueueInterface
+   */
+  private $queue;
+
+  /**
    * QueueContentsForm constructor.
    */
   public function __construct(MpxMediaType $mpxMediaTypeRepository, LoggerChannelInterface $loggerChannel, EventDispatcherInterface $eventDispatcher, DataObjectFactoryCreator $dataObjectFactoryCreator, QueueFactory $queueFactory) {
     $this->logger = $loggerChannel;
     $this->eventDispatcher = $eventDispatcher;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
-    $this->queueFactory = $queueFactory;
+    $this->queue = $queueFactory->get(self::MEDIA_MPX_IMPORT_QUEUE);
     $this->mpxMediaTypeRepository = $mpxMediaTypeRepository;
   }
 
@@ -86,7 +87,6 @@ class QueueVideoImports {
    * @throws \Drupal\media_mpx\Exception\MediaTypeNotAssociatedWithMpxException
    */
   public function execute(QueueVideoImportsRequest $request): QueueVideoImportsResponse {
-    $queue = $this->queueFactory->get(self::MEDIA_MPX_IMPORT_QUEUE);
     $media_type_id = $request->getMediaTypeId();
     $limit = $request->getLimit();
 
@@ -95,25 +95,17 @@ class QueueVideoImports {
     $results = $this->fetchMediaTypeItemIdsFromMpx($media_type, $request);
     $queued = 0;
     $errored = 0;
-    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
     foreach ($results as $index => $mpx_media) {
-      if (!is_null($limit) && $queued >= $limit) {
+      if (!is_null($limit) && ($queued + $errored) >= $limit) {
         break;
       }
 
-      $import_task = new MpxImportTask($mpx_media->getId(), $media_type->id());
-      if (!$queue->createItem($import_task)) {
-        $errored++;
-        $this->logger->error(t('@type @uri could not be queued for updates.',
-            ['@type' => $media_type->id(), '@uri' => $mpx_media->getId()])
-        );
-        continue;
+      if ($this->queueMpxItem($mpx_media, $media_type->id()) == TRUE) {
+        $queued++;
       }
-
-      $this->logger->info(t('@type @uri has been queued to be imported.',
-          ['@type' => $media_type->id(), '@uri' => $mpx_media->getId()])
-      );
-      $queued++;
+      else {
+        $errored++;
+      }
     }
 
     return new QueueVideoImportsResponse($queued, $errored, $results);
@@ -151,6 +143,32 @@ class QueueVideoImports {
     $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
     $results = $factory->select($query);
     return $results;
+  }
+
+  /**
+   * Queues an mpx Media item.
+   *
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The mpx Media item.
+   * @param string $media_type_id
+   *   The media item type id.
+   *
+   * @return bool
+   *   TRUE if the item was queued successfully, FALSE otherwise.
+   */
+  protected function queueMpxItem(Media $mpx_media, string $media_type_id): bool {
+    $import_task = new MpxImportTask($mpx_media->getId(), $media_type_id);
+    if (!$this->queue->createItem($import_task)) {
+      $this->logger->error(t('@type @uri could not be queued for updates.',
+          ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
+      );
+      return FALSE;
+    }
+
+    $this->logger->info(t('@type @uri has been queued to be imported.',
+        ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
+    );
+    return TRUE;
   }
 
 }

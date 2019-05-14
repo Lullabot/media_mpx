@@ -7,6 +7,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\QueueVideoImportsRequest;
+use Drupal\media_mpx\Service\QueueVideoImportsResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -83,8 +84,8 @@ class QueueContentsForm extends FormBase {
    * @throws \Drupal\media_mpx\Exception\MediaTypeNotAssociatedWithMpxException
    */
   public function batchedQueueItemsForMediaType(string $media_type_id, array &$context) {
-    /* @var \Drupal\media_mpx\Service\QueueVideoImports $service */
-    $service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
+    /* @var \Drupal\media_mpx\Service\QueueVideoImports $queue_service */
+    $queue_service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
     $batch_size = 200;
 
     if (empty($context['sandbox'])) {
@@ -96,14 +97,33 @@ class QueueContentsForm extends FormBase {
       ];
     }
 
-    $request = new QueueVideoImportsRequest($media_type_id,
+    $request = new QueueVideoImportsRequest(
+      $media_type_id,
       $batch_size,
-      $context['sandbox']['last_index'] + 1);
+      $context['sandbox']['last_index'] + 1
+    );
 
-    $response = $service->execute($request);
+    $response = $queue_service->execute($request);
+    $context = $this->updateContextArrayFromResponse($media_type_id, $context, $response, $batch_size);
+  }
 
+  /**
+   * Updates the context array after getting a response from the queue service.
+   *
+   * @param string $media_type_id
+   *   The media type id being processed.
+   * @param array $context
+   *   The context array.
+   * @param \Drupal\media_mpx\Service\QueueVideoImportsResponse $response
+   *   The response from the queue service.
+   * @param int $batch_size
+   *   The batch size being used for the batch operation.
+   */
+  private function updateContextArrayFromResponse(string $media_type_id, array &$context, QueueVideoImportsResponse $response, int $batch_size): void {
     if (!isset($context['sandbox']['total_results'])) {
-      $context['sandbox']['total_results'] = $response->getIterator()->getList()->getTotalResults();
+      $context['sandbox']['total_results'] = $response->getIterator()
+        ->getList()
+        ->getTotalResults();
     }
     $total_items = $context['sandbox']['total_results'];
 
@@ -111,17 +131,13 @@ class QueueContentsForm extends FormBase {
     $context['results']['errors'] += $response->getErrors();
     $context['sandbox']['progress'] += $response->getVideosQueued();
     $context['sandbox']['last_index'] = $context['sandbox']['last_index'] + $batch_size;
-
-    $context['message'] = 'Processed a total of ' . $context['sandbox']['progress'] . ' items.';
     $context['message'] = t('Queued @progress %type items out of @total.', [
       '@progress' => $context['sandbox']['progress'],
-      '@total' => $total_items,
-      '%type' => $media_type_id,
+      '@total'    => $total_items,
+      '%type'     => $media_type_id,
     ]);
 
-    if ($context['sandbox']['progress'] != $total_items) {
-      $context['finished'] = $context['sandbox']['progress'] / $total_items;
-    }
+    $context['finished'] = $context['sandbox']['progress'] / $total_items;
   }
 
   /**
