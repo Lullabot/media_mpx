@@ -133,11 +133,7 @@ class QueueContentsForm extends FormBase {
    *   The batch size being used for the batch operation.
    */
   private function updateContextArrayFromResponse(string $media_type_id, array &$context, QueueVideoImportsResponse $response, int $batch_size): void {
-    if (!isset($context['sandbox']['total_results'])) {
-      $context['sandbox']['total_results'] = $response->getIterator()
-        ->getList()
-        ->getTotalResults();
-    }
+    $context['sandbox']['total_results'] = $context['sandbox']['total_results'] ?: $response->getIterator()->getTotalResults();
     $total_items = $context['sandbox']['total_results'];
 
     $context['results']['success'] += $response->getVideosQueued();
