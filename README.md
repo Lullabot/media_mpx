@@ -115,7 +115,7 @@ or more, so use this option sparingly and rely on cached data where possible.
 
 ## Media access and availability calculations
 
-Access to a mpx media entity is calculated using the mpx available and
+Access to an mpx media entity is calculated using the mpx available and
 expiration dates. By default, after a site cache clear those videos will
 need to be re-fetched from mpx to have up-to-date availability dates. To
 improve performance, map the available and expiration dates to Date / Time
