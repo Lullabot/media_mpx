@@ -2,7 +2,6 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
-use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\media\MediaSourceBase as DrupalMediaSourceBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -19,6 +18,7 @@ use GuzzleHttp\Psr7\Uri;
 use Lullabot\Mpx\DataService\CachingPhpDocExtractor;
 use Lullabot\Mpx\DataService\CustomFieldManager;
 use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
+use Lullabot\Mpx\DataService\Media\Media;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -66,6 +66,16 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    * @var \Drupal\media_mpx\MpxLogger
    */
   protected $mpxLogger;
+
+  /**
+   * The path to the thumbnails directory.
+   *
+   * Normally this would be a class constant, but file_prepare_directory()
+   * requires the string to be passed by reference.
+   *
+   * @var string
+   */
+  protected $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
   /**
    * Media constructor.
@@ -253,10 +263,56 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $value = $mpx_object->$method();
 
     if ($value instanceof \DateTime || $value instanceof DateTimeFormatInterface) {
-      $value = $value->format(DateTimeItemInterface::DATETIME_STORAGE_FORMAT);
+      // @todo Remove this when https://bravotv.atlassian.net/browse/BR-6856
+      // is fixed.
+      $value = $value->format('U');
     }
 
     return $value;
+  }
+
+  /**
+   * Download a thumbnail to the local file system.
+   *
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
+   *   The mpx media object to download the thumbnail for.
+   *
+   * @return string
+   *   The existing thumbnail, or the newly downloaded thumbnail.
+   */
+  protected function downloadThumbnail(Media $mpx_media): string {
+    $thumbnailUrl = $mpx_media->getDefaultThumbnailUrl();
+    $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
+    if (!file_exists($local_uri)) {
+      $directory = dirname($local_uri);
+      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+      $thumbnail = $this->httpClient->request('GET', $thumbnailUrl);
+      file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+    }
+
+    return $local_uri;
+  }
+
+  /**
+   * Return the alt tag for a thumbnail.
+   *
+   * While mpx has support for thumbnail descriptions, in practice they do not
+   * look to be filled with useful text. Instead, we default to using the media
+   * label, and if that is not available we fall back to the media title.
+   *
+   * @param \Drupal\media\MediaInterface $media
+   *   The media entity being processed.
+   *
+   * @return string
+   *   The thumbnail alt text.
+   */
+  protected function thumbnailAlt(MediaInterface $media) {
+    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
+    $mpx_media = $this->getMpxObject($media);
+    if (!empty($media->label())) {
+      return $media->label();
+    }
+    return $mpx_media->getTitle();
   }
 
 }
