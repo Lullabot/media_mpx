@@ -126,7 +126,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     $element = [];
 
     /** @var \Drupal\media\Entity\Media $entity */
-    $entity = $items->getEntity();
+    if (!$entity = $items->getEntity()) {
+      return [];
+    }
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
     $source_plugin = $entity->getSource();
 
@@ -227,7 +229,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
    */
   protected function fetchPlayerOptions(): array {
     $options = [];
-    $bundle = $this->fieldDefinition->getTargetBundle();
+    if (!$bundle = $this->fieldDefinition->getTargetBundle()) {
+      return [];
+    }
     /** @var \Drupal\media\Entity\MediaType $type */
     $type = $this->entityTypeManager->getStorage('media_type')->load($bundle);
     /** @var \Drupal\media_mpx\Plugin\media\Source\Media $source_plugin */
@@ -242,9 +246,9 @@ class PlayerFormatter extends FormatterBase implements ContainerFactoryPluginInt
     /** @var \Lullabot\Mpx\DataService\Player\Player[] $results */
     $results = $factory->select($query);
 
-    foreach ($results as $player) {
-      if (!$player->getDisabled()) {
-        $options[(string) $player->getId()] = $player->getTitle();
+    foreach ($results as $player_option) {
+      if (!$player_option->getDisabled()) {
+        $options[(string) $player_option->getId()] = $player_option->getTitle();
       }
     }
     return $options;
