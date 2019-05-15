@@ -38,21 +38,21 @@ media_mpx.settings:
   requirements:
     _permission: 'administer site configuration'
 
-media_mpx.asset_sync:
-  path: '/admin/config/media/mpx/asset-sync'
+media_mpx.asset_sync.queue_contents:
+  path: '/admin/content/media/mpx/queue-contents'
   defaults:
-    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
-    _title: 'mpx Asset Sync'
+    _title: 'Queue contents for updates'
+    _form: \Drupal\media_mpx\Form\QueueContentsForm
   requirements:
     _permission: 'manage media_mpx asset updates'
   options:
     _admin_route: TRUE
 
-media_mpx.asset_sync.queue_contents:
-  path: '/admin/config/media/mpx/asset-sync/queue-contents'
+media_mpx.asset_sync.single_by_account_guid:
+  path: '/admin/content/media/mpx/update-item-by-account-guid'
   defaults:
-    _title: 'Queue contents for updates'
-    _form: \Drupal\media_mpx\Form\QueueContentsForm
+    _title: 'Update MPX Item for a given account'
+    _form: \Drupal\media_mpx\Form\UpdateMediaItemForAccount
   requirements:
     _permission: 'manage media_mpx asset updates'
   options:

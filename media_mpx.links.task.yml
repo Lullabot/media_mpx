@@ -1,5 +1,10 @@
 # MPX Asset management.
 media_mpx.asset_sync.queue_contents:
   route_name: media_mpx.asset_sync.queue_contents
-  title: 'Queue contents for update.'
-  base_route: media_mpx.media_mpx.asset_sync.queue_contents
+  title: 'mpx Bulk Import'
+  parent_id: entity.media.collection
+
+media_mpx.asset_sync.single_by_account_guid:
+  route_name: media_mpx.asset_sync.single_by_account_guid
+  title: 'mpx Single Import (account / guid)'
+  parent_id: entity.media.collection
