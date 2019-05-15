@@ -37,3 +37,23 @@ media_mpx.settings:
     _title: 'mpx settings'
   requirements:
     _permission: 'administer site configuration'
+
+media_mpx.asset_sync:
+  path: '/admin/config/media/mpx/asset-sync'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'mpx Asset Sync'
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE
+
+media_mpx.asset_sync.queue_contents:
+  path: '/admin/config/media/mpx/asset-sync/queue-contents'
+  defaults:
+    _title: 'Queue contents for updates'
+    _form: \Drupal\media_mpx\Form\QueueContentsForm
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE
