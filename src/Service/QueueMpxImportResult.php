@@ -14,7 +14,7 @@ use Lullabot\Mpx\DataService\Media\Media;
 class QueueMpxImportResult {
 
   /**
-   * Whether the queueing attempt was succesful.
+   * Whether the queueing attempt was successful.
    *
    * @var bool
    */
@@ -31,7 +31,7 @@ class QueueMpxImportResult {
    * QueueMpxImportResult constructor.
    *
    * @param bool $success
-   *   Whether the queueing attempt was succesful or not.
+   *   Whether the queueing attempt was successful or not.
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
    *   The mpx Media item.
    */
@@ -41,12 +41,12 @@ class QueueMpxImportResult {
   }
 
   /**
-   * Returns whether the queuing attempt was succesful or not.
+   * Returns whether the queuing attempt was successful or not.
    *
    * @return bool
    *   TRUE if the item was queued for later import. FALSE otherwise.
    */
-  public function wasSuccesful(): bool {
+  public function wasSuccessful(): bool {
     return $this->success;
   }
 

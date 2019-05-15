@@ -47,7 +47,7 @@ class QueueVideoImportsResponse {
   public function getQueuedVideos(): array {
     $queued = [];
     foreach ($this->queueResults as $result) {
-      if ($result->wasSuccesful()) {
+      if ($result->wasSuccessful()) {
         $queued[] = $result->getMpxMediaItem();
       }
     }
@@ -63,7 +63,7 @@ class QueueVideoImportsResponse {
   public function getNotQueuedVideos(): array {
     $not_queued = [];
     foreach ($this->queueResults as $result) {
-      if ($result->wasSuccesful() === FALSE) {
+      if ($result->wasSuccessful() === FALSE) {
         $not_queued[] = $result->getMpxMediaItem();
       }
     }
