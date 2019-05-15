@@ -115,9 +115,8 @@ class FeedConfig extends MediaSourceBase implements MediaSourceInterface {
       return $this->downloadThumbnail($video);
     }
     catch (ClientException $e) {
-      // Mpx doesn't removed pinned videos from feeds if the video is
-      // deleted. In that case, we go on to the next video to find a
-      // thumbnail.
+      // Mpx doesn't remove pinned videos from feeds if the video is deleted.
+      // In that case, we go on to the next video to find a thumbnail.
       if ($e->getCode() != 404) {
         throw $e;
       }
