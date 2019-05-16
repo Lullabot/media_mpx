@@ -156,13 +156,13 @@ class QueueVideoImports {
       $this->logger->error(t('@type @uri could not be queued for updates.',
           ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
       );
-      return new QueueMpxImportResult(FALSE, $mpx_media);
+      return new QueueMpxImportResult($mpx_media, FALSE);
     }
 
     $this->logger->info(t('@type @uri has been queued to be imported.',
         ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
     );
-    return new QueueMpxImportResult(TRUE, $mpx_media);
+    return new QueueMpxImportResult($mpx_media, TRUE);
   }
 
 }
