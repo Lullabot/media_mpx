@@ -105,8 +105,8 @@ class QueueContentsForm extends FormBase {
       $context['sandbox']['progress'] = 0;
       $context['sandbox']['last_index'] = 0;
       $context['results'] = [
-        'success' => 0,
-        'errors' => 0,
+        'success' => [],
+        'errors' => [],
       ];
     }
 
@@ -136,9 +136,9 @@ class QueueContentsForm extends FormBase {
     $context['sandbox']['total_results'] = $context['sandbox']['total_results'] ?: $response->getIterator()->getTotalResults();
     $total_items = $context['sandbox']['total_results'];
 
-    $context['results']['success'] += $response->getVideosQueued();
-    $context['results']['errors'] += $response->getErrors();
-    $context['sandbox']['progress'] += $response->getVideosQueued();
+    $context['results']['success'] = array_merge($context['results']['success'], $response->getQueuedVideos());
+    $context['results']['errors'] = array_merge($context['results']['errors'], $response->getNotQueuedVideos());
+    $context['sandbox']['progress'] += count($response->getQueuedVideos());
     $context['sandbox']['last_index'] = $context['sandbox']['last_index'] + $batch_size;
     $context['message'] = $this->t('Queued @progress %type items out of @total.', [
       '@progress' => $context['sandbox']['progress'],
@@ -161,19 +161,24 @@ class QueueContentsForm extends FormBase {
     $finished_message = $this->t('Finished with errors.');
 
     if ($success) {
-      $finished_message = $this->formatPlural($results['success'],
+      $finished_message = $this->formatPlural(count($results['success']),
         'One mpx item queued.',
         '@count mpx items queued for updates. Imports will continue in the background.');
     }
 
     $this->messenger()->addMessage($finished_message);
 
-    if ($results['errors'] > 0) {
+    if (count($results['errors']) > 0) {
       $errors_message = $this->formatPlural(
-        $results['errors'],
-        'One mpx item could not be queued. Check logs for details.',
-        '@count mpx items could not be queued for updates. Check logs for details.');
+        count($results['errors']),
+        'The following mpx item could not be queued. Check logs for details.',
+        'The following @count mpx items could not be queued for updates. Check logs for details.');
       $this->messenger()->addError($errors_message);
+
+      /* @var \Lullabot\Mpx\DataService\Media\Media $mpx_item */
+      foreach ($results['errors'] as $mpx_item) {
+        $this->messenger()->addError($mpx_item->getId());
+      }
     }
   }
 

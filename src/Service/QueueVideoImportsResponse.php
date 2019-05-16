@@ -16,7 +16,7 @@ class QueueVideoImportsResponse {
    *
    * @var int
    */
-  private $videosQueued;
+  private $queueResults;
 
   /**
    * The http response iterator.
@@ -26,46 +26,48 @@ class QueueVideoImportsResponse {
   private $iterator;
 
   /**
-   * The number of videos that could not be queued.
-   *
-   * @var int
-   */
-  private $errors;
-
-  /**
    * QueueVideoImportsResponse constructor.
    *
-   * @param int $videos_queued
-   *   The number of videos queued.
-   * @param int $errors
-   *   The number of videos that could not be queued.
+   * @param \Drupal\media_mpx\Service\QueueMpxImportResult[] $queueMpxImportsResults
+   *   An array of mpx import queue results.
    * @param \Lullabot\Mpx\DataService\ObjectListIterator $iterator
    *   The http response iterator.
    */
-  public function __construct(int $videos_queued, int $errors, ObjectListIterator $iterator) {
-    $this->videosQueued = $videos_queued;
+  public function __construct(array $queueMpxImportsResults, ObjectListIterator $iterator) {
+    $this->queueResults = $queueMpxImportsResults;
     $this->iterator = $iterator;
-    $this->errors = $errors;
   }
 
   /**
-   * Returns the number of videos that were queued.
+   * Returns the mpx Media Items that were successfully queued.
    *
-   * @return int
-   *   The number of videos queued.
+   * @return \Lullabot\Mpx\DataService\Media\Media[]
+   *   An array of mpx Media items.
    */
-  public function getVideosQueued(): int {
-    return $this->videosQueued;
+  public function getQueuedVideos(): array {
+    $queued = [];
+    foreach ($this->queueResults as $result) {
+      if ($result->wasSuccessful()) {
+        $queued[] = $result->getMpxMediaItem();
+      }
+    }
+    return $queued;
   }
 
   /**
-   * Returns the number of videos that could not be queued.
+   * Returns the mpx Media items that could not be queued.
    *
-   * @return int
-   *   The number of videos that could not be queued.
+   * @return \Lullabot\Mpx\DataService\Media\Media[]
+   *   An array of mpx Media items.
    */
-  public function getErrors(): int {
-    return $this->errors;
+  public function getNotQueuedVideos(): array {
+    $not_queued = [];
+    foreach ($this->queueResults as $result) {
+      if ($result->wasSuccessful() === FALSE) {
+        $not_queued[] = $result->getMpxMediaItem();
+      }
+    }
+    return $not_queued;
   }
 
   /**

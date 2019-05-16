@@ -93,22 +93,16 @@ class QueueVideoImports {
     $media_type = $this->mpxMediaTypeRepository->findByTypeId($media_type_id);
 
     $results = $this->fetchMediaTypeItemIdsFromMpx($media_type, $request);
-    $queued = 0;
-    $errored = 0;
+    $queue_results = [];
+
     foreach ($results as $index => $mpx_media) {
-      if (!is_null($limit) && ($queued + $errored) >= $limit) {
+      if (!is_null($limit) && count($queue_results) >= $limit) {
         break;
       }
-
-      if ($this->queueMpxItem($mpx_media, $media_type->id()) == TRUE) {
-        $queued++;
-      }
-      else {
-        $errored++;
-      }
+      $queue_results[] = $this->queueMpxItem($mpx_media, $media_type->id());
     }
 
-    return new QueueVideoImportsResponse($queued, $errored, $results);
+    return new QueueVideoImportsResponse($queue_results, $results);
   }
 
   /**
@@ -153,22 +147,22 @@ class QueueVideoImports {
    * @param string $media_type_id
    *   The media item type id.
    *
-   * @return bool
-   *   TRUE if the item was queued successfully, FALSE otherwise.
+   * @return \Drupal\media_mpx\Service\QueueMpxImportResult
+   *   A QueueMpxImportResult object.
    */
-  protected function queueMpxItem(Media $mpx_media, string $media_type_id): bool {
+  protected function queueMpxItem(Media $mpx_media, string $media_type_id): QueueMpxImportResult {
     $import_task = new MpxImportTask($mpx_media->getId(), $media_type_id);
     if (!$this->queue->createItem($import_task)) {
       $this->logger->error(t('@type @uri could not be queued for updates.',
           ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
       );
-      return FALSE;
+      return new QueueMpxImportResult($mpx_media, FALSE);
     }
 
     $this->logger->info(t('@type @uri has been queued to be imported.',
         ['@type' => $media_type_id, '@uri' => $mpx_media->getId()])
     );
-    return TRUE;
+    return new QueueMpxImportResult($mpx_media, TRUE);
   }
 
 }
