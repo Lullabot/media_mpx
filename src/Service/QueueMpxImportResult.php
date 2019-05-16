@@ -30,12 +30,12 @@ class QueueMpxImportResult {
   /**
    * QueueMpxImportResult constructor.
    *
-   * @param bool $success
-   *   Whether the queueing attempt was successful or not.
    * @param \Lullabot\Mpx\DataService\Media\Media $mpx_media
    *   The mpx Media item.
+   * @param bool $success
+   *   Whether the queueing attempt was successful or not.
    */
-  public function __construct(bool $success, Media $mpx_media) {
+  public function __construct(Media $mpx_media, bool $success) {
     $this->success = $success;
     $this->mpxMediaItem = $mpx_media;
   }

@@ -73,7 +73,7 @@ class QueueVideoImportsResponseTest extends UnitTestCase {
       $media_item->setId($id);
 
       $succesful = !(bool) $i % 2;
-      $import_results[$i] = new QueueMpxImportResult($succesful, $media_item);
+      $import_results[$i] = new QueueMpxImportResult($media_item, $succesful);
       if ($succesful) {
         $split_entries['succesful'][] = $media_item;
       }
