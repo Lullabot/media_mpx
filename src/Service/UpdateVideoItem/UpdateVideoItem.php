@@ -66,7 +66,7 @@ class UpdateVideoItem {
 
     $media_type = $this->mpxMediaTypeRepository->findByTypeId($media_type_id);
 
-    $media_source = $this->importer::loadMediaSource($media_type);
+    $media_source = $this->importer->loadMediaSource($media_type);
     $factory = $this->objectFactoryCreator->fromMediaSource($media_source);
     $results = $factory->load($mpx_id);
     $mpx_media = $results->wait();
