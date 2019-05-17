@@ -5,6 +5,7 @@ declare(strict_types = 1);
 namespace Drupal\media_mpx\Service\UpdateVideoItem;
 
 use Drupal\media\Entity\Media;
+use Drupal\media_mpx\MpxImportTask;
 
 /**
  * Contains the data needed to update a media entity via UpdateVideoItem.
@@ -53,6 +54,23 @@ class UpdateVideoItemRequest {
     $mpx_id = (int) $entity->get('field_mpx_id')->value;
     $media_type_id = $entity->bundle();
     return new self($mpx_id, $media_type_id);
+  }
+
+  /**
+   * Creates an update video request from an mpx import task.
+   *
+   * @param \Drupal\media_mpx\MpxImportTask $importTask
+   *   The import task coming from the import queue.
+   *
+   * @return \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest
+   *   The request object, to be passed to the UpdateVideoItem service.
+   */
+  public static function createFromMpxImportTask(MpxImportTask $importTask): UpdateVideoItemRequest {
+    // Import tasks store the actual URI object pointing to the mpx object. Get
+    // the last part only, which is the numeric id.
+    $mpx_id = (int) end(explode('/', $importTask->getMediaId()->getPath()));
+
+    return new self($mpx_id, $importTask->getMediaTypeId());
   }
 
   /**

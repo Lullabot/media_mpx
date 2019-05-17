@@ -4,7 +4,6 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\Service\UpdateVideoItem;
 
-use Drupal\media\MediaInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Repository\MpxMediaType;
@@ -72,11 +71,7 @@ class UpdateVideoItem {
     $mpx_media = $results->wait();
     $saved = $this->importer->importItem($mpx_media, $media_type);
 
-    $ids = array_map(function (MediaInterface $media) {
-      return $media->id();
-    }, $saved);
-
-    $response = new UpdateVideoItemResponse($ids);
+    $response = new UpdateVideoItemResponse($mpx_media, $saved);
     return $response;
   }
 
