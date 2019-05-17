@@ -149,8 +149,8 @@ class UpdateMediaItemForVideoType extends FormBase {
    */
   private function loadVideoMatchingGuidAndType(string $guid, string $type):? Media {
     $guid_field = NULL;
-    if ($type = $this->mpxTypeRepository->findByTypeId($type)) {
-      $field_map = $type->getFieldMap();
+    if ($media_type = $this->mpxTypeRepository->findByTypeId($type)) {
+      $field_map = $media_type->getFieldMap();
       $guid_field = $field_map['Media:guid'] ?: NULL;
     }
 
