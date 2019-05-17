@@ -119,6 +119,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     $updateRequest = UpdateVideoItemRequest::createFromMediaEntity($video_item);
     try {
       $this->updateVideoItemService->execute($updateRequest);
+      $this->messenger()->addMessage($this->t('The selected video has been updated.'));
     }
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom exception
