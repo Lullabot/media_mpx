@@ -7,10 +7,13 @@ namespace Drupal\media_mpx\Form;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Logger\RfcLogLevel;
+use Drupal\Core\Utility\Error;
 use Drupal\media\Entity\Media;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -42,12 +45,20 @@ class UpdateMediaItemForVideoType extends FormBase {
   private $mpxTypeRepository;
 
   /**
+   * The system logger.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  private $logger;
+
+  /**
    * UpdateMediaItemForAccount constructor.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, LoggerInterface $logger) {
     $this->mediaStorage = $entityTypeManager->getStorage('media');
     $this->updateVideoItemService = $updateVideoItem;
     $this->mpxTypeRepository = $mpxTypeRepository;
+    $this->logger = $logger;
   }
 
   /**
@@ -57,7 +68,8 @@ class UpdateMediaItemForVideoType extends FormBase {
     return new static(
       $container->get('entity_type.manager'),
       $container->get('media_mpx.service.update_video_item'),
-      $container->get('media_mpx.repository.mpx_media_types')
+      $container->get('media_mpx.repository.mpx_media_types'),
+      $container->get('logger.channel.media_mpx')
     );
   }
 
@@ -65,7 +77,13 @@ class UpdateMediaItemForVideoType extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $video_types = $this->mpxTypeRepository->findAllTypes();
+    try {
+      $video_types = $this->mpxTypeRepository->findAllTypes();
+    }
+    catch (\Exception $e) {
+      $this->messenger()->addError($this->t('There has been an unexpected problem finding the local video information. Check the logs for details.'));
+      $this->watchdogException($e);
+    }
     $video_opts = [];
 
     foreach ($video_types as $type) {
@@ -107,8 +125,15 @@ class UpdateMediaItemForVideoType extends FormBase {
     }
 
     $updateRequest = UpdateVideoItemRequest::createFromMediaEntity($video_item);
-    $this->updateVideoItemService->execute($updateRequest);
-    // @todo: add exception and response handling for the update service.
+    try {
+      $this->updateVideoItemService->execute($updateRequest);
+    }
+    catch (\Exception $e) {
+      // Up until here, all necessary checks have been made. No custom exception
+      // handling needed other than for the db possibly exploding at this point.
+      $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
+      $this->watchdogException($e);
+    }
   }
 
   /**
@@ -141,6 +166,38 @@ class UpdateMediaItemForVideoType extends FormBase {
     }
 
     return $video;
+  }
+
+  /**
+   * Logs an exception.
+   *
+   * @param \Exception $exception
+   *   The exception that is going to be logged.
+   * @param string $message
+   *   The message to store in the log.
+   * @param array $variables
+   *   Array of variables to replace in the message on display or
+   *   NULL if message is already translated or not possible to
+   *   translate.
+   * @param int $severity
+   *   The severity of the message, as per RFC 3164.
+   * @param string $link
+   *   A link to associate with the message.
+   *
+   * @see \Drupal\Core\Utility\Error::decodeException()
+   */
+  private function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
+    // Use a default value if $message is not set.
+    if (empty($message)) {
+      $message = '%type: @message in %function (line %line of %file).';
+    }
+
+    if ($link) {
+      $variables['link'] = $link;
+    }
+
+    $variables += Error::decodeException($exception);
+    $this->logger->log($severity, $message, $variables);
   }
 
 }
