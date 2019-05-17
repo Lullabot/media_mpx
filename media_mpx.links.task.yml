@@ -4,7 +4,7 @@ media_mpx.asset_sync.queue_contents:
   title: 'mpx Bulk Import'
   parent_id: entity.media.collection
 
-media_mpx.asset_sync.single_by_account_guid:
-  route_name: media_mpx.asset_sync.single_by_account_guid
-  title: 'mpx Single Import (account / guid)'
+media_mpx.asset_sync.single_for_video_type:
+  route_name: media_mpx.asset_sync.single_for_video_type
+  title: 'mpx Single Import (Type & guid)'
   parent_id: entity.media.collection

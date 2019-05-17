@@ -5,7 +5,6 @@ declare(strict_types = 1);
 namespace Drupal\media_mpx\Service\UpdateVideoItem;
 
 use Drupal\media\Entity\Media;
-use GuzzleHttp\Psr7\Uri;
 
 /**
  * Contains the data needed to update a media entity via UpdateVideoItem.
@@ -14,12 +13,10 @@ use GuzzleHttp\Psr7\Uri;
  */
 class UpdateVideoItemRequest {
 
-  const MPX_MEDIA_DATA_SERVICE_URL = "http://data.media.theplatform.com/media/data/Media/";
-
   /**
-   * The mpx global item id.
+   * The mpx global item numeric id.
    *
-   * @var \GuzzleHttp\Psr7\Uri
+   * @var int
    */
   private $mpxId;
 
@@ -33,12 +30,12 @@ class UpdateVideoItemRequest {
   /**
    * UpdateVideoItemRequest constructor.
    *
-   * @param \GuzzleHttp\Psr7\Uri $mpxId
-   *   The Uri object specifying the video item id.
+   * @param int $mpxId
+   *   The mpx video item global id.
    * @param string $mediaTypeId
    *   The media type id.
    */
-  private function __construct(Uri $mpxId, string $mediaTypeId) {
+  private function __construct(int $mpxId, string $mediaTypeId) {
     $this->mpxId = $mpxId;
     $this->mediaTypeId = $mediaTypeId;
   }
@@ -53,20 +50,18 @@ class UpdateVideoItemRequest {
    *   The request object, to be passed to the UpdateVideoItem service.
    */
   public static function createFromMediaEntity(Media $entity): UpdateVideoItemRequest {
-    $mpx_id = $entity->get('field_mpx_id')->value;
-    $mpx_id = new Uri(self::MPX_MEDIA_DATA_SERVICE_URL . $mpx_id);
+    $mpx_id = (int) $entity->get('field_mpx_id')->value;
     $media_type_id = $entity->bundle();
-
     return new self($mpx_id, $media_type_id);
   }
 
   /**
-   * Returns the mpx global item id.
+   * Returns the mpx global item numeric id.
    *
-   * @return \GuzzleHttp\Psr7\Uri
+   * @return int
    *   The mpx global item id.
    */
-  public function getMpxId(): Uri {
+  public function getMpxId(): int {
     return $this->mpxId;
   }
 

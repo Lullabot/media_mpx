@@ -48,11 +48,11 @@ media_mpx.asset_sync.queue_contents:
   options:
     _admin_route: TRUE
 
-media_mpx.asset_sync.single_by_account_guid:
-  path: '/admin/content/media/mpx/update-item-by-account-guid'
+media_mpx.asset_sync.single_for_video_type:
+  path: '/admin/content/media/mpx/update-item-for-video-type'
   defaults:
-    _title: 'Update MPX Item for a given account'
-    _form: \Drupal\media_mpx\Form\UpdateMediaItemForAccount
+    _title: 'Update an mpx Item for a given Video type'
+    _form: \Drupal\media_mpx\Form\UpdateMediaItemForVideoType
   requirements:
     _permission: 'manage media_mpx asset updates'
   options:
