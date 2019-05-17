@@ -81,8 +81,9 @@ class UpdateMediaItemForVideoType extends FormBase {
       $video_types = $this->mpxTypeRepository->findAllTypes();
     }
     catch (\Exception $e) {
-      $this->messenger()->addError($this->t('There has been an unexpected problem finding the local video information. Check the logs for details.'));
+      $this->messenger()->addError($this->t('There has been an unexpected problem loading the form. Reload the page.'));
       $this->watchdogException($e);
+      return [];
     }
     $video_opts = [];
 
