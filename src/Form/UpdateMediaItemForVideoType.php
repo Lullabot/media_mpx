@@ -77,18 +77,9 @@ class UpdateMediaItemForVideoType extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    try {
-      $video_types = $this->mpxTypeRepository->findAllTypes();
-    }
-    catch (\Exception $e) {
+    if (!$video_opts = $this->loadVideoTypeOptions()) {
       $this->messenger()->addError($this->t('There has been an unexpected problem loading the form. Reload the page.'));
-      $this->watchdogException($e);
       return [];
-    }
-    $video_opts = [];
-
-    foreach ($video_types as $type) {
-      $video_opts[$type->id()] = $type->label();
     }
 
     $form['video_type'] = [
@@ -176,29 +167,41 @@ class UpdateMediaItemForVideoType extends FormBase {
    *   The exception that is going to be logged.
    * @param string $message
    *   The message to store in the log.
-   * @param array $variables
-   *   Array of variables to replace in the message on display or
-   *   NULL if message is already translated or not possible to
-   *   translate.
-   * @param int $severity
-   *   The severity of the message, as per RFC 3164.
-   * @param string $link
-   *   A link to associate with the message.
    *
    * @see \Drupal\Core\Utility\Error::decodeException()
    */
-  private function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
+  private function watchdogException(\Exception $exception, $message = NULL) {
     // Use a default value if $message is not set.
     if (empty($message)) {
       $message = '%type: @message in %function (line %line of %file).';
     }
 
-    if ($link) {
-      $variables['link'] = $link;
+    $variables = Error::decodeException($exception);
+    $this->logger->log(RfcLogLevel::ERROR, $message, $variables);
+  }
+
+  /**
+   * Returns the mpx Video Type options of the dropdown (prepared for form api).
+   *
+   * @return array
+   *   An array with options to show in the dropdown. The keys are the video
+   *   types, and the values are the video type label.
+   */
+  private function loadVideoTypeOptions(): array {
+    $video_opts = [];
+
+    try {
+      $video_types = $this->mpxTypeRepository->findAllTypes();
+
+      foreach ($video_types as $type) {
+        $video_opts[$type->id()] = $type->label();
+      }
+    }
+    catch (\Exception $e) {
+      $this->watchdogException($e);
     }
 
-    $variables += Error::decodeException($exception);
-    $this->logger->log($severity, $message, $variables);
+    return $video_opts;
   }
 
 }
