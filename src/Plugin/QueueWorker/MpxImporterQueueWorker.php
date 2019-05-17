@@ -6,12 +6,11 @@ use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\media\MediaInterface;
-use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\MpxImportTask;
+use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
+use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\media_mpx\DataObjectFactoryCreator;
 
 /**
  * Process mpx imports.
@@ -28,28 +27,8 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
  * )
  */
 class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactoryPluginInterface {
+
   use StringTranslationTrait;
-
-  /**
-   * The factory used to load a complete mpx object.
-   *
-   * @var \Drupal\media_mpx\DataObjectFactoryCreator
-   */
-  protected $dataObjectFactoryCreator;
-
-  /**
-   * A class to import mpx objects.
-   *
-   * @var \Drupal\media_mpx\DataObjectImporter
-   */
-  private $dataObjectImporter;
-
-  /**
-   * The entity type manager used to load entities.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  private $entityTypeManager;
 
   /**
    * The logger used to record import actions.
@@ -57,6 +36,13 @@ class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactory
    * @var \Psr\Log\LoggerInterface
    */
   private $logger;
+
+  /**
+   * The update video service.
+   *
+   * @var \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
+   */
+  private $updateService;
 
   /**
    * MpxImporterQueueWorker constructor.
@@ -67,21 +53,15 @@ class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactory
    *   The plugin_id for the plugin instance.
    * @param mixed $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   An entity type manager.
-   * @param \Drupal\media_mpx\DataObjectImporter $data_importer
-   *   The data importer.
-   * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
-   *   Data factory creator.
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateService
+   *   The update video service.
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger used to record import actions.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entityTypeManager, DataObjectImporter $data_importer, DataObjectFactoryCreator $dataObjectFactoryCreator, LoggerInterface $logger) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, UpdateVideoItem $updateService, LoggerInterface $logger) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
-    $this->entityTypeManager = $entityTypeManager;
-    $this->dataObjectImporter = $data_importer;
-    $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->logger = $logger;
+    $this->updateService = $updateService;
   }
 
   /**
@@ -92,9 +72,7 @@ class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactory
       $configuration,
       $plugin_id,
       $plugin_definition,
-      $container->get('entity_type.manager'),
-      $container->get('media_mpx.data_object_importer'),
-      $container->get('media_mpx.data_object_factory_creator'),
+      $container->get('media_mpx.service.update_video_item'),
       $container->get('logger.channel.media_mpx')
     );
   }
@@ -109,22 +87,19 @@ class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactory
     if (!$data instanceof MpxImportTask) {
       return;
     }
-    /** @var \Drupal\media_mpx\MpxImportTask $data */
-    $media_type_id = $data->getMediaTypeId();
-    $media_id = $data->getMediaId();
 
-    $bundle_type = $this->entityTypeManager->getDefinition('media')->getBundleEntityType();
-    /** @var \Drupal\media\MediaTypeInterface $media_type */
-    $media_type = $this->entityTypeManager->getStorage($bundle_type)->load($media_type_id);
-    if (!$media_type) {
+    $update_request = UpdateVideoItemRequest::createFromMpxImportTask($data);
+    try {
+      $update_response = $this->updateService->execute($update_request);
+      $saved = $update_response->getUpdatedEntities();
+    }
+    catch (\Exception $e) {
+      $this->logger->error($this->t('mpx queued import failed. Mpx id: @id. Details: @details', [
+        '@id' => $data->getMediaId(),
+        '@details' => $e->getMessage(),
+      ]));
       return;
     }
-
-    $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    $results = $factory->load($media_id);
-    $mpx_media = $results->wait();
-    $saved = $this->dataObjectImporter->importItem($mpx_media, $media_type);
 
     $ids = array_map(function (MediaInterface $media) {
       return $media->id();
@@ -139,8 +114,11 @@ class MpxImporterQueueWorker extends QueueWorkerBase implements ContainerFactory
     }
 
     $this->logger->info('@id has been imported to media @saved.', [
-      '@id' => $mpx_media->getId(),
-      '@saved' => $this->formatPlural(count($saved), 'ID @ids', 'IDs @ids', ['@ids' => implode(', ', $ids)]),
+      '@id' => $update_response->getMpxItem()->getId(),
+      '@saved' => $this->formatPlural(
+        count($saved),
+        'ID @ids', 'IDs @ids',
+        ['@ids' => implode(', ', $ids)]),
       'link' => $link,
     ]);
   }

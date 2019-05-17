@@ -16,10 +16,3 @@ entity.media_mpx_account.overview:
   parent: media_mpx.settings
   description: 'Manage mpx accounts associated with users.'
   route_name: entity.media_mpx_account.collection
-
-# MPX Asset management.
-media_mpx.asset_sync:
-  title: 'mpx Asset Sync'
-  parent: media_mpx.settings
-  description: 'Trigger updates for specific items and queue items for full asset updates.'
-  route_name: media_mpx.asset_sync

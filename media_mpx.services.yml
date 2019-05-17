@@ -163,3 +163,10 @@ services:
       - '@event_dispatcher'
       - '@media_mpx.data_object_factory_creator'
       - '@queue'
+
+  media_mpx.service.update_video_item:
+    class: Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
+    arguments:
+      - '@media_mpx.repository.mpx_media_types'
+      - '@media_mpx.data_object_importer'
+      - '@media_mpx.data_object_factory_creator'
