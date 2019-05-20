@@ -36,7 +36,7 @@ class UpdateVideoItemRequest {
    * @param string $mediaTypeId
    *   The media type id.
    */
-  private function __construct(int $mpxId, string $mediaTypeId) {
+  public function __construct(int $mpxId, string $mediaTypeId) {
     $this->mpxId = $mpxId;
     $this->mediaTypeId = $mediaTypeId;
   }

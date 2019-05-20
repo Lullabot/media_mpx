@@ -8,3 +8,8 @@ media_mpx.asset_sync.single_for_video_type:
   route_name: media_mpx.asset_sync.single_for_video_type
   title: 'mpx Single Import (Type & guid)'
   parent_id: entity.media.collection
+
+media_mpx.asset_sync.single_by_mpx_id:
+  route_name: media_mpx.asset_sync.single_by_mpx_id
+  title: 'mpx Single Import (mpx ID)'
+  parent_id: entity.media.collection

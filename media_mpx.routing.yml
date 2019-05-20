@@ -57,3 +57,13 @@ media_mpx.asset_sync.single_for_video_type:
     _permission: 'manage media_mpx asset updates'
   options:
     _admin_route: TRUE
+
+media_mpx.asset_sync.single_by_mpx_id:
+  path: '/admin/content/media/mpx/import-item-by-mpx-id'
+  defaults:
+    _title: 'Creates or Updates an mpx Item based on its mpx ID'
+    _form: \Drupal\media_mpx\Form\ImportVideoItemByMpxId
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE

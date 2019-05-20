@@ -98,7 +98,7 @@ class QueueVideoImports {
     foreach ($results as $index => $mpx_media) {
       $queue_results[] = $this->queueMpxItem($mpx_media, $media_type->id());
 
-      // Break if the limist is reached, to avoid an extra request to mpx for
+      // Break if the limit is reached, to avoid an extra request to mpx for
       // the next batch of items (which will not be used).
       if (!is_null($limit) && count($queue_results) >= $limit) {
         break;
