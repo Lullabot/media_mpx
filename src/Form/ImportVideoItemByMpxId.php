@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @package Drupal\media_mpx\Form
  */
-class ImportMediaItemByMpxId extends FormBase {
+class ImportVideoItemByMpxId extends FormBase {
 
   /**
    * The Update Video Item service.
