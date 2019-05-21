@@ -72,7 +72,7 @@ class MediaMpxServiceProvider implements ServiceProviderInterface, ServiceModifi
    */
   private function importerCommand(): Definition {
     $arguments = [
-      'entity_type.manager',
+      'media_mpx.repository.mpx_media_types',
       'media_mpx.data_object_factory_creator',
       'media_mpx.data_object_importer',
       'event_dispatcher',
