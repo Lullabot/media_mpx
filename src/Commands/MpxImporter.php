@@ -7,13 +7,11 @@ use Drupal\Core\Queue\QueueFactory;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
-use Drupal\media_mpx\Event\ImportSelectEvent;
-use Drupal\media_mpx\MpxImportTask;
+use Drupal\media_mpx\Repository\MpxMediaType;
+use Drupal\media_mpx\Service\QueueVideoImportsRequest;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
-use Lullabot\Mpx\DataService\Fields;
 use Lullabot\Mpx\DataService\ObjectList;
-use Lullabot\Mpx\DataService\ObjectListIterator;
 use Lullabot\Mpx\DataService\ObjectListQuery;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -34,13 +32,6 @@ class MpxImporter extends DrushCommands {
    * The name of the queue for notifications.
    */
   const MEDIA_MPX_IMPORT_QUEUE = 'media_mpx_importer';
-
-  /**
-   * The entity type manager used to load entities.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
-   */
-  private $entityTypeManager;
 
   /**
    * The factory used to load media data from mpx.
@@ -71,10 +62,17 @@ class MpxImporter extends DrushCommands {
   private $eventDispatcher;
 
   /**
+   * The mpx media type repository.
+   *
+   * @var \Drupal\media_mpx\Repository\MpxMediaType
+   */
+  private $mpxTypeRepository;
+
+  /**
    * MpxImporter constructor.
    *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   The manager used to load config and media entities.
+   * @param \Drupal\media_mpx\Repository\MpxMediaType $mpxTypeRepository
+   *   The mpx media type repository.
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The creator used to configure a factory for loading mpx objects.
    * @param \Drupal\media_mpx\DataObjectImporter $dataObjectImporter
@@ -84,8 +82,8 @@ class MpxImporter extends DrushCommands {
    * @param \Drupal\Core\Queue\QueueFactory $queue_factory
    *   The factory to load the mpx notification queue.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher, QueueFactory $queue_factory) {
-    $this->entityTypeManager = $entityTypeManager;
+  public function __construct(MpxMediaType $mpxTypeRepository, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher, QueueFactory $queue_factory) {
+    $this->mpxTypeRepository = $mpxTypeRepository;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->dataObjectImporter = $dataObjectImporter;
     $this->eventDispatcher = $eventDispatcher;
@@ -97,37 +95,39 @@ class MpxImporter extends DrushCommands {
    *
    * @param string $media_type_id
    *   The media type ID to import for.
+   * @option batch_size An integer with the number of items to import per batch.
    *
-   * @usage media_mpx-import mpx_video
+   * @usage media_mpx:import {bundle}
    *   Import all mpx data for the mpx_video media type.
    *
    * @command media_mpx:import
    * @aliases mpxi
    */
-  public function import(string $media_type_id) {
-    $media_type = $this->loadMediaType($media_type_id);
-
-    // Only return the media ids to add to the queue.
-    $field_query = new Fields();
-    $field_query->addField('id');
-    $query = new ObjectListQuery();
-    $query->add($field_query);
-
-    $results = $this->select($media_type, $query);
+  public function import(string $media_type_id, $options = ['batch_size' => 100]) {
+    $queue_service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
+    $batch_size = $options['batch_size'];
+    $last_index = 0;
 
     $this->io()->title(dt('Importing @type media', ['@type' => $media_type_id]));
-    $this->io()->progressStart($this->getTotalCount($media_type, $query));
 
-    $queue = $this->queueFactory->get(self::MEDIA_MPX_IMPORT_QUEUE);
+    // First request is done out of the loop, to fetch total results and set up
+    // the progress bar.
+    $request = new QueueVideoImportsRequest($media_type_id, $batch_size, $last_index + 1);
+    $response = $queue_service->execute($request);
+    $total_count = $response->getIterator()->getTotalResults();
+    $this->io()->progressStart($total_count);
 
-    /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
-    foreach ($results as $index => $mpx_media) {
-      $queue->createItem(new MpxImportTask($mpx_media->getId(), $media_type_id));
-
-      $this->io()->progressAdvance();
-      $this->logger()->info(dt('@type @uri has been queued to be imported.', ['@type' => $media_type_id, '@uri' => $mpx_media->getId()]));
+    while ($last_index <= $total_count) {
+      $last_index += $batch_size;
+      $request = new QueueVideoImportsRequest($media_type_id, $batch_size, $last_index + 1);
+      $response = $queue_service->execute($request);
+      foreach ($response->getQueuedVideos() as $queued) {
+        $this->io()->progressAdvance();
+        $this->logger()->info(dt('@type @uri has been queued to be imported.',
+            ['@type' => $media_type_id, '@uri' => $queued->getId()])
+        );
+      }
     }
-
     $this->io()->progressFinish();
 
   }
@@ -142,7 +142,7 @@ class MpxImporter extends DrushCommands {
    * @aliases mpxw
    */
   public function warmCache(string $media_type_id) {
-    $media_type = $this->loadMediaType($media_type_id);
+    $media_type = $this->mpxTypeRepository->findByTypeId($media_type_id);
 
     $media_source = DataObjectImporter::loadMediaSource($media_type);
 
@@ -167,76 +167,6 @@ class MpxImporter extends DrushCommands {
       }
 
     })->wait();
-  }
-
-  /**
-   * Fetch all mpx items for a given media type.
-   *
-   * @param \Drupal\media\MediaTypeInterface $media_type
-   *   The media type to load items for.
-   * @param \Lullabot\Mpx\DataService\ObjectListQuery $query
-   *   An optional query to limit what is returned.
-   *
-   * @return \Lullabot\Mpx\DataService\ObjectListIterator
-   *   An iterator over all retrieved media items.
-   */
-  private function select(MediaTypeInterface $media_type, ObjectListQuery $query = NULL): ObjectListIterator {
-    $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    if (!$query) {
-      $query = new ObjectListQuery();
-    }
-    $event = new ImportSelectEvent($query, $media_source);
-    $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
-    $results = $factory->select($query);
-    return $results;
-  }
-
-  /**
-   * Return the total number of results in a query.
-   *
-   * @param \Drupal\media\MediaTypeInterface $media_type
-   *   The media type being queried for.
-   * @param \Lullabot\Mpx\DataService\ObjectListQuery|null $query
-   *   (optional) The object list query to filter mpx results by.
-   *
-   * @todo This should be an API in mpx-php.
-   *
-   * @return int
-   *   The total number of results.
-   */
-  private function getTotalCount(MediaTypeInterface $media_type, ObjectListQuery $query = NULL): int {
-    $media_source = DataObjectImporter::loadMediaSource($media_type);
-    $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-    if (!$query) {
-      $query = new ObjectListQuery();
-    }
-    $event = new ImportSelectEvent($query, $media_source);
-    $this->eventDispatcher->dispatch(ImportSelectEvent::IMPORT_SELECT, $event);
-    $results = $factory->selectRequest($query);
-    return $results->wait()->getTotalResults();
-  }
-
-  /**
-   * Load the media type object for a given media type ID.
-   *
-   * @param string $media_type_id
-   *   The media type ID.
-   *
-   * @return \Drupal\media\MediaTypeInterface
-   *   The loaded media type object.
-   */
-  private function loadMediaType(string $media_type_id): MediaTypeInterface {
-    $bundle_type = $this->entityTypeManager->getDefinition('media')->getBundleEntityType();
-    /* @var $media_type \Drupal\media\MediaTypeInterface */
-    if (!$media_type = $this->entityTypeManager->getStorage($bundle_type)
-      ->load($media_type_id)) {
-      // Normally you wouldn't translate exception text, but Drush does it in
-      // it's own commands.
-      // @see https://github.com/drush-ops/drush/blob/76a28373e7d3bdd708ab54d54f0e686370b46506/examples/Commands/PolicyCommands.php#L37
-      throw new \InvalidArgumentException(dt('The media type @type does not exist.', ['@type' => $media_type_id]));
-    }
-    return $media_type;
   }
 
 }
