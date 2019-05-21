@@ -92,11 +92,25 @@ class MediaFormAlter implements ContainerInjectionInterface {
     $id_field = NULL;
     if ($media_type = $this->mpxMediaTypeRepository->findByTypeId($video->bundle())) {
       $field_map = $media_type->getFieldMap();
+
+      if (!isset($field_map['Media:id'])) {
+        $this->messenger()->addError($this->t('The mpx field @field is not mapped to any local field. The Media source must be configured
+          before using the Reimport feature', ['@field' => 'Media:id'])
+        );
+        return;
+      }
+
       $id_field = $field_map['Media:id'] ?: NULL;
     }
 
-    $mpx_id = $video->{$id_field}->value;
-    $this->updateVideoData((int) $mpx_id, $video->bundle());
+    try {
+      if (($field = $video->get($id_field)) && !$field->isEmpty()) {
+        $mpx_id = $video->{$id_field}->value;
+        $this->updateVideoData((int) $mpx_id, $video->bundle());
+      }
+    }
+    catch (\InvalidArgumentException $e) {
+    }
   }
 
   /**
