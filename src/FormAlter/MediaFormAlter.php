@@ -7,7 +7,9 @@ namespace Drupal\media_mpx\FormAlter;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
@@ -21,6 +23,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class MediaFormAlter implements ContainerInjectionInterface {
 
   use StringTranslationTrait;
+  use MessengerTrait;
 
   /**
    * The mpx media types repository.
@@ -37,11 +40,19 @@ class MediaFormAlter implements ContainerInjectionInterface {
   private $updateService;
 
   /**
+   * The custom media mpx logger service.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $logger;
+
+  /**
    * MediaFormAlter constructor.
    */
-  private function __construct(MpxMediaType $mpxMediaTypeRepository, UpdateVideoItem $updateService) {
+  private function __construct(MpxMediaType $mpxMediaTypeRepository, UpdateVideoItem $updateService, MpxLogger $logger) {
     $this->mpxMediaTypeRepository = $mpxMediaTypeRepository;
     $this->updateService = $updateService;
+    $this->logger = $logger;
   }
 
   /**
@@ -50,7 +61,8 @@ class MediaFormAlter implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('media_mpx.repository.mpx_media_types'),
-      $container->get('media_mpx.service.update_video_item')
+      $container->get('media_mpx.service.update_video_item'),
+      $container->get('media_mpx.exception_logger')
     );
   }
 
@@ -64,7 +76,7 @@ class MediaFormAlter implements ContainerInjectionInterface {
 
     $form['actions']['reimport'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Update with mpx data'),
+      '#value' => $this->t('Reimport mpx data'),
       '#submit' => [[$this, 'reimportCallback']],
     ];
   }
@@ -94,11 +106,11 @@ class MediaFormAlter implements ContainerInjectionInterface {
     $request = new UpdateVideoItemRequest($mpxId, $mediaTypeId);
     try {
       $this->updateService->execute($request);
-      // @todo: success message.
+      $this->messenger()->addMessage($this->t('The video has been reimported.'));
     }
     catch (\Exception $e) {
-      \Drupal::messenger()->addError('@todo: Add error message');
-      // @todo: logging.
+      $this->messenger()->addError("The video data could not be reimported. Try again in a few minutes.");
+      $this->logger->watchdogException($e, sprintf('Video Reimport failed for item %s', $mpxId));
     }
   }
 

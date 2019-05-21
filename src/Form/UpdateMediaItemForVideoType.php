@@ -7,13 +7,11 @@ namespace Drupal\media_mpx\Form;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Logger\RfcLogLevel;
-use Drupal\Core\Utility\Error;
 use Drupal\media\Entity\Media;
+use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -45,16 +43,16 @@ class UpdateMediaItemForVideoType extends FormBase {
   private $mpxTypeRepository;
 
   /**
-   * The system logger.
+   * The custom media mpx logger.
    *
-   * @var \Psr\Log\LoggerInterface
+   * @var \Drupal\media_mpx\MpxLogger
    */
   private $logger;
 
   /**
    * UpdateMediaItemForAccount constructor.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, LoggerInterface $logger) {
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger) {
     $this->mediaStorage = $entityTypeManager->getStorage('media');
     $this->updateVideoItemService = $updateVideoItem;
     $this->mpxTypeRepository = $mpxTypeRepository;
@@ -69,7 +67,7 @@ class UpdateMediaItemForVideoType extends FormBase {
       $container->get('entity_type.manager'),
       $container->get('media_mpx.service.update_video_item'),
       $container->get('media_mpx.repository.mpx_media_types'),
-      $container->get('logger.channel.media_mpx')
+      $container->get('media_mpx.exception_logger')
     );
   }
 
@@ -125,7 +123,7 @@ class UpdateMediaItemForVideoType extends FormBase {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
       $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
-      $this->watchdogException($e);
+      $this->logger->watchdogException($e, sprintf('mpx video with guid %s could not be updated', $guid));
     }
   }
 
@@ -172,26 +170,6 @@ class UpdateMediaItemForVideoType extends FormBase {
   }
 
   /**
-   * Logs an exception.
-   *
-   * @param \Exception $exception
-   *   The exception that is going to be logged.
-   * @param string $message
-   *   The message to store in the log.
-   *
-   * @see \Drupal\Core\Utility\Error::decodeException()
-   */
-  private function watchdogException(\Exception $exception, $message = NULL) {
-    // Use a default value if $message is not set.
-    if (empty($message)) {
-      $message = '%type: @message in %function (line %line of %file).';
-    }
-
-    $variables = Error::decodeException($exception);
-    $this->logger->log(RfcLogLevel::ERROR, $message, $variables);
-  }
-
-  /**
    * Returns the mpx Video Type options of the dropdown (prepared for form api).
    *
    * @return array
@@ -209,7 +187,7 @@ class UpdateMediaItemForVideoType extends FormBase {
       }
     }
     catch (\Exception $e) {
-      $this->watchdogException($e);
+      $this->logger->watchdogException($e, 'Could not load mpx video type options.');
     }
 
     return $video_opts;
