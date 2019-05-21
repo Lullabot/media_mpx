@@ -9,6 +9,7 @@ use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\media\Entity\Media;
 use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
@@ -89,18 +90,11 @@ class MediaFormAlter implements ContainerInjectionInterface {
     $form_object = $formState->getFormObject();
     $video = $form_object->getEntity();
 
-    $id_field = NULL;
-    if ($media_type = $this->mpxMediaTypeRepository->findByTypeId($video->bundle())) {
-      $field_map = $media_type->getFieldMap();
-
-      if (!isset($field_map['Media:id'])) {
-        $this->messenger()->addError($this->t('The mpx field @field is not mapped to any local field. The Media source must be configured
+    if (!$id_field = $this->resolveIdFieldName($video)) {
+      $this->messenger()->addError($this->t('The mpx field @field is not mapped to any local field. The Media source must be configured
           before using the Reimport feature', ['@field' => 'Media:id'])
-        );
-        return;
-      }
-
-      $id_field = $field_map['Media:id'] ?: NULL;
+      );
+      return;
     }
 
     try {
@@ -111,6 +105,29 @@ class MediaFormAlter implements ContainerInjectionInterface {
     }
     catch (\InvalidArgumentException $e) {
     }
+  }
+
+  /**
+   * Returns the name of the entity field holding the mpx ID.
+   *
+   * @param \Drupal\media\Entity\Media $video
+   *   The media entity for which to fetch the mpx ID field.
+   *
+   * @return string|null
+   *   The name of the field holding the mpx ID, or NULL if not configured.
+   */
+  private function resolveIdFieldName(Media $video):? string {
+    $id_field = NULL;
+    if ($media_type = $this->mpxMediaTypeRepository->findByTypeId($video->bundle())) {
+      $field_map = $media_type->getFieldMap();
+
+      if (!isset($field_map['Media:id'])) {
+        return NULL;
+      }
+
+      $id_field = $field_map['Media:id'];
+    }
+    return $id_field;
   }
 
   /**
