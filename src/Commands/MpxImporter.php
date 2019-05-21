@@ -1,10 +1,10 @@
 <?php
 
+// phpcs:disable Drupal.Commenting.FunctionComment.ParamMissingDefinition
+
 namespace Drupal\media_mpx\Commands;
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Queue\QueueFactory;
-use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Repository\MpxMediaType;
@@ -95,6 +95,7 @@ class MpxImporter extends DrushCommands {
    *
    * @param string $media_type_id
    *   The media type ID to import for.
+   *
    * @option batch_size An integer with the number of items to import per batch.
    *
    * @usage media_mpx:import {bundle}
