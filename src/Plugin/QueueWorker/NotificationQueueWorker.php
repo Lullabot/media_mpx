@@ -124,7 +124,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
         $this->mpxLogger->logException($reason);
       }
       elseif ($reason instanceof \Exception) {
-        $this->watchdogException($reason);
+        $this->mpxLogger->watchdogException($reason);
       }
       else {
         $this->logger->error('An error occurred processing an mpx notification: %reason', ['%reason' => (string) $reason]);
@@ -159,39 +159,6 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
       yield $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
     }
-  }
-
-  /**
-   * Logs an exception.
-   *
-   * @param \Exception $exception
-   *   The exception that is going to be logged.
-   * @param string $message
-   *   The message to store in the log.
-   * @param array $variables
-   *   Array of variables to replace in the message on display or
-   *   NULL if message is already translated or not possible to
-   *   translate.
-   * @param int $severity
-   *   The severity of the message, as per RFC 3164.
-   * @param string $link
-   *   A link to associate with the message.
-   *
-   * @see \Drupal\Core\Utility\Error::decodeException()
-   */
-  private function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
-    // Use a default value if $message is not set.
-    if (empty($message)) {
-      $message = '%type: @message in %function (line %line of %file).';
-    }
-
-    if ($link) {
-      $variables['link'] = $link;
-    }
-
-    $variables += Error::decodeException($exception);
-
-    $this->logger->log($severity, $message, $variables);
   }
 
 }
