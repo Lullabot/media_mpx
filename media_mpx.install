@@ -5,9 +5,41 @@
  * Installation hooks for media_mpx.
  */
 
+use Drupal\Core\Link;
+
 /**
  * Install the new guzzle_cache dependency.
  */
 function media_mpx_update_8101() {
   \Drupal::service('module_installer')->install(['guzzle_cache']);
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function media_mpx_requirements($phase) {
+  $requirements = [];
+
+  $mpx_importer_queue = \Drupal::queue('media_mpx_importer');
+  $thumbnail_queue = \Drupal::queue('media_entity_thumbnail');
+
+  $mpx_importer_queue->numberOfItems();
+
+  if ($phase === 'runtime') {
+    $requirements['media_mpx_video_items'] = [
+      'severity' => REQUIREMENT_INFO,
+      'title' => t('Media mpx'),
+      'value' => t('mpx videos queued for import: @items', ['@items' => $mpx_importer_queue->numberOfItems()]),
+      'description' => t('Videos for specific video types can be queued from the @link or via drush.', [
+        '@link' => Link::createFromRoute('mpx Queue Contents page', 'media_mpx.asset_sync.queue_contents')->toString(),
+      ]),
+    ];
+    $requirements['media_mpx_thumbnails_items'] = [
+      'severity' => REQUIREMENT_INFO,
+      'title' => t('Media mpx - Thumbnails'),
+      'value' => t('Thumbnail items queued for processing: @items', ['@items' => $thumbnail_queue->numberOfItems()]),
+    ];
+  }
+
+  return $requirements;
 }
