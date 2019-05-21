@@ -135,8 +135,8 @@ class MediaFormAlter implements ContainerInjectionInterface {
       $type_ids = [];
       foreach ($mpx_types as $key => $type) {
         $type_ids[] = $type->id();
-        return in_array($form_object->getEntity()->bundle(), $type_ids);
       }
+      return in_array($form_object->getEntity()->bundle(), $type_ids);
     }
     catch (\Exception $e) {
       return FALSE;
