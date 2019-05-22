@@ -38,21 +38,31 @@ media_mpx.settings:
   requirements:
     _permission: 'administer site configuration'
 
-media_mpx.asset_sync:
-  path: '/admin/config/media/mpx/asset-sync'
+media_mpx.asset_sync.queue_contents:
+  path: '/admin/content/media/mpx/queue-contents'
   defaults:
-    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
-    _title: 'mpx Asset Sync'
+    _title: 'Queue contents for updates'
+    _form: \Drupal\media_mpx\Form\QueueContentsForm
   requirements:
     _permission: 'manage media_mpx asset updates'
   options:
     _admin_route: TRUE
 
-media_mpx.asset_sync.queue_contents:
-  path: '/admin/config/media/mpx/asset-sync/queue-contents'
+media_mpx.asset_sync.single_for_video_type:
+  path: '/admin/content/media/mpx/update-item-for-video-type'
   defaults:
-    _title: 'Queue contents for updates'
-    _form: \Drupal\media_mpx\Form\QueueContentsForm
+    _title: 'Update an mpx Item for a given Video type'
+    _form: \Drupal\media_mpx\Form\UpdateMediaItemForVideoType
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE
+
+media_mpx.asset_sync.single_by_mpx_id:
+  path: '/admin/content/media/mpx/import-item-by-mpx-id'
+  defaults:
+    _title: 'Creates or Updates an mpx Item based on its mpx ID'
+    _form: \Drupal\media_mpx\Form\ImportVideoItemByMpxId
   requirements:
     _permission: 'manage media_mpx asset updates'
   options:
