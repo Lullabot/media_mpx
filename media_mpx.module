@@ -185,6 +185,10 @@ function media_mpx_migration_plugins_alter(array &$migrations) {
  * Implements hook_form_FORM_ID_alter().
  */
 function media_mpx_form_media_form_alter(&$form, $form_state, $form_id) {
-  $media_form_alter = MediaFormAlter::create(\Drupal::getContainer());
+  $mpx_type_repository = \Drupal::service('media_mpx.repository.mpx_media_types');
+  $update_service = \Drupal::service('media_mpx.service.update_video_item');
+  $logger = \Drupal::service('media_mpx.exception_logger');
+
+  $media_form_alter = new MediaFormAlter($mpx_type_repository, $update_service, $logger);
   $media_form_alter->alter($form, $form_state, $form_id);
 }
