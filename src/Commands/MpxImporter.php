@@ -4,16 +4,15 @@
 
 namespace Drupal\media_mpx\Commands;
 
-use Drupal\Core\Queue\QueueFactory;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Repository\MpxMediaType;
+use Drupal\media_mpx\Service\QueueVideoImports;
 use Drupal\media_mpx\Service\QueueVideoImportsRequest;
 use Drush\Commands\DrushCommands;
 use function GuzzleHttp\Promise\each_limit;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListQuery;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Drush commands for mpx.
@@ -41,13 +40,6 @@ class MpxImporter extends DrushCommands {
   private $dataObjectFactoryCreator;
 
   /**
-   * The factory to load the mpx notification queue.
-   *
-   * @var \Drupal\Core\Queue\QueueFactory
-   */
-  private $queueFactory;
-
-  /**
    * The class to import mpx objects.
    *
    * @var \Drupal\media_mpx\DataObjectImporter
@@ -55,18 +47,18 @@ class MpxImporter extends DrushCommands {
   private $dataObjectImporter;
 
   /**
-   * The system event dispatcher.
-   *
-   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
-   */
-  private $eventDispatcher;
-
-  /**
    * The mpx media type repository.
    *
    * @var \Drupal\media_mpx\Repository\MpxMediaType
    */
   private $mpxTypeRepository;
+
+  /**
+   * The Queue video imports service.
+   *
+   * @var \Drupal\media_mpx\Service\QueueVideoImports
+   */
+  private $queueVideoService;
 
   /**
    * MpxImporter constructor.
@@ -77,17 +69,14 @@ class MpxImporter extends DrushCommands {
    *   The creator used to configure a factory for loading mpx objects.
    * @param \Drupal\media_mpx\DataObjectImporter $dataObjectImporter
    *   The class used to import mpx objects.
-   * @param \Symfony\Component\EventDispatcher\EventDispatcherInterface $eventDispatcher
-   *   The system event dispatcher.
-   * @param \Drupal\Core\Queue\QueueFactory $queue_factory
-   *   The factory to load the mpx notification queue.
+   * @param \Drupal\media_mpx\Service\QueueVideoImports $queueVideoService
+   *   The Queue Video imports service.
    */
-  public function __construct(MpxMediaType $mpxTypeRepository, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, EventDispatcherInterface $eventDispatcher, QueueFactory $queue_factory) {
+  public function __construct(MpxMediaType $mpxTypeRepository, DataObjectFactoryCreator $dataObjectFactoryCreator, DataObjectImporter $dataObjectImporter, QueueVideoImports $queueVideoService) {
     $this->mpxTypeRepository = $mpxTypeRepository;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
     $this->dataObjectImporter = $dataObjectImporter;
-    $this->eventDispatcher = $eventDispatcher;
-    $this->queueFactory = $queue_factory;
+    $this->queueVideoService = $queueVideoService;
   }
 
   /**
@@ -105,7 +94,6 @@ class MpxImporter extends DrushCommands {
    * @aliases mpxi
    */
   public function import(string $media_type_id, $options = ['batch_size' => 100]) {
-    $queue_service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
     $batch_size = $options['batch_size'];
     $last_index = 0;
 
@@ -114,14 +102,14 @@ class MpxImporter extends DrushCommands {
     // First request is done out of the loop, to fetch total results and set up
     // the progress bar.
     $request = new QueueVideoImportsRequest($media_type_id, $batch_size, $last_index + 1);
-    $response = $queue_service->execute($request);
+    $response = $this->queueVideoService->execute($request);
     $total_count = $response->getIterator()->getTotalResults();
     $this->io()->progressStart($total_count);
 
     while ($last_index <= $total_count) {
       $last_index += $batch_size;
       $request = new QueueVideoImportsRequest($media_type_id, $batch_size, $last_index + 1);
-      $response = $queue_service->execute($request);
+      $response = $this->queueVideoService->execute($request);
       foreach ($response->getQueuedVideos() as $queued) {
         $this->io()->progressAdvance();
         $this->logger()->info(dt('@type @uri has been queued to be imported.',
@@ -130,7 +118,6 @@ class MpxImporter extends DrushCommands {
       }
     }
     $this->io()->progressFinish();
-
   }
 
   /**
