@@ -11,7 +11,6 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\media\Entity\Media;
 use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
-use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
 
@@ -49,8 +48,7 @@ class MediaFormAlter {
   /**
    * MediaFormAlter constructor.
    */
-  public function __construct(MpxMediaType $mpxMediaTypeRepository, UpdateVideoItem $updateService, MpxLogger $logger) {
-    $this->mpxMediaTypeRepository = $mpxMediaTypeRepository;
+  public function __construct(UpdateVideoItem $updateService, MpxLogger $logger) {
     $this->updateService = $updateService;
     $this->logger = $logger;
   }
@@ -100,17 +98,11 @@ class MediaFormAlter {
    *   The name of the field holding the mpx ID, or NULL if not configured.
    */
   private function resolveIdFieldName(Media $video):? string {
-    $id_field = NULL;
-    if ($media_type = $this->mpxMediaTypeRepository->findByTypeId($video->bundle())) {
-      $field_map = $media_type->getFieldMap();
-
-      if (!isset($field_map['Media:id'])) {
-        return NULL;
-      }
-
-      $id_field = $field_map['Media:id'];
+    if (!$field_map = $video->bundle->entity->getFieldMap()) {
+      return NULL;
     }
-    return $id_field;
+
+    return isset($field_map['Media:id']) ? $field_map['Media:id'] : NULL;
   }
 
   /**
