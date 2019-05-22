@@ -123,7 +123,7 @@ class UpdateMediaItemForVideoType extends FormBase {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
       $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
-      $this->logger->watchdogException($e, sprintf('mpx video with guid %s could not be updated', $guid));
+      $this->logger->watchdogException($e, 'mpx video with guid @guid could not be updated', ['@guid' => $guid]);
     }
   }
 

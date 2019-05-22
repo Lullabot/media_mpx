@@ -4,6 +4,8 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\FormAlter;
 
+use Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException;
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
@@ -11,6 +13,7 @@ use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\media\Entity\Media;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
@@ -75,27 +78,22 @@ class MediaFormAlter implements ContainerInjectionInterface {
       return;
     }
 
-    $form['actions']['reimport'] = [
+    $form['actions']['update'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Reimport mpx data'),
+      '#value' => $this->t('Update mpx data'),
       '#submit' => [[$this, 'reimportCallback']],
     ];
   }
 
   /**
-   * Callback for the 'reimport' button.
+   * Callback for the 'Update mpx data' button.
    */
   public function reimportCallback(array $form, FormStateInterface $formState) {
     /* @var \Drupal\Core\Entity\ContentEntityForm $form_object */
     $form_object = $formState->getFormObject();
     $video = $form_object->getEntity();
 
-    if (!$id_field = $this->resolveIdFieldName($video)) {
-      $this->messenger()->addError($this->t('The mpx field @field is not mapped to any local field. The Media source must be configured
-          before using the Reimport feature', ['@field' => 'Media:id'])
-      );
-      return;
-    }
+    $id_field = $this->resolveIdFieldName($video);
 
     try {
       if (($field = $video->get($id_field)) && !$field->isEmpty()) {
@@ -141,7 +139,7 @@ class MediaFormAlter implements ContainerInjectionInterface {
     }
     catch (\Exception $e) {
       $this->messenger()->addError("The video data could not be reimported. Try again in a few minutes.");
-      $this->logger->watchdogException($e, sprintf('Video Reimport failed for item %s', $mpxId));
+      $this->logger->watchdogException($e, 'Video Reimport failed for item @item', ['@item' => $mpxId]);
     }
   }
 
@@ -161,19 +159,14 @@ class MediaFormAlter implements ContainerInjectionInterface {
       return FALSE;
     }
 
-    try {
-      $mpx_types = $this->mpxMediaTypeRepository->findAllTypes();
-      $type_ids = [];
-      foreach ($mpx_types as $key => $type) {
-        $type_ids[] = $type->id();
-      }
-      return in_array($form_object->getEntity()->bundle(), $type_ids);
-    }
-    catch (\Exception $e) {
+    $entity = $form_object->getEntity();
+    $is_media_entity = $entity instanceof Media;
+
+    if (!$is_media_entity || !$entity->getSource() instanceof MpxMediaSourceInterface) {
       return FALSE;
     }
 
-    return FALSE;
+    return !is_null($this->resolveIdFieldName($entity));
   }
 
 }
