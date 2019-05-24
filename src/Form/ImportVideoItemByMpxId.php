@@ -6,12 +6,10 @@ namespace Drupal\media_mpx\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Logger\RfcLogLevel;
-use Drupal\Core\Utility\Error;
+use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -29,13 +27,6 @@ class ImportVideoItemByMpxId extends FormBase {
   private $updateVideoItem;
 
   /**
-   * The system logger.
-   *
-   * @var \Psr\Log\LoggerInterface
-   */
-  private $logger;
-
-  /**
    * The media type repository.
    *
    * @var \Drupal\media_mpx\Repository\MpxMediaType
@@ -43,9 +34,16 @@ class ImportVideoItemByMpxId extends FormBase {
   private $mpxTypeRepository;
 
   /**
+   * The custom media mpx logger.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $logger;
+
+  /**
    * UpdateMediaItemForAccount constructor.
    */
-  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, LoggerInterface $logger) {
+  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger) {
     $this->updateVideoItem = $updateVideoItem;
     $this->mpxTypeRepository = $mpxTypeRepository;
     $this->logger = $logger;
@@ -58,7 +56,7 @@ class ImportVideoItemByMpxId extends FormBase {
     return new static(
       $container->get('media_mpx.service.update_video_item'),
       $container->get('media_mpx.repository.mpx_media_types'),
-      $container->get('logger.channel.media_mpx')
+      $container->get('media_mpx.exception_logger')
     );
   }
 
@@ -107,28 +105,8 @@ class ImportVideoItemByMpxId extends FormBase {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
       $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
-      $this->watchdogException($e);
+      $this->logger->watchdogException($e);
     }
-  }
-
-  /**
-   * Logs an exception.
-   *
-   * @param \Exception $exception
-   *   The exception that is going to be logged.
-   * @param string $message
-   *   The message to store in the log.
-   *
-   * @see \Drupal\Core\Utility\Error::decodeException()
-   */
-  private function watchdogException(\Exception $exception, $message = NULL) {
-    // Use a default value if $message is not set.
-    if (empty($message)) {
-      $message = '%type: @message in %function (line %line of %file).';
-    }
-
-    $variables = Error::decodeException($exception);
-    $this->logger->log(RfcLogLevel::ERROR, $message, $variables);
   }
 
   /**
@@ -149,7 +127,7 @@ class ImportVideoItemByMpxId extends FormBase {
       }
     }
     catch (\Exception $e) {
-      $this->watchdogException($e);
+      $this->logger->watchdogException($e, 'Could not load mpx video type options.');
     }
 
     return $video_opts;
