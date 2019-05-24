@@ -4,23 +4,22 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\FormAlter;
 
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerTrait;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\media\Entity\Media;
 use Drupal\media_mpx\MpxLogger;
-use Drupal\media_mpx\Repository\MpxMediaType;
+use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Alters the media form for mpx items to add "Reimport" button.
  *
  * @package Drupal\media_mpx\FormAlter
  */
-class MediaFormAlter implements ContainerInjectionInterface {
+class MediaFormAlter {
 
   use StringTranslationTrait;
   use MessengerTrait;
@@ -49,21 +48,9 @@ class MediaFormAlter implements ContainerInjectionInterface {
   /**
    * MediaFormAlter constructor.
    */
-  private function __construct(MpxMediaType $mpxMediaTypeRepository, UpdateVideoItem $updateService, MpxLogger $logger) {
-    $this->mpxMediaTypeRepository = $mpxMediaTypeRepository;
+  public function __construct(UpdateVideoItem $updateService, MpxLogger $logger) {
     $this->updateService = $updateService;
     $this->logger = $logger;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('media_mpx.repository.mpx_media_types'),
-      $container->get('media_mpx.service.update_video_item'),
-      $container->get('media_mpx.exception_logger')
-    );
   }
 
   /**
@@ -74,29 +61,48 @@ class MediaFormAlter implements ContainerInjectionInterface {
       return;
     }
 
-    $form['actions']['reimport'] = [
+    $form['actions']['update'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Reimport mpx data'),
+      '#value' => $this->t('Update mpx data'),
       '#submit' => [[$this, 'reimportCallback']],
     ];
   }
 
   /**
-   * Callback for the 'reimport' button.
+   * Callback for the 'Update mpx data' button.
    */
   public function reimportCallback(array $form, FormStateInterface $formState) {
     /* @var \Drupal\Core\Entity\ContentEntityForm $form_object */
     $form_object = $formState->getFormObject();
     $video = $form_object->getEntity();
 
-    $id_field = NULL;
-    if ($media_type = $this->mpxMediaTypeRepository->findByTypeId($video->bundle())) {
-      $field_map = $media_type->getFieldMap();
-      $id_field = $field_map['Media:id'] ?: NULL;
+    $id_field = $this->resolveIdFieldName($video);
+
+    try {
+      if (($field = $video->get($id_field)) && !$field->isEmpty()) {
+        $mpx_id = $video->{$id_field}->value;
+        $this->updateVideoData((int) $mpx_id, $video->bundle());
+      }
+    }
+    catch (\InvalidArgumentException $e) {
+    }
+  }
+
+  /**
+   * Returns the name of the entity field holding the mpx ID.
+   *
+   * @param \Drupal\media\Entity\Media $video
+   *   The media entity for which to fetch the mpx ID field.
+   *
+   * @return string|null
+   *   The name of the field holding the mpx ID, or NULL if not configured.
+   */
+  private function resolveIdFieldName(Media $video):? string {
+    if (!$field_map = $video->bundle->entity->getFieldMap()) {
+      return NULL;
     }
 
-    $mpx_id = $video->{$id_field}->value;
-    $this->updateVideoData((int) $mpx_id, $video->bundle());
+    return isset($field_map['Media:id']) ? $field_map['Media:id'] : NULL;
   }
 
   /**
@@ -110,7 +116,7 @@ class MediaFormAlter implements ContainerInjectionInterface {
     }
     catch (\Exception $e) {
       $this->messenger()->addError("The video data could not be reimported. Try again in a few minutes.");
-      $this->logger->watchdogException($e, sprintf('Video Reimport failed for item %s', $mpxId));
+      $this->logger->watchdogException($e, 'Video Reimport failed for item @item', ['@item' => $mpxId]);
     }
   }
 
@@ -130,19 +136,14 @@ class MediaFormAlter implements ContainerInjectionInterface {
       return FALSE;
     }
 
-    try {
-      $mpx_types = $this->mpxMediaTypeRepository->findAllTypes();
-      $type_ids = [];
-      foreach ($mpx_types as $key => $type) {
-        $type_ids[] = $type->id();
-        return in_array($form_object->getEntity()->bundle(), $type_ids);
-      }
-    }
-    catch (\Exception $e) {
+    $entity = $form_object->getEntity();
+    $is_media_entity = $entity instanceof Media;
+
+    if (!$is_media_entity || !$entity->getSource() instanceof MpxMediaSourceInterface) {
       return FALSE;
     }
 
-    return FALSE;
+    return !is_null($this->resolveIdFieldName($entity));
   }
 
 }
