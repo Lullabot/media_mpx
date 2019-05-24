@@ -5,11 +5,16 @@ namespace Drupal\media_mpx\Plugin\media\Source;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
+use Drupal\field\FieldStorageConfigInterface;
+use Drupal\media\Entity\MediaType;
 use Drupal\media\MediaInterface;
 use Drupal\media\MediaSourceInterface;
+use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ClientException;
@@ -64,6 +69,17 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $dataServiceManager = $dataObjectFactory->getDataServiceManager();
     $this->mediaClass = $dataServiceManager->getDataService($service_info['service_name'], $service_info['object_type'], $service_info['schema_version'])->getClass();
     $this->mediaFileClass = $dataServiceManager->getDataService($service_info['service_name'], 'MediaFile', $service_info['schema_version'])->getClass();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defaultConfiguration() {
+    return parent::defaultConfiguration() + [
+      'media_image_bundle' => NULL,
+      'media_image_field' => NULL,
+      'media_image_entity_reference_field' => NULL,
+    ];
   }
 
   /**
@@ -458,6 +474,272 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       }
     }
     return $value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    /** @var \Drupal\Core\Form\SubformState $form_state */
+    $form = parent::buildConfigurationForm($form, $form_state);
+    /** @var \Drupal\media\MediaTypeInterface $entity */
+    $entity = $form_state->getFormObject()->getEntity();
+
+    $form['media_image_bundle'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Media image bundle'),
+      '#default_value' => $this->getConfiguration()['media_image_bundle'],
+      '#options' => $this->getImageMediaBundles(),
+      '#empty_option' => $this->t('- Select -'),
+      '#description' => $this->t('To have the thumbnail mapped to a media entity rather than a file (the default) choose a media type and field to map the thumbnail to.'),
+      '#ajax' => [
+        'callback' => [$this, 'mediaImageBundleOnChange'],
+        'event' => 'change',
+        'wrapper' => 'media-mpx-media-image-field',
+      ],
+    ];
+
+    // For some reason because $form_state is a SubFormState object, we can't
+    // get the current value of sub-form elements directly from it on an AJAX
+    // request. Thus we have to work through the complete form state, which is
+    // awkward b/c now we're coupled to the parent form's structure, which is
+    // the whole point of SubForm's. To be fair, the #states API (used below)
+    // is also coupled to the parent form structure.
+    // @see https://www.drupal.org/project/drupal/issues/2798261
+    $complete_form_state = $form_state->getCompleteFormState();
+    if ($complete_form_state->isProcessingInput()) {
+      $media_image_bundle = $complete_form_state->getValue(['source_configuration', 'media_image_bundle']);
+    }
+    else {
+      $media_image_bundle = $this->getConfiguration()['media_image_bundle'];
+    }
+    if ($media_image_bundle) {
+      $form['media_image_field'] = [
+        '#type' => 'select',
+        '#title' => $this->t('Media image field'),
+        '#default_value' => $this->getConfiguration()['media_image_field'],
+        '#options' => $this->getImageFieldsForMediaBundle($media_image_bundle),
+        '#description' => $this->t('Select an image field from the selected media bundle.'),
+        '#prefix' => '<div id="media-mpx-media-image-field">',
+        '#suffix' => '</div>',
+        '#required' => TRUE,
+      ];
+    }
+    else {
+      $form['media_image_field'] = [
+        '#markup' => '<div id="media-mpx-media-image-field"></div>',
+      ];
+    }
+
+    $form['media_image_entity_reference_field'] = [
+      '#type' => 'select',
+      '#title' => $this->t('Media image entity reference field'),
+      '#default_value' => $this->getConfiguration()['media_image_entity_reference_field'],
+      '#options' => $this->getMediaImageEntityReferenceFieldOptions($entity),
+      '#empty_option' => $this->t('- Create -'),
+      '#description' => $this->t('Select the field to use to store the entity reference to the created media entity. If none is selected, one will be created for you.'),
+      '#states' => [
+        'invisible' => [
+          ':input[name="source_configuration[media_image_bundle]"]' => ['value' => ''],
+        ],
+      ],
+    ];
+
+    return $form;
+  }
+
+  /**
+   * AJAX callback for when the media bundle changes.
+   *
+   * Used to update the field selection.
+   *
+   * @param array $form
+   *   The form array.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The render array to render in place of the media image fields spot.
+   */
+  public function mediaImageBundleOnChange(array &$form, FormStateInterface $form_state) {
+    return $form['source_dependent']['source_configuration']['media_image_field'];
+  }
+
+  /**
+   * Get a list of media bundles that could be used to save an image.
+   *
+   * @return array
+   *   Array of media bundle labels keyed by bundle id, suitable for use in a
+   *   #type => select return array.
+   */
+  protected function getImageMediaBundles() {
+    // Get all media bundles.
+    $bundles = $this->entityTypeManager->getStorage('media_type')->loadMultiple();
+
+    $bundles = array_filter($bundles, function (MediaType $bundle) {
+      // Filter out any bundles that use this source plugin. That would be
+      // silly.
+      if ($bundle->getSource()->getPluginId() === $this->getPluginId()) {
+        return FALSE;
+      }
+      // Filter out any bundles that don't have a suitable image field. Also
+      // silly.
+      return !empty($this->getImageFieldsForMediaBundle($bundle->id()));
+    });
+
+    return array_map(function (MediaType $bundle) {
+      return $bundle->label();
+    }, $bundles);
+  }
+
+  /**
+   * Get a list of image fields on the given media bundle.
+   *
+   * @param string $media_bundle_id
+   *   Image bundle id.
+   *
+   * @return array
+   *   Array of image fields keyed by field name.
+   */
+  protected function getImageFieldsForMediaBundle($media_bundle_id) {
+    $image_field_options = [];
+    foreach ($this->entityFieldManager->getFieldDefinitions('media', $media_bundle_id) as $field_name => $field) {
+      if (!($field instanceof BaseFieldDefinition) && $field->getType() === 'image') {
+        $image_field_options[$field_name] = sprintf('%s (%s)', $field->getLabel(), $field_name);
+      }
+    }
+    return $image_field_options;
+  }
+
+  /**
+   * Get a list of entity reference fields for the media type form.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   Media type to look for fields on.
+   *
+   * @return string[]
+   *   A list of media image entity reference field options for the media type
+   *   form.
+   */
+  protected function getMediaImageEntityReferenceFieldOptions(MediaTypeInterface $media_type) {
+    $options = [];
+    foreach ($this->entityFieldManager->getFieldDefinitions('media', $media_type->id()) as $field_name => $field) {
+      $field_storage = $field->getFieldStorageDefinition();
+      if (!$field_storage->isBaseField() &&
+        $field_storage->getType() === 'entity_reference' &&
+        $field_storage->getSetting('target_type') === 'media') {
+        $options[$field_name] = sprintf('%s (%s)', $field->getLabel(), $field_name);
+      }
+    }
+    return $options;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+    parent::submitConfigurationForm($form, $form_state);
+    /** @var \Drupal\media\MediaTypeInterface $entity */
+    $entity = $form_state->getFormObject()->getEntity();
+
+    // If a media bundle and field is chosen to map the thumbnail to, and no
+    // entity reference field was chosen, create an entity reference field.
+    $configuration = $this->getConfiguration();
+    if (!empty($configuration['media_image_bundle']) &&
+      !empty($configuration['media_image_field']) &&
+      empty($this->configuration['media_image_entity_reference_field'])) {
+      // Create the field storage.
+      $field_storage = $this->createMediaImageEntityReferenceFieldStorage();
+      // Create the field.
+      $this->createMediaImageEntityReferenceField($entity, $field_storage);
+      $this->configuration['media_image_entity_reference_field'] = $field_storage->getName();
+    }
+  }
+
+  /**
+   * Create the field storage for storing and entity reference to a media image.
+   *
+   * @return \Drupal\field\FieldStorageConfigInterface
+   *   The created field storage for the media image entity reference.
+   */
+  protected function createMediaImageEntityReferenceFieldStorage() {
+    /** @var \Drupal\field\FieldStorageConfigInterface $field_storage */
+    $field_storage = $this->entityTypeManager
+      ->getStorage('field_storage_config')
+      ->create([
+        'entity_type' => 'media',
+        'field_name' => $this->getMediaImageEntityReferenceFieldName(),
+        'type' => 'entity_reference',
+        'settings' => [
+          'target_type' => 'media',
+        ],
+      ]);
+    $field_storage->save();
+    return $field_storage;
+  }
+
+  /**
+   * Create the field for storing an entity reference to the mpx thumbnail.
+   *
+   * @param \Drupal\media\Entity\MediaType $media_type
+   *   The mpx media type to create the field for.
+   * @param \Drupal\field\FieldStorageConfigInterface $field_storage
+   *   The field storage to use for the created field.
+   *
+   * @return \Drupal\field\FieldConfigInterface
+   *   The field config that was created.
+   */
+  protected function createMediaImageEntityReferenceField(MediaType $media_type, FieldStorageConfigInterface $field_storage) {
+    /** @var \Drupal\field\FieldConfigInterface $field */
+    $field = $this->entityTypeManager
+      ->getStorage('field_config')
+      ->create([
+        'field_storage' => $field_storage,
+        'bundle' => $media_type->id(),
+        'label' => $this->t('Media image'),
+        'required' => FALSE,
+      ]);
+    $field->save();
+    return $field;
+  }
+
+  /**
+   * Generate a name for a new entity reference field.
+   *
+   * @return string
+   *   Generated name for a new entity reference field, taking into account
+   *   fields that are already defined.
+   */
+  protected function getMediaImageEntityReferenceFieldName() {
+    $base_id = 'field_media_image_reference';
+    $tries = 0;
+    $storage = $this->entityTypeManager->getStorage('field_storage_config');
+
+    // Iterate at least once, until no field with the generated ID is found.
+    do {
+      $id = $base_id;
+      // If we've tried before, increment and append the suffix.
+      if ($tries) {
+        $id .= '_' . $tries;
+      }
+      $field = $storage->load('media.' . $id);
+      $tries++;
+    } while ($field);
+
+    return $id;
+  }
+
+  /**
+   * Return whether the thumbnail should be saved as a media entity.
+   *
+   * @return bool
+   *   TRUE if the thumbnail should be saved as a media entity, otherwise FALSE.
+   */
+  public function doSaveThumbnailAsMedia() {
+    $configuration = $this->getConfiguration();
+    return !empty($configuration['media_image_bundle']) &&
+      !empty($configuration['media_image_field']) &&
+      !empty($configuration['media_image_entity_reference_field']);
   }
 
 }
