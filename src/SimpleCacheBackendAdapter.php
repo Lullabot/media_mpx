@@ -190,7 +190,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
    *
    * Checks that the item is either permanent or did not expire.
    *
-   * @param \stdClass $cache
+   * @param object $cache
    *   An item loaded from cache_get() or cache_get_multiple().
    * @param bool $allow_invalid
    *   If TRUE, a cache item may be returned even if it is expired or has been
@@ -199,7 +199,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
    * @return mixed
    *   The cache item or FALSE if the item expired.
    */
-  private function prepareItem(\stdClass $cache, bool $allow_invalid) {
+  private function prepareItem(object $cache, bool $allow_invalid) {
     if (!isset($cache->data)) {
       return FALSE;
     }
@@ -228,10 +228,10 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
    * @param string[] $tags
    *   An array of cache tags.
    *
-   * @return \stdClass
+   * @return object
    *   The cache item.
    */
-  private function createCacheItem($cid, $data, $expire, array $tags): \stdClass {
+  private function createCacheItem($cid, $data, $expire, array $tags): object {
     // Additional tag to support invalidateAll().
     $tags[] = 'simple_cache_adapter';
     $tags = array_unique($tags);
