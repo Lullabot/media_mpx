@@ -91,7 +91,7 @@ class DataObjectImporter {
   public function unpublishItem(int $mpx_object_id, MediaTypeInterface $media_type): array {
     $results = $this->loadMediaEntitiesById($media_type, $mpx_object_id);
     if (!empty($results)) {
-      foreach ($results as $result) {
+      foreach ($results as $entity) {
         if ($entity->isPublished()) {
           $entity->setUnpublished();
           $entity->save();
