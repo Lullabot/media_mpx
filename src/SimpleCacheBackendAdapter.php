@@ -199,7 +199,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
    * @return mixed
    *   The cache item or FALSE if the item expired.
    */
-  private function prepareItem(object $cache, bool $allow_invalid) {
+  private function prepareItem(\stdClass $cache, bool $allow_invalid) {
     if (!isset($cache->data)) {
       return FALSE;
     }
@@ -231,7 +231,7 @@ class SimpleCacheBackendAdapter implements CacheBackendInterface, CacheTagsInval
    * @return object
    *   The cache item.
    */
-  private function createCacheItem($cid, $data, $expire, array $tags): object {
+  private function createCacheItem($cid, $data, $expire, array $tags): \stdClass {
     // Additional tag to support invalidateAll().
     $tags[] = 'simple_cache_adapter';
     $tags = array_unique($tags);
