@@ -113,7 +113,6 @@ class DataObjectImporter {
    *   The array of media entities that were imported.
    */
   public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type): array {
-    // @todo Handle POST, PUT, Delete, etc.
     // Store an array of media items we touched, so we can clear out their
     // static cache.
     $reset_ids = [];
