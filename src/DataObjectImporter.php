@@ -89,15 +89,19 @@ class DataObjectImporter {
    *   The array of media entities that were imported.
    */
   public function unpublishItem(int $mpx_object_id, MediaTypeInterface $media_type): array {
+    // Find any existing media items, or return a new one.
     $results = $this->loadMediaEntitiesById($media_type, $mpx_object_id);
     if (!empty($results)) {
       foreach ($results as $entity) {
+        // Check if current entity is published or not
         if ($entity->isPublished()) {
+          // If yes then set as unpublished and save this change
           $entity->setUnpublished();
           $entity->save();
         }
       }
     }
+    // Return unpublished entities
     return $results;
   }
 
@@ -118,7 +122,6 @@ class DataObjectImporter {
     // static cache.
     $reset_ids = [];
     // @todo start a transaction.
-
     // Find any existing media items, or return a new one.
     $results = $this->loadMediaEntities($media_type, $mpx_object);
 
