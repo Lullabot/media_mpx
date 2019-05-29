@@ -154,10 +154,17 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     foreach ($notifications as $notification) {
       /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_media */
       $mpx_media = $notification->getNotification()->getEntry();
+      switch ($notification->getNotification()->getMethod()) {
+        case "delete":
+          $this->importer->unpublishItem($notification->getNotification()->getId(), $notification->getMediaType());
+          break;
 
-      $media_source = $this->importer::loadMediaSource($notification->getMediaType());
-      $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
-      yield $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
+        default:
+          $media_source = $this->importer::loadMediaSource($notification->getMediaType());
+          $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
+          yield $factory->load($mpx_media->getId(), ['headers' => ['Cache-Control' => 'no-cache']]);
+      }
+
     }
   }
 

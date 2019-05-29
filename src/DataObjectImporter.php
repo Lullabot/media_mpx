@@ -78,6 +78,30 @@ class DataObjectImporter {
   }
 
   /**
+   * Unpublish a media entity for mpx object of the given id and type.
+   *
+   * @param int $mpx_object_id
+   *   The mpx object id.
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to import to.
+   *
+   * @return \Drupal\media\MediaInterface[]
+   *   The array of media entities that were imported.
+   */
+  public function unpublishItem(int $mpx_object_id, MediaTypeInterface $media_type): array {
+    $results = $this->loadMediaEntitiesById($media_type, $mpx_object_id);
+    if (!empty($results)) {
+      foreach ($results as $result) {
+        if ($entity->isPublished()) {
+          $entity->setUnpublished();
+          $entity->save();
+        }
+      }
+    }
+    return $results;
+  }
+
+  /**
    * Import an mpx object into a media entity of the given type.
    *
    * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
@@ -126,10 +150,7 @@ class DataObjectImporter {
    *   An array of existing media entities or a new media entity.
    */
   private function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
-    $media_source = $this->loadMediaSource($media_type);
-    $source_field = $media_source->getSourceFieldDefinition($media_type);
-    $media_storage = $this->entityTypeManager->getStorage('media');
-    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object->getId()]);
+    $results = $this->loadMediaEntitiesById($media_type, $mpx_object->getId());
 
     // Create a new entity owned by the admin user.
     if (empty($results)) {
@@ -142,6 +163,26 @@ class DataObjectImporter {
       $new_media_entity->set($source_field->getName(), $mpx_object->getId());
       $results = [$new_media_entity];
     }
+
+    return $results;
+  }
+
+  /**
+   * Load all media entities for a given mpx object.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to load all entities for.
+   * @param int $mpx_object_id
+   *   The mpx object id to load the associated entities for.
+   *
+   * @return \Drupal\media\Entity\Media[]
+   *   An array of existing media entities or a new media entity.
+   */
+  private function loadMediaEntitiesById(MediaTypeInterface $media_type, int $mpx_object_id): array {
+    $media_source = $this->loadMediaSource($media_type);
+    $source_field = $media_source->getSourceFieldDefinition($media_type);
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object_id]);
 
     return $results;
   }
