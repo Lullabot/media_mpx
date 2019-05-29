@@ -80,7 +80,7 @@ class DataObjectImporter {
   /**
    * Unpublish a media entity for mpx object of the given id and type.
    *
-   * @param int $mpx_object_id
+   * @param int $id
    *   The mpx object id.
    * @param \Drupal\media\MediaTypeInterface $media_type
    *   The media type to import to.
@@ -88,21 +88,15 @@ class DataObjectImporter {
    * @return \Drupal\media\MediaInterface[]
    *   The array of media entities that were imported.
    */
-  public function unpublishItem(int $mpx_object_id, MediaTypeInterface $media_type): array {
-    // Find any existing media items, or return a new one.
-    $results = $this->loadMediaEntitiesById($media_type, $mpx_object_id);
-    if (!empty($results)) {
-      foreach ($results as $entity) {
-        // Check if current entity is published or not
-        if ($entity->isPublished()) {
-          // If yes then set as unpublished and save this change
-          $entity->setUnpublished();
-          $entity->save();
-        }
-      }
+  public function unpublishItem(int $id, MediaTypeInterface $media_type): array {
+    // Find any existing media items.
+    foreach ($this->loadMediaEntitiesById($media_type, $id) as $entity) {
+      // Set as unpublished and save this change.
+      $entity->setUnpublished();
+      $entity->save();
     }
-    // Return unpublished entities
-    return $results;
+    // Return unpublished entities.
+    return $entities;
   }
 
   /**
@@ -153,6 +147,7 @@ class DataObjectImporter {
    *   An array of existing media entities or a new media entity.
    */
   private function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
+    // Find any existing media items.
     $results = $this->loadMediaEntitiesById($media_type, $mpx_object->getId());
 
     // Create a new entity owned by the admin user.
