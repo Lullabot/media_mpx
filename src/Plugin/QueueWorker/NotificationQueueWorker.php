@@ -156,7 +156,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
       $mpx_media = $notification->getNotification()->getEntry();
       switch ($notification->getNotification()->getMethod()) {
         case "delete":
-          $this->importer->unpublishItem($notification->getNotification()->getId(), $notification->getMediaType());
+          $this->importer->unpublishItem($mpx_media, $notification->getMediaType());
           break;
 
         default:
