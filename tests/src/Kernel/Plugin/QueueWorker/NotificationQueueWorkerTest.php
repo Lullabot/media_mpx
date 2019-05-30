@@ -38,6 +38,7 @@ class NotificationQueueWorkerTest extends MediaMpxTestBase {
 
     $notification = new MpxNotification();
     $notification->setEntry($entry);
+    $notification->setMethod("get");
     $data[] = new Notification($notification, $this->mediaType);
 
     $this->handler->append(new JsonResponse(200, [], 'signin-success.json'));
@@ -79,6 +80,7 @@ class NotificationQueueWorkerTest extends MediaMpxTestBase {
 
     $notification = new MpxNotification();
     $notification->setEntry($entry);
+    $notification->setMethod("get");
     $data[] = new Notification($notification, $this->mediaType);
 
     $this->handler->append(new JsonResponse(200, [], 'signin-success.json'));
