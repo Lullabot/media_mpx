@@ -74,15 +74,9 @@ class MediaFormAlter {
   public function reimportCallback(array $form, FormStateInterface $formState) {
     /* @var \Drupal\Core\Entity\ContentEntityForm $form_object */
     $form_object = $formState->getFormObject();
-    $video = $form_object->getEntity();
-
-    $id_field = $this->resolveIdFieldName($video);
 
     try {
-      if (($field = $video->get($id_field)) && !$field->isEmpty()) {
-        $mpx_id = $video->{$id_field}->value;
-        $this->updateVideoData((int) $mpx_id, $video->bundle());
-      }
+      $this->updateVideoData($form_object->getEntity());
     }
     catch (\InvalidArgumentException $e) {
     }
@@ -98,25 +92,26 @@ class MediaFormAlter {
    *   The name of the field holding the mpx ID, or NULL if not configured.
    */
   private function resolveIdFieldName(Media $video):? string {
-    if (!$field_map = $video->bundle->entity->getFieldMap()) {
-      return NULL;
-    }
-
-    return isset($field_map['Media:id']) ? $field_map['Media:id'] : NULL;
+    $media_source = $video->getSource();
+    $source_field = $media_source->getSourceFieldDefinition($video->bundle->entity);
+    return $source_field->getName();
   }
 
   /**
    * Update video data and show success / error messages as relevant.
    */
-  public function updateVideoData(int $mpxId, string $mediaTypeId) {
-    $request = new UpdateVideoItemRequest($mpxId, $mediaTypeId);
+  public function updateVideoData(Media $video) {
+    $request = UpdateVideoItemRequest::createFromMediaEntity($video);
     try {
       $this->updateService->execute($request);
       $this->messenger()->addMessage($this->t('The video has been reimported.'));
     }
     catch (\Exception $e) {
+      $id_field = $this->resolveIdFieldName($video);
+      $mpx_id = $video->{$id_field}->value;
+
       $this->messenger()->addError("The video data could not be reimported. Try again in a few minutes.");
-      $this->logger->watchdogException($e, 'Video Reimport failed for item @item', ['@item' => $mpxId]);
+      $this->logger->watchdogException($e, 'Video Reimport failed for item @item', ['@item' => $mpx_id]);
     }
   }
 

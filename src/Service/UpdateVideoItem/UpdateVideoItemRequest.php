@@ -51,9 +51,12 @@ class UpdateVideoItemRequest {
    *   The request object, to be passed to the UpdateVideoItem service.
    */
   public static function createFromMediaEntity(Media $entity): UpdateVideoItemRequest {
-    $mpx_id = (int) $entity->get('field_mpx_id')->value;
-    $media_type_id = $entity->bundle();
-    return new self($mpx_id, $media_type_id);
+    $media_source = $entity->bundle->entity->getSource();
+    $source_field = $media_source->getSourceFieldDefinition($entity->bundle->entity);
+
+    $global_url_parts = explode('/', $entity->get($source_field->getName())->value);
+    $mpx_id = (int) end($global_url_parts);
+    return new self($mpx_id, $entity->bundle());
   }
 
   /**
@@ -68,7 +71,8 @@ class UpdateVideoItemRequest {
   public static function createFromMpxImportTask(MpxImportTask $importTask): UpdateVideoItemRequest {
     // Import tasks store the actual URI object pointing to the mpx object. Get
     // the last part only, which is the numeric id.
-    $mpx_id = (int) end(explode('/', $importTask->getMediaId()->getPath()));
+    $global_url_parts = explode('/', $importTask->getMediaId()->getPath());
+    $mpx_id = (int) end($global_url_parts);
 
     return new self($mpx_id, $importTask->getMediaTypeId());
   }

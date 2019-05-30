@@ -94,7 +94,6 @@ class DataObjectImporter {
     // static cache.
     $reset_ids = [];
     // @todo start a transaction.
-
     // Find any existing media items, or return a new one.
     $results = $this->loadMediaEntities($media_type, $mpx_object);
 
