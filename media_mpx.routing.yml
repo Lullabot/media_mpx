@@ -38,10 +38,10 @@ media_mpx.settings:
   requirements:
     _permission: 'administer site configuration'
 
-media_mpx.asset_sync.queue_contents:
-  path: '/admin/content/media/mpx/queue-contents'
+media_mpx.asset_sync.queue_videos:
+  path: '/admin/content/media/mpx/queue-videos'
   defaults:
-    _title: 'Queue contents for updates'
+    _title: 'Import all mpx videos'
     _form: \Drupal\media_mpx\Form\QueueContentsForm
   requirements:
     _permission: 'manage media_mpx asset updates'

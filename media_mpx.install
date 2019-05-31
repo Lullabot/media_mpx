@@ -31,7 +31,7 @@ function media_mpx_requirements($phase) {
       'title' => t('Media mpx'),
       'value' => t('mpx videos queued for import: @items', ['@items' => $mpx_importer_queue->numberOfItems()]),
       'description' => t('Videos for specific video types can be queued from the @link or via drush.', [
-        '@link' => Link::createFromRoute('mpx Queue Contents page', 'media_mpx.asset_sync.queue_contents')->toString(),
+        '@link' => Link::createFromRoute('mpx Import Videos page', 'media_mpx.asset_sync.queue_videos')->toString(),
       ]),
     ];
     $requirements['media_mpx_thumbnails_items'] = [
