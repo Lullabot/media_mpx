@@ -2,6 +2,7 @@
 
 namespace Drupal\media_mpx;
 
+use GuzzleHttp\Psr7\Uri;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\file\FileInterface;
@@ -78,6 +79,29 @@ class DataObjectImporter {
   }
 
   /**
+   * Unpublish a media entity for mpx object of the given id and type.
+   *
+   * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
+   *   The mpx object.
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to import to.
+   *
+   * @return \Drupal\media\MediaInterface[]
+   *   The array of media entities that were imported.
+   */
+  public function unpublishItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type): array {
+    // Find any existing media items.
+    $entities = $this->loadMediaEntitiesById($media_type, $mpx_object->getId());
+    foreach ($entities as $entity) {
+      // Set as unpublished and save this change.
+      $entity->setUnpublished();
+      $entity->save();
+    }
+    // Return unpublished entities.
+    return $entities;
+  }
+
+  /**
    * Import an mpx object into a media entity of the given type.
    *
    * @param \Lullabot\Mpx\DataService\ObjectInterface $mpx_object
@@ -89,7 +113,6 @@ class DataObjectImporter {
    *   The array of media entities that were imported.
    */
   public function importItem(ObjectInterface $mpx_object, MediaTypeInterface $media_type): array {
-    // @todo Handle POST, PUT, Delete, etc.
     // Store an array of media items we touched, so we can clear out their
     // static cache.
     $reset_ids = [];
@@ -125,13 +148,12 @@ class DataObjectImporter {
    *   An array of existing media entities or a new media entity.
    */
   private function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
-    $media_source = $this->loadMediaSource($media_type);
-    $source_field = $media_source->getSourceFieldDefinition($media_type);
-    $media_storage = $this->entityTypeManager->getStorage('media');
-    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object->getId()]);
+    // Find any existing media items.
+    $results = $this->loadMediaEntitiesById($media_type, $mpx_object->getId());
 
     // Create a new entity owned by the admin user.
     if (empty($results)) {
+      list('source_field' => $source_field, 'media_storage' => $media_storage) = $this->getSourceFieldAndStorage($media_type);
       /** @var \Drupal\media\Entity\Media $new_media_entity */
       $new_media_entity = $media_storage->create([
         $this->entityTypeManager->getDefinition('media')
@@ -143,6 +165,40 @@ class DataObjectImporter {
     }
 
     return $results;
+  }
+
+  /**
+   * Load all media entities for a given mpx object.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to load all entities for.
+   * @param GuzzleHttp\Psr7\Uri $mpx_object_id
+   *   The mpx object id to load the associated
+   *    entities for represente by UriInterface.
+   *
+   * @return \Drupal\media\Entity\Media[]
+   *   An array of existing media entities or a new media entity.
+   */
+  private function loadMediaEntitiesById(MediaTypeInterface $media_type, Uri $mpx_object_id): array {
+    list('source_field' => $source_field, 'media_storage' => $media_storage) = $this->getSourceFieldAndStorage($media_type);
+    $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object_id]);
+    return $results;
+  }
+
+  /**
+   * Get source field and storage for certain media type.
+   *
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   The media type to load all entities for.
+   *
+   * @return \Drupal\media\Entity\Media[]
+   *   An array of existing media entities or a new media entity.
+   */
+  private function getSourceFieldAndStorage(MediaTypeInterface $media_type): array {
+    $media_source = $this->loadMediaSource($media_type);
+    $source_field = $media_source->getSourceFieldDefinition($media_type);
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    return ['source_field' => $source_field, 'media_storage' => $media_storage];
   }
 
   /**
