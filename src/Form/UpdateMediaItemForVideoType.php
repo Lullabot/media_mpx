@@ -126,18 +126,24 @@ class UpdateMediaItemForVideoType extends FormBase {
     $video_item = NULL;
     if (!$video_item = $this->loadVideoMatchingGuidAndType($guid, $video_type)) {
       $videoMpxData = $this->loadVideoMatchingGuidAndTypeFromMpx($guid, $video_type);
-      $mpx_id = (int) end(explode('/', (string) $videoMpxData->getId()));
-      $request = new UpdateVideoItemRequest($mpx_id, $video_type);
-      try {
-        $this->updateVideoItemService->execute($request);
-        $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      if ($videoMpxData) {
+        $mpx_id = (int) end(explode('/', (string) $videoMpxData->getId()));
+        $request = new UpdateVideoItemRequest($mpx_id, $video_type);
+        try {
+          $this->updateVideoItemService->execute($request);
+          $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+        }
+        catch (\Exception $e) {
+          // Up until here, all necessary checks have been made. No custom
+          // exception handling needed other than for the db possibly
+          // exploding at this point.
+          $this->messenger()->addError($this->t('There has been an unexpected problem getting the video. Check the logs for details.'));
+          $this->logger->watchdogException($e);
+        }
       }
-      catch (\Exception $e) {
-        // Up until here, all necessary checks have been made. No custom
-        // exception handling needed other than for the db possibly
-        // exploding at this point.
-        $this->messenger()->addError($this->t('There has been an unexpected problem getting the video. Check the logs for details.'));
-        $this->logger->watchdogException($e);
+      else {
+        $this->messenger()->addError($this->t("Given GUID doesn't exists, please check and try again."));
+        $this->logger->watchdogException($e, 'mpx video with guid @guid could not be updated', ['@guid' => $guid]);
       }
     }
     else {
