@@ -133,8 +133,9 @@ class UpdateMediaItemForVideoType extends FormBase {
         $this->messenger()->addMessage($this->t('The selected video has been imported.'));
       }
       catch (\Exception $e) {
-        // Up until here, all necessary checks have been made. No custom exception
-        // handling needed other than for the db possibly exploding at this point.
+        // Up until here, all necessary checks have been made. No custom 
+        // exception handling needed other than for the db possibly
+        // exploding at this point.
         $this->messenger()->addError($this->t('There has been an unexpected problem getting the video. Check the logs for details.'));
         $this->logger->watchdogException($e);
       }
@@ -146,8 +147,9 @@ class UpdateMediaItemForVideoType extends FormBase {
         $this->messenger()->addMessage($this->t('The selected video has been updated.'));
       }
       catch (\Exception $e) {
-        // Up until here, all necessary checks have been made. No custom exception
-        // handling needed other than for the db possibly exploding at this point.
+        // Up until here, all necessary checks have been made. No custom
+        // exception handling needed other than for the db possibly
+        // exploding at this point.
         $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
         $this->logger->watchdogException($e, 'mpx video with guid @guid could not be updated', ['@guid' => $guid]);
       }
