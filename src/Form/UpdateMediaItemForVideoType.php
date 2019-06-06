@@ -274,7 +274,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     foreach ($results as $index => $mpx_media) {
       $queues[] = $mpx_media;
     }
-    return !empty($queues) ? reset($queues) : NULL;
+    return reset($queues) ?: NULL;
   }
 
   /**
