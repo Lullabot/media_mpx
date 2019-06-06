@@ -4,10 +4,8 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\Form;
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\media\Entity\Media;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
@@ -26,13 +24,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @package Drupal\media_mpx\Form
  */
 class UpdateMediaItemForVideoType extends FormBase {
-
-  /**
-   * The media storage.
-   *
-   * @var \Drupal\media\MediaStorage
-   */
-  private $mediaStorage;
 
   /**
    * The update video service.
