@@ -65,8 +65,6 @@ class UpdateMediaItemForVideoType extends FormBase {
   /**
    * UpdateMediaItemForAccount constructor.
    *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   The entity type manager used to load existing media entities.
    * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItem
    *   The update video service.
    * @param \Drupal\media_mpx\Repository\MpxMediaType $mpxTypeRepository
@@ -76,8 +74,7 @@ class UpdateMediaItemForVideoType extends FormBase {
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The factory used to load a complete mpx object.
    */
-  public function __construct(EntityTypeManagerInterface $entityTypeManager, UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
-    $this->mediaStorage = $entityTypeManager->getStorage('media');
+  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
     $this->updateVideoItemService = $updateVideoItem;
     $this->mpxTypeRepository = $mpxTypeRepository;
     $this->logger = $logger;
@@ -89,7 +86,6 @@ class UpdateMediaItemForVideoType extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity_type.manager'),
       $container->get('media_mpx.service.update_video_item'),
       $container->get('media_mpx.repository.mpx_media_types'),
       $container->get('media_mpx.exception_logger'),
@@ -134,26 +130,18 @@ class UpdateMediaItemForVideoType extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $video_type = $form_state->getValue('video_type');
     $guid = $form_state->getValue('guid');
-    $video_item = NULL;
-    if (!$video_item = $this->loadVideoMatchingGuidAndType($guid, $video_type)) {
-      $videoMpxData = $this->loadVideoMatchingGuidAndTypeFromMpx($guid, $video_type);
-      if ($videoMpxData) {
-        $mpx_id = (int) end(explode('/', (string) $videoMpxData->getId()));
-        $request = new UpdateVideoItemRequest($mpx_id, $video_type);
-        $successText = $this->t('The selected video has been imported.');
-        $errorText = $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
-        $this->submitFormProcessRequest($request, $guid, $successText, $errorText);
-        return;
-      }
-      $guidNotFoundException = new \Exception("Given GUID doesn't exists, please check and try again.");
-      $errorText = $this->t("Given GUID doesn't exists, please check and try again.");
-      $this->submitFormReportError($guid, $guidNotFoundException, $errorText);
+    $videoMpxData = $this->loadVideoMatchingGuidAndTypeFromMpx($guid, $video_type);
+    if ($videoMpxData) {
+      $mpx_id = (int) end(explode('/', (string) $videoMpxData->getId()));
+      $request = new UpdateVideoItemRequest($mpx_id, $video_type);
+      $successText = $this->t('The selected video has been imported.');
+      $errorText = $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
+      $this->submitFormProcessRequest($request, $guid, $successText, $errorText);
       return;
     }
-    $request = UpdateVideoItemRequest::createFromMediaEntity($video_item);
-    $successText = $this->t('The selected video has been updated.');
-    $errorText = $this->t('There has been an unexpected problem updating the video. Check the logs for details.');
-    $this->submitFormProcessRequest($request, $guid, $successText, $errorText);
+    $guidNotFoundException = new \Exception("Given GUID doesn't exists, please check and try again.");
+    $errorText = $this->t("Given GUID doesn't exists, please check and try again.");
+    $this->submitFormReportError($guid, $guidNotFoundException, $errorText);
   }
 
   /**
@@ -192,41 +180,6 @@ class UpdateMediaItemForVideoType extends FormBase {
    */
   public function getFormId() {
     return 'media_mpx_asset_sync_single_by_account_guid';
-  }
-
-  /**
-   * Loads the media entity with a given guid and bundle.
-   *
-   * @param string $guid
-   *   The guid to filter by.
-   * @param string $type
-   *   The video type.
-   *
-   * @return \Drupal\media\Entity\Media|null
-   *   The mpx Media entity matching the given guid
-   */
-  private function loadVideoMatchingGuidAndType(string $guid, string $type):? Media {
-    $guid_field = NULL;
-    if ($media_type = $this->mpxTypeRepository->findByTypeId($type)) {
-      $field_map = $media_type->getFieldMap();
-      $guid_field = $field_map['Media:guid'] ?: NULL;
-    }
-
-    if (!$guid_field) {
-      return NULL;
-    }
-
-    $id = $this->mediaStorage->getQuery()
-      ->condition($guid_field, $guid)
-      ->condition('bundle', $type)
-      ->execute();
-
-    $video = NULL;
-    if (!empty($id)) {
-      $video = $this->mediaStorage->load(reset($id));
-    }
-
-    return $video;
   }
 
   /**
