@@ -742,4 +742,44 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       !empty($configuration['media_image_entity_reference_field']);
   }
 
+  /**
+   * Get Mpx object id from uri string.
+   *
+   * @param string $mpx_object_id
+   *   The entity whose associated video will be checked to get the mpx id.
+   *
+   * @return int
+   *   The id from mpx object uri.
+   */
+  public static function getMpxObjectIdFromUri(string $mpx_object_id): int {
+    $global_url_parts = explode('/', $mpx_object_id);
+    $mpx_id = (int) end($global_url_parts);
+    return $mpx_id;
+  }
+
+  /**
+   * Get Mpx object id from entity.
+   *
+   * @param \Drupal\media\Entity\Media $entity
+   *   The entity whose associated video will be checked to get the mpx id.
+   *
+   * @return int
+   *   The id from mpx object related with the entity.
+   */
+  public static function getMpxObjectIdFromEntity(Media $entity): int {
+    $media_source = $entity->bundle->entity->getSource();
+    $source_field = $media_source->getSourceFieldDefinition($entity->bundle->entity);
+    return self::getMpxObjectIdFromUri($entity->get($source_field->getName())->value);
+  }
+
+  /**
+   * Get Mpx object id from current entity.
+   *
+   * @return int
+   *   The id from mpx object related with the current entity.
+   */
+  public function getMpxObjectId(): int {
+    return self::getMpxObjectId($this);
+  }
+
 }
