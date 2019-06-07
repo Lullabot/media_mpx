@@ -10,6 +10,7 @@ use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\Plugin\media\Source\Media as MediaEntity;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
@@ -121,49 +122,70 @@ class UpdateMediaItemForVideoType extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $video_type = $form_state->getValue('video_type');
     $guid = $form_state->getValue('guid');
-    $videoMpxData = $this->loadVideoMatchingGuidAndTypeFromMpx($guid, $video_type);
-    if ($videoMpxData) {
-      $mpx_id = (int) end(explode('/', (string) $videoMpxData->getId()));
+    $video_mpx_data = $this->loadVideoMatchingGuidAndTypeFromMpx($guid, $video_type);
+    if ($video_mpx_data) {
+      $mpx_id = MediaEntity::getMpxObjectIdFromUri((string) $video_mpx_data->getId());
       $request = new UpdateVideoItemRequest($mpx_id, $video_type);
-      $successText = $this->t('The selected video has been imported.');
-      $errorText = $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
-      $this->submitFormProcessRequest($request, $guid, $successText, $errorText);
+      $success_text = $this->t('The selected video has been imported.');
+      $error_text = $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
+      $this->submitFormProcessRequest($request, $guid, $success_text, $error_text);
       return;
     }
-    $guidNotFoundException = new \Exception("Given GUID doesn't exists, please check and try again.");
-    $errorText = $this->t("Given GUID doesn't exists, please check and try again.");
-    $this->submitFormReportError($guid, $guidNotFoundException, $errorText);
+    $guid_not_found_exception = new \Exception("Given GUID doesn't exist, please check and try again.");
+    $error_text = $this->t("Given GUID doesn't exist, please check and try again.");
+    $this->submitFormReportError($guid, $guid_not_found_exception, $error_text);
   }
 
   /**
-   * Process import / update item with the video item service.
-   */
-  private function submitFormProcessRequest(UpdateVideoItemRequest $request, $guid, $successText, $errorText) {
+   * Given request execute it with the video item service.
+   *
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest $request
+   *   Update/creation video request to be executed.
+   * @param string $guid
+   *   GUID of the required MPX object.
+   * @param string $success_text
+   *   Success text to be used on the notification.
+   * @param string $error_text
+   *   Error text to be used on the logger.
+   * */
+  private function submitFormProcessRequest(UpdateVideoItemRequest $request, string $guid, string $success_text, string $error_text) {
     try {
-      $this->submitFormExecuteRequest($request, $successText);
+      $this->submitFormExecuteRequest($request, $success_text);
     }
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom
       // exception handling needed other than for the db possibly
       // exploding at this point.
-      $this->submitFormReportError($guid, $e, $errorText);
+      $this->submitFormReportError($guid, $e, $error_text);
     }
   }
 
   /**
    * Given request execute it with the video item service.
+   *
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest $request
+   *   Update/creation video request to be executed.
+   * @param string $success_text
+   *   Success text to be used on the notification.
    */
-  private function submitFormExecuteRequest(UpdateVideoItemRequest $request, $successText) {
+  private function submitFormExecuteRequest(UpdateVideoItemRequest $request, string $success_text) {
     $this->updateVideoItemService->execute($request);
-    $this->messenger()->addMessage($successText);
+    $this->messenger()->addMessage($success_text);
   }
 
   /**
    * Report an error given guid and exception.
+   *
+   * @param string $guid
+   *   GUID of the required MPX object.
+   * @param \Exception $e
+   *   Exception that should be notified.
+   * @param string $error_text
+   *   Error text to be used on the logger.
    */
-  private function submitFormReportError(string $guid, \Exception $e, $errorText) {
-    $this->messenger()->addError($errorText);
-    $this->logger->watchdogException($e, 'mpx video with guid @guid could not be created/updated', ['@guid' => $guid]);
+  private function submitFormReportError(string $guid, \Exception $e, string $error_text) {
+    $this->messenger()->addError($error_text);
+    $this->logger->watchdogException($e, 'mpx video with guid @Guid could not be created/updated.', ['@Guid' => $guid]);
   }
 
   /**
@@ -184,7 +206,7 @@ class UpdateMediaItemForVideoType extends FormBase {
    * @return \Drupal\media\Entity\Media|null
    *   The mpx Media entity matching the given guid
    */
-  private function loadVideoMatchingGuidAndTypeFromMpx(string $guid, string $type):?MpxMedia {
+  private function loadVideoMatchingGuidAndTypeFromMpx(string $guid, string $type): ?MpxMedia {
     $media_type = $this->mpxTypeRepository->findByTypeId($type);
     if (!$media_type) {
       return NULL;
@@ -204,7 +226,7 @@ class UpdateMediaItemForVideoType extends FormBase {
    * @return \Lullabot\Mpx\DataService\Media\Media|null
    *   The Media entity returned by the mpx.
    */
-  private function fetchMediaTypeItemGuidFromMpx(MediaTypeInterface $media_type, string $guid):?MpxMedia {
+  private function fetchMediaTypeItemGuidFromMpx(MediaTypeInterface $media_type, string $guid): ?MpxMedia {
     $field_query = new ByFields();
     $field_query->addField('guid', $guid);
     $query = new ObjectListQuery();
