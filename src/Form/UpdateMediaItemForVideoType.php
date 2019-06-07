@@ -126,13 +126,13 @@ class UpdateMediaItemForVideoType extends FormBase {
     if ($video_mpx_data) {
       $mpx_id = MediaEntity::getMpxObjectIdFromUri((string) $video_mpx_data->getId());
       $request = new UpdateVideoItemRequest($mpx_id, $video_type);
-      $success_text = $this->t('The selected video has been imported.');
-      $error_text = $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
+      $success_text = (string) $this->t('The selected video has been imported.');
+      $error_text = (string) $this->t('There has been an unexpected problem getting the video. Check the logs for details.');
       $this->submitFormProcessRequest($request, $guid, $success_text, $error_text);
       return;
     }
     $guid_not_found_exception = new \Exception("Given GUID doesn't exist, please check and try again.");
-    $error_text = $this->t("Given GUID doesn't exist, please check and try again.");
+    $error_text = (string) $this->t("Given GUID doesn't exist, please check and try again.");
     $this->submitFormReportError($guid, $guid_not_found_exception, $error_text);
   }
 
