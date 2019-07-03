@@ -215,27 +215,11 @@ class MediaAvailableAccess {
     }
 
     // One last attempt to get a date time object if the value is a timestamp.
-    if ($this->isValidTimestamp($fieldItemList->value)) {
-      $date_time = (new \DateTime())->setTimestamp($fieldItemList->value);
+    if ($date_time = \DateTime::createFromFormat('U', $fieldItemList->value)) {
       return new ConcreteDateTime($date_time);
     }
 
     return new NullDateTime();
-  }
-
-  /**
-   * Checks whether a value is valid to be used as a timestamp.
-   *
-   * @param string|int $value
-   *   The value to check.
-   *
-   * @return bool
-   *   TRUE if the value is a valid timestamp, FALSE otherwise.
-   */
-  private function isValidTimestamp($value) {
-    return ((string) (int) $value === $value)
-      && ($value <= PHP_INT_MAX)
-      && ($value >= ~PHP_INT_MAX);
   }
 
 }
