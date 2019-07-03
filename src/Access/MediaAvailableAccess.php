@@ -206,9 +206,36 @@ class MediaAvailableAccess {
    */
   private function getDateTime(MediaInterface $media, string $field_name): DateTimeFormatInterface {
     $fieldItemList = $media->get($field_name);
-    $date_time = \DateTime::createFromFormat(DateTimeItemInterface::DATETIME_STORAGE_FORMAT, $fieldItemList->value);
-    $date = !$fieldItemList->isEmpty() && $date_time ? new ConcreteDateTime($date_time) : new NullDateTime();
-    return $date;
+    if ($fieldItemList->isEmpty()) {
+      return new NullDateTime();
+    }
+
+    if ($date_time = \DateTime::createFromFormat(DateTimeItemInterface::DATETIME_STORAGE_FORMAT, $fieldItemList->value)) {
+      return new ConcreteDateTime($date_time);
+    }
+
+    // One last attempt to get a date time object if the value is a timestamp.
+    if ($this->isValidTimestamp($fieldItemList->value)) {
+      $date_time = (new \DateTime())->setTimestamp($fieldItemList->value);
+      return new ConcreteDateTime($date_time);
+    }
+
+    return new NullDateTime();
+  }
+
+  /**
+   * Checks whether a value is valid to be used as a timestamp.
+   *
+   * @param string|int $value
+   *   The value to check.
+   *
+   * @return bool
+   *   TRUE if the value is a valid timestamp, FALSE otherwise.
+   */
+  private function isValidTimestamp($value) {
+    return ((string) (int) $value === $value)
+      && ($value <= PHP_INT_MAX)
+      && ($value >= ~PHP_INT_MAX);
   }
 
 }
