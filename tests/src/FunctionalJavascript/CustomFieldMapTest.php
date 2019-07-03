@@ -16,8 +16,14 @@ use Drupal\media_mpx_test\JsonResponse;
  */
 class CustomFieldMapTest extends WebDriverTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = [
     'media_mpx',
     'media_mpx_test',
