@@ -102,7 +102,7 @@ Unfortunately, mpx returns `Cache-control: no-cache` headers in every request.
 For most Drupal sites, cached video data is fine to use and expected given that
 the data is copied into media entities. By default, all requests loading a
 single data object (like an mpx media item) are cached. When using any of the
-provided services to load mpx data (such as `media_mpx.authenticated_client` or
+provided services to load mpx data (such as `media_mpx.authenticated_client_factory` or
 `media_mpx.data_object_factory_creator`), assume data will be cached. To force
 a fresh request, pass in an appropriate `Cache-Control` header, such as:
 

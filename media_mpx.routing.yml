@@ -37,3 +37,33 @@ media_mpx.settings:
     _title: 'mpx settings'
   requirements:
     _permission: 'administer site configuration'
+
+media_mpx.asset_sync.queue_videos:
+  path: '/admin/content/media/mpx/queue-videos'
+  defaults:
+    _title: 'Import all mpx videos'
+    _form: \Drupal\media_mpx\Form\QueueContentsForm
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE
+
+media_mpx.asset_sync.single_for_video_type:
+  path: '/admin/content/media/mpx/update-item-for-video-type'
+  defaults:
+    _title: 'Update an mpx Item for a given Video type'
+    _form: \Drupal\media_mpx\Form\UpdateMediaItemForVideoType
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE
+
+media_mpx.asset_sync.single_by_mpx_id:
+  path: '/admin/content/media/mpx/import-item-by-mpx-id'
+  defaults:
+    _title: 'Creates or Updates an mpx Item based on its mpx ID'
+    _form: \Drupal\media_mpx\Form\ImportVideoItemByMpxId
+  requirements:
+    _permission: 'manage media_mpx asset updates'
+  options:
+    _admin_route: TRUE

@@ -11,6 +11,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\media\MediaInterface;
+use Drupal\media_mpx\FormAlter\MediaFormAlter;
 use Drupal\media_mpx\Plugin\QueueWorker\ThumbnailDownloader;
 
 /**
@@ -178,4 +179,15 @@ function media_mpx_migration_plugins_alter(array &$migrations) {
       ];
     }
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function media_mpx_form_media_form_alter(&$form, $form_state, $form_id) {
+  $update_service = \Drupal::service('media_mpx.service.update_video_item');
+  $logger = \Drupal::service('media_mpx.exception_logger');
+
+  $media_form_alter = new MediaFormAlter($update_service, $logger);
+  $media_form_alter->alter($form, $form_state, $form_id);
 }

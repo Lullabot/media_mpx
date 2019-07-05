@@ -83,7 +83,7 @@ class DataObjectFactoryCreator {
    * @return \Lullabot\Mpx\DataService\DataObjectFactory
    *   A factory to load and query objects with.
    */
-  public function fromMediaSource(MpxMediaSourceInterface $media_source) {
+  public function fromMediaSource(MpxMediaSourceInterface $media_source): MpxDataObjectFactory {
     if (!$service_info = $media_source->getPluginDefinition()['media_mpx']) {
       throw new \InvalidArgumentException('The media source annotation must have a media_mpx key');
     }

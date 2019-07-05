@@ -1,2 +1,4 @@
 administer media_mpx_account:
   title: 'Administer mpx account'
+manage media_mpx asset updates:
+  title: 'Manage mpx asset updates'
