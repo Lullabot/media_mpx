@@ -98,8 +98,16 @@ class ImportVideoItemByMpxId extends FormBase {
 
     $request = new UpdateVideoItemRequest($mpx_id, $video_type);
     try {
-      $this->updateVideoItem->execute($request);
-      $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      $response = $this->updateVideoItem->execute($request);
+      if (empty($response->getUpdatedEntities())) {
+        $this->messenger()->addWarning($this->t('The selected video: @video_title (@guid) did not import. The video was filtered out by one or more custom import filters. Adjust the video metadata in mpx to ensure it\'s available to be imported and try again.', [
+          '@video_title' => $mpx_media->getTitle(),
+          '@guid' => $mpx_media->getGuid(),
+        ]));
+      }
+      else {
+        $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      }
     }
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom exception

@@ -169,8 +169,17 @@ class UpdateMediaItemForVideoType extends FormBase {
    *   Success text to be used on the notification.
    */
   private function submitFormExecuteRequest(UpdateVideoItemRequest $request, string $success_text) {
-    $this->updateVideoItemService->execute($request);
-    $this->messenger()->addMessage($success_text);
+    $response = $this->updateVideoItemService->execute($request);
+    if (empty($response->getUpdatedEntities())) {
+      $mpx_media = $response->getMpxItem();
+      $this->messenger()->addWarning($this->t('The selected video: @video_title (@guid) did not import. The video was filtered out by one or more custom import filters. Adjust the video metadata in mpx to ensure it\'s available to be imported and try again.', [
+        '@video_title' => $mpx_media->getTitle(),
+        '@guid' => $mpx_media->getGuid(),
+      ]));
+    }
+    else {
+      $this->messenger()->addMessage($success_text);
+    }
   }
 
   /**
