@@ -7,6 +7,7 @@ namespace Drupal\media_mpx\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
@@ -104,9 +105,9 @@ class ImportVideoItemByMpxId extends FormBase {
       $response = $this->updateVideoItem->execute($request);
       if (empty($response->getUpdatedEntities())) {
         $mpx_media = $response->getMpxItem();
-        $this->messenger()->addWarning($this->t("The selected video: @video_title (@guid) did not import. The video was filtered out by one or more custom import filters. Adjust the video metadata in mpx to ensure it's available to be imported and try again.", [
+        $this->messenger()->addWarning($this->t("The selected video: @video_title (@id) did not import. The video was filtered out by one or more custom import filters. Adjust the video metadata in mpx to ensure it's available to be imported and try again.", [
           '@video_title' => $mpx_media->getTitle(),
-          '@guid' => $mpx_media->getGuid(),
+          '@id' => Media::getMpxObjectIdFromUri((string) $mpx_media->getId()),
         ]));
       }
       else {
@@ -116,7 +117,7 @@ class ImportVideoItemByMpxId extends FormBase {
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
-      $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
+      $this->messenger()->addError($this->t('There has been an unexpected problem importing the video. Check the logs for details.'));
       $this->logger->watchdogException($e);
     }
   }

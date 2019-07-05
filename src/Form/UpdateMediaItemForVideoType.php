@@ -132,8 +132,8 @@ class UpdateMediaItemForVideoType extends FormBase {
       $this->submitFormProcessRequest($request, $guid, $success_text, $error_text);
       return;
     }
-    $guid_not_found_exception = new \Exception("Given GUID doesn't exist, please check and try again.");
-    $error_text = (string) $this->t("Given GUID doesn't exist, please check and try again.");
+    $guid_not_found_exception = new \Exception("Given guid doesn't exist, please check and try again.");
+    $error_text = (string) $this->t("Given guid doesn't exist, please check and try again.");
     $this->submitFormReportError($guid, $guid_not_found_exception, $error_text);
   }
 
