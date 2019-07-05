@@ -71,19 +71,22 @@ class ImportVideoItemByMpxId extends FormBase {
 
     $form['video_type'] = [
       '#type' => 'select',
-      '#title' => $this->t('Video Type'),
+      '#title' => $this->t('Video type'),
       '#description' => $this->t('Choose the video type to import the video into.'),
       '#options' => $video_opts,
       '#required' => TRUE,
     ];
     $form['mpx_id'] = [
       '#type' => 'textfield',
-      '#title' => t('mpx item ID'),
+      '#title' => t('ID'),
+      '#placeholder' => 'Type the ID of the mpx video you want to import.',
       '#required' => FALSE,
     ];
-    $form['submit'] = [
+    $form['actions']['#type'] = 'actions';
+    $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Import Item'),
+      '#value' => $this->t('Import video'),
+      '#button_type' => 'primary',
     ];
 
     return $form;
