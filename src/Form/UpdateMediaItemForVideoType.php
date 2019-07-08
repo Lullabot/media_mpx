@@ -103,7 +103,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     ];
     $form['guid'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('Guid'),
+      '#title' => $this->t('GUID'),
       '#placeholder' => 'Type the GUID of the mpx video you want to import.',
       '#required' => TRUE,
     ];
