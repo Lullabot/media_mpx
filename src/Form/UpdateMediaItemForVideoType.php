@@ -172,7 +172,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     $response = $this->updateVideoItemService->execute($request);
     if (empty($response->getUpdatedEntities())) {
       $mpx_media = $response->getMpxItem();
-      $this->messenger()->addWarning($this->t("The selected video: @video_title (@guid) did not import. The video was filtered out by one or more custom import filters. Adjust the video metadata in mpx to ensure it's available to be imported and try again.", [
+      $this->messenger()->addWarning($this->t("The selected video: @video_title (@guid) did not import. There may be one or more custom business rules in place which filtered it out. Consult the site administrator, adjust the video metadata in mpx to ensure it's available to be imported, and try again.", [
         '@video_title' => $mpx_media->getTitle(),
         '@guid' => $mpx_media->getGuid(),
       ]));
