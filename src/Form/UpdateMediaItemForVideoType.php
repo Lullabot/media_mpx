@@ -96,21 +96,22 @@ class UpdateMediaItemForVideoType extends FormBase {
 
     $form['video_type'] = [
       '#type' => 'select',
-      '#title' => $this->t('Video Type'),
+      '#title' => $this->t('Video type'),
       '#description' => $this->t('Choose the video type to import the video into.'),
       '#options' => $video_opts,
       '#required' => TRUE,
     ];
     $form['guid'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('guid'),
-      '#placeholder' => 'Type the GUID of the mpx item you want to import.',
+      '#title' => $this->t('GUID'),
+      '#placeholder' => 'Type the GUID of the mpx video you want to import.',
       '#required' => TRUE,
     ];
-
-    $form['submit'] = [
+    $form['actions']['#type'] = 'actions';
+    $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Update item'),
+      '#value' => $this->t('Import video'),
+      '#button_type' => 'primary',
     ];
 
     return $form;
@@ -131,8 +132,8 @@ class UpdateMediaItemForVideoType extends FormBase {
       $this->submitFormProcessRequest($request, $guid, $success_text, $error_text);
       return;
     }
-    $guid_not_found_exception = new \Exception("Given GUID doesn't exist, please check and try again.");
-    $error_text = (string) $this->t("Given GUID doesn't exist, please check and try again.");
+    $guid_not_found_exception = new \RuntimeException(sprintf("Given guid (%s) doesn't exist, please check and try again.", $guid));
+    $error_text = (string) $this->t("Given guid (@guid) doesn't exist, please check and try again.", ['@guid' => $guid]);
     $this->submitFormReportError($guid, $guid_not_found_exception, $error_text);
   }
 
@@ -153,9 +154,8 @@ class UpdateMediaItemForVideoType extends FormBase {
       $this->submitFormExecuteRequest($request, $success_text);
     }
     catch (\Exception $e) {
-      // Up until here, all necessary checks have been made. No custom
-      // exception handling needed other than for the db possibly
-      // exploding at this point.
+      // Up until here, all necessary checks have been made. No custom exception
+      // handling needed other than for the db possibly exploding at this point.
       $this->submitFormReportError($guid, $e, $error_text);
     }
   }
@@ -169,8 +169,17 @@ class UpdateMediaItemForVideoType extends FormBase {
    *   Success text to be used on the notification.
    */
   private function submitFormExecuteRequest(UpdateVideoItemRequest $request, string $success_text) {
-    $this->updateVideoItemService->execute($request);
-    $this->messenger()->addMessage($success_text);
+    $response = $this->updateVideoItemService->execute($request);
+    if (empty($response->getUpdatedEntities())) {
+      $mpx_media = $response->getMpxItem();
+      $this->messenger()->addWarning($this->t("The selected video: @video_title (@guid) did not import. There may be one or more custom business rules in place which filtered it out. Consult the site administrator, adjust the video metadata in mpx to ensure it's available to be imported, and try again.", [
+        '@video_title' => $mpx_media->getTitle(),
+        '@guid' => $mpx_media->getGuid(),
+      ]));
+    }
+    else {
+      $this->messenger()->addMessage($success_text);
+    }
   }
 
   /**

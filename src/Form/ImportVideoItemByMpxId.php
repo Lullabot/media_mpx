@@ -7,6 +7,7 @@ namespace Drupal\media_mpx\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\media_mpx\MpxLogger;
+use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
@@ -71,19 +72,22 @@ class ImportVideoItemByMpxId extends FormBase {
 
     $form['video_type'] = [
       '#type' => 'select',
-      '#title' => $this->t('Video Type'),
+      '#title' => $this->t('Video type'),
       '#description' => $this->t('Choose the video type to import the video into.'),
       '#options' => $video_opts,
       '#required' => TRUE,
     ];
     $form['mpx_id'] = [
       '#type' => 'textfield',
-      '#title' => t('mpx item ID'),
+      '#title' => $this->t('ID'),
+      '#placeholder' => $this->t('Type the ID of the mpx video you want to import.'),
       '#required' => FALSE,
     ];
-    $form['submit'] = [
+    $form['actions']['#type'] = 'actions';
+    $form['actions']['submit'] = [
       '#type' => 'submit',
-      '#value' => $this->t('Import Item'),
+      '#value' => $this->t('Import video'),
+      '#button_type' => 'primary',
     ];
 
     return $form;
@@ -98,13 +102,22 @@ class ImportVideoItemByMpxId extends FormBase {
 
     $request = new UpdateVideoItemRequest($mpx_id, $video_type);
     try {
-      $this->updateVideoItem->execute($request);
-      $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      $response = $this->updateVideoItem->execute($request);
+      if (empty($response->getUpdatedEntities())) {
+        $mpx_media = $response->getMpxItem();
+        $this->messenger()->addWarning($this->t("The selected video: @video_title (@id) did not import. There may be one or more custom business rules in place which filtered it out. Consult the site administrator, adjust the video metadata in mpx to ensure it's available to be imported, and try again.", [
+          '@video_title' => $mpx_media->getTitle(),
+          '@id' => Media::getMpxObjectIdFromUri((string) $mpx_media->getId()),
+        ]));
+      }
+      else {
+        $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      }
     }
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
-      $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
+      $this->messenger()->addError($this->t('There has been an unexpected problem importing the video. Check the logs for details.'));
       $this->logger->watchdogException($e);
     }
   }

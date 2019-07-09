@@ -50,13 +50,15 @@ class QueueContentsForm extends FormBase {
 
     $form['mpx_video_types'] = [
       '#type' => 'checkboxes',
-      '#title' => $this->t('mpx Video Types'),
+      '#title' => $this->t('mpx Video types'),
       '#options' => $options,
       '#required' => TRUE,
     ];
-    $form['queue'] = [
+    $form['actions']['#type'] = 'actions';
+    $form['actions']['queue'] = [
       '#type' => 'submit',
       '#value' => $this->t('Import videos'),
+      '#button_type' => 'primary',
     ];
 
     return $form;
