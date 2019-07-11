@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\Service\UpdateVideoItem;
 
+use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\Repository\MpxMediaType;
@@ -14,6 +15,7 @@ use Drupal\media_mpx\Repository\MpxMediaType;
  * @package Drupal\media_mpx\Service\ImportVideoItem
  */
 class UpdateVideoItem {
+  use DependencySerializationTrait;
 
   /**
    * The Data Object Importer.
