@@ -51,7 +51,7 @@ media_mpx.asset_sync.queue_videos:
 media_mpx.asset_sync.single_for_video_type:
   path: '/admin/content/media/mpx/update-item-for-video-type'
   defaults:
-    _title: 'Update an mpx Item for a given Video type'
+    _title: 'Import mpx video by GUID'
     _form: \Drupal\media_mpx\Form\UpdateMediaItemForVideoType
   requirements:
     _permission: 'manage media_mpx asset updates'
@@ -61,7 +61,7 @@ media_mpx.asset_sync.single_for_video_type:
 media_mpx.asset_sync.single_by_mpx_id:
   path: '/admin/content/media/mpx/import-item-by-mpx-id'
   defaults:
-    _title: 'Creates or Updates an mpx Item based on its mpx ID'
+    _title: 'Import mpx video by Full ID'
     _form: \Drupal\media_mpx\Form\ImportVideoItemByMpxId
   requirements:
     _permission: 'manage media_mpx asset updates'
