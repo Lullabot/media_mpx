@@ -245,11 +245,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
 
     $results = $factory->select($query);
-    $queues = [];
-    foreach ($results as $index => $mpx_media) {
-      $queues[] = $mpx_media;
-    }
-    return reset($queues) ?: NULL;
+    return ($results->valid() ? $results->current() : NULL);
   }
 
   /**
