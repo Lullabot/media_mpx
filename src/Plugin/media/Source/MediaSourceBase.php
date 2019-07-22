@@ -110,6 +110,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The logger used to log errors while downloading thumbnails.
    * @param \Lullabot\Mpx\DataService\CustomFieldManager $customFieldManager
    *   The manager used to load custom field classes.
+   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
+   *   The file system.
    *
    * @todo Refactor this constructor to reduce the number of parameters.
    */
