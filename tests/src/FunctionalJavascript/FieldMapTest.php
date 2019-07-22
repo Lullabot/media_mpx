@@ -43,6 +43,7 @@ class FieldMapTest extends WebDriverTestBase {
       ->getEditable('media.settings')
       ->set('standalone_url', TRUE)
       ->save(TRUE);
+    $this->container->get('router.builder')->rebuild();
 
     /** @var \Drupal\media_mpx_test\MockClientFactory $factory */
     $factory = $this->container->get('media_mpx.client_factory');
