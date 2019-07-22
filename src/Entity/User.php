@@ -36,7 +36,12 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "edit-form" = "/admin/config/media/mpx/user/{media_mpx_user}/edit",
  *     "delete-form" = "/admin/config/media/mpx/user/{media_mpx_user}/delete",
  *     "collection" = "/admin/config/media/mpx/user"
- *   }
+ *   },
+ *   config_export={
+ *     "id",
+ *     "username",
+ *     "password",
+ *   },
  * )
  */
 class User extends ConfigEntityBase implements UserInterface {
