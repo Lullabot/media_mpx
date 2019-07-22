@@ -37,6 +37,11 @@ class PlayerFormatterTest extends WebDriverTestBase {
    * that an iframe is properly rendered.
    */
   public function testViewPlayerFormatter() {
+    $this->container->get('config.factory')
+      ->getEditable('media.settings')
+      ->set('standalone_url', TRUE)
+      ->save(TRUE);
+
     /** @var \Drupal\media_mpx_test\MockClientFactory $factory */
     $factory = $this->container->get('media_mpx.client_factory');
     $factory->getMockHandler()->append([
