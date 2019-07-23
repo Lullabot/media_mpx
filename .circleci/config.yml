@@ -16,7 +16,7 @@
 defaults: &defaults
   docker:
     # specify the version you desire here (avoid latest except for testing)
-    - image: quay.io/deviantintegral/drupal_tests:latest
+    - image: quay.io/deviantintegral/drupal_tests:0.5.0-drupal87
 
     - image: selenium/standalone-chrome-debug:3.141.59-neon
 
