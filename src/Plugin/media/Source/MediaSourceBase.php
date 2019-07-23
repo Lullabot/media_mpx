@@ -2,6 +2,7 @@
 
 namespace Drupal\media_mpx\Plugin\media\Source;
 
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\media\MediaSourceBase as DrupalMediaSourceBase;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -78,6 +79,13 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
   protected $thumbnailsDirectory = 'public://media_mpx/thumbnails/';
 
   /**
+   * The file system.
+   *
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  private $fileSystem;
+
+  /**
    * Media constructor.
    *
    * @param array $configuration
@@ -102,10 +110,12 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The logger used to log errors while downloading thumbnails.
    * @param \Lullabot\Mpx\DataService\CustomFieldManager $customFieldManager
    *   The manager used to load custom field classes.
+   * @param \Drupal\Core\File\FileSystemInterface $fileSystem
+   *   The file system.
    *
    * @todo Refactor this constructor to reduce the number of parameters.
    */
-  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger, CustomFieldManager $customFieldManager) {
+  public function __construct(array $configuration, string $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, FieldTypePluginManagerInterface $field_type_manager, ConfigFactoryInterface $config_factory, DataObjectFactoryCreator $dataObjectFactory, ClientInterface $httpClient, LoggerInterface $logger, CustomFieldManager $customFieldManager, FileSystemInterface $fileSystem) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $entity_field_manager, $field_type_manager, $config_factory);
     $this->dataObjectFactoryCreator = $dataObjectFactory;
     $this->httpClient = $httpClient;
@@ -113,6 +123,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $this->customFieldManager = $customFieldManager;
 
     $this->mpxLogger = new MpxLogger($logger);
+    $this->fileSystem = $fileSystem;
   }
 
   /**
@@ -130,7 +141,8 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
       $container->get('media_mpx.data_object_factory_creator'),
       $container->get('http_client'),
       $container->get('logger.channel.media_mpx'),
-      $container->get('media_mpx.custom_field_manager')
+      $container->get('media_mpx.custom_field_manager'),
+      $container->get('file_system')
     );
   }
 
@@ -285,9 +297,9 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
     if (!file_exists($local_uri)) {
       $directory = dirname($local_uri);
-      file_prepare_directory($directory, FILE_CREATE_DIRECTORY);
+      $this->fileSystem->prepareDirectory($directory, FILE_CREATE_DIRECTORY);
       $thumbnail = $this->httpClient->request('GET', $thumbnailUrl);
-      file_unmanaged_save_data((string) $thumbnail->getBody(), $local_uri);
+      $this->fileSystem->saveData((string) $thumbnail->getBody(), $local_uri);
     }
 
     return $local_uri;
