@@ -10,6 +10,7 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\media\Entity\Media;
 use Drupal\Tests\media_mpx\Kernel\MediaMpxTestBase;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\User;
 
 /**
@@ -19,6 +20,7 @@ use Drupal\user\Entity\User;
  * @coversDefaultClass \Drupal\media_mpx\Access\MediaAvailableAccess
  */
 class MediaAvailableAccessTest extends MediaMpxTestBase {
+  use UserCreationTrait;
 
   /**
    * {@inheritdoc}
@@ -56,11 +58,7 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
    */
   public function testAccessChecksForMediaItemWithTimestampFields() {
     $anonymous = User::getAnonymousUser();
-    $media = Media::create([
-      'bundle' => $this->mediaType->get('id'),
-      'title' => 'test available access',
-      'field_media_media_mpx_media' => 'http://example.com/1234',
-    ]);
+    $media = $this->createMedia();
 
     $field_map = [];
     $field_map['Media:availableDate'] = 'field_available_date_timestamp';
@@ -88,17 +86,9 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
    */
   public function testAccessChecksForMediaItemWithDateTimeFields() {
     $anonymous = User::getAnonymousUser();
-    $media = Media::create([
-      'bundle' => $this->mediaType->get('id'),
-      'title' => 'test available access',
-      'field_media_media_mpx_media' => 'http://example.com/1234',
-    ]);
+    $media = $this->createMedia();
 
-    $field_map = [];
-    $field_map['Media:availableDate'] = 'field_available_date_datetime';
-    $field_map['Media:expirationDate'] = 'field_expiration_date_datetime';
-    $this->mediaType->setFieldMap($field_map);
-    $this->mediaType->save();
+    $this->setExpirationFieldMapDateTime();
 
     /** @var \Drupal\media_mpx\Access\MediaAvailableAccess $available_access_service */
     $available_access_service = $this->container->get('media_mpx.media_available_access');
@@ -111,6 +101,43 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
       $access = $available_access_service->view($media, $anonymous);
       $this->assertInstanceOf($expectedClass, $access);
     }
+  }
+
+  /**
+   * Test that availability access is skipped if you can edit the media.
+   */
+  public function testAccessWithEditPermission() {
+    $user = $this->setUpCurrentUser([], ['update any media']);
+
+    $this->setExpirationFieldMapDateTime();
+
+    $media = $this->createMedia();
+
+    // Set the video to expired 10 seconds in the past.
+    $media->set('field_available_date_datetime', 0);
+    $media->set('field_expiration_date_datetime', time() - 10);
+
+    /** @var \Drupal\media_mpx\Access\MediaAvailableAccess $available_access_service */
+    $available_access_service = $this->container->get('media_mpx.media_available_access');
+    $this->assertTrue($available_access_service->view($media, $user)->isNeutral());
+  }
+
+  /**
+   * Test that availability access is used if you can not edit the media.
+   */
+  public function testAccessWithoutEditPermission() {
+    $user = $this->setUpCurrentUser();
+
+    $this->setExpirationFieldMapDateTime();
+
+    $media = $this->createMedia();
+
+    $media->set('field_available_date_datetime', 0);
+    $media->set('field_expiration_date_datetime', time() - 10);
+
+    /** @var \Drupal\media_mpx\Access\MediaAvailableAccess $available_access_service */
+    $available_access_service = $this->container->get('media_mpx.media_available_access');
+    $this->assertTrue($available_access_service->view($media, $user)->isForbidden());
   }
 
   /**
@@ -251,6 +278,31 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
       'required' => TRUE,
     ]);
     $field_exp_datetime->save();
+  }
+
+  /**
+   * Set field mappings for datetime date fields.
+   */
+  private function setExpirationFieldMapDateTime() {
+    $field_map = [];
+    $field_map['Media:availableDate'] = 'field_available_date_datetime';
+    $field_map['Media:expirationDate'] = 'field_expiration_date_datetime';
+    $this->mediaType->setFieldMap($field_map);
+    $this->mediaType->save();
+  }
+
+  /**
+   * Create a media entity.
+   *
+   * @return \Drupal\media\Entity\Media
+   */
+  private function createMedia() {
+    $media = Media::create([
+      'bundle' => $this->mediaType->get('id'),
+      'title' => 'test available access',
+      'field_media_media_mpx_media' => 'http://example.com/1234',
+    ]);
+    return $media;
   }
 
 }
