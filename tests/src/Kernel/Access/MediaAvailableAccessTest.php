@@ -199,7 +199,7 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
   /**
    * Creates necessary datetime and integer fields for Access tests.
    */
-  protected function createExpirationAndAvailableFields(): void {
+  protected function createExpirationAndAvailableFields() {
     $mpx_media_type_id = $this->mediaType->get('id');
     $field_avail_timestamp_storage = FieldStorageConfig::create([
       'field_name' => 'field_available_date_timestamp',
@@ -295,6 +295,7 @@ class MediaAvailableAccessTest extends MediaMpxTestBase {
    * Create a media entity.
    *
    * @return \Drupal\media\Entity\Media
+   *   Returns an unsaved media entity.
    */
   private function createMedia() {
     $media = Media::create([
