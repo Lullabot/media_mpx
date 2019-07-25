@@ -65,8 +65,8 @@ class MediaAvailableAccess {
       return AccessResult::neutral();
     }
 
-    // If you can edit an entity, don't apply availability rules.
-    if ($media->access('edit', $account)) {
+    // If you can update an entity, don't apply availability rules.
+    if ($media->access('update', $account)) {
       return AccessResult::neutral();
     }
 
