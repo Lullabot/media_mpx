@@ -5,10 +5,7 @@ declare(strict_types = 1);
 namespace Drupal\media_mpx\Form;
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\media_mpx\MpxLogger;
 use Drupal\media_mpx\Plugin\media\Source\Media;
-use Drupal\media_mpx\Repository\MpxMediaType;
-use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
