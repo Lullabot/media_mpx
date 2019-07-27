@@ -52,6 +52,7 @@ class QueueContentsForm extends FormBase {
       '#type' => 'checkboxes',
       '#title' => $this->t('mpx Video types'),
       '#options' => $options,
+      '#default_value' => count($options) === 1 ? array_keys($options) : [],
       '#required' => TRUE,
     ];
     $form['actions']['#type'] = 'actions';

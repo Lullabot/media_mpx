@@ -99,6 +99,7 @@ class UpdateMediaItemForVideoType extends FormBase {
       '#title' => $this->t('Video type'),
       '#description' => $this->t('Choose the video type to import the video into.'),
       '#options' => $video_opts,
+      '#default_value' => count($video_opts) === 1 ? array_keys($video_opts) : [],
       '#required' => TRUE,
     ];
     $form['guid'] = [
