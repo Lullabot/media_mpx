@@ -11,7 +11,6 @@ use Drupal\media_mpx\Repository\MpxMediaType;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
 
-
 /**
  * Form class to import a single mpx item based on its id.
  *

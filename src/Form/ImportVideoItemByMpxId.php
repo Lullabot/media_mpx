@@ -22,13 +22,6 @@ class ImportVideoItemByMpxId extends ImportUpdateVideoItem {
   /**
    * {@inheritdoc}
    */
-  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger) {
-    parent::__construct($updateVideoItem, $mpxTypeRepository, $logger);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('media_mpx.service.update_video_item'),
