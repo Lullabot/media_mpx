@@ -4,17 +4,52 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\Form;
 
+use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
+use Drupal\media_mpx\Repository\MpxMediaType;
+use Drupal\media_mpx\MpxLogger;
 
 /**
  * Form class to import a single mpx item based on its id.
  *
  * @package Drupal\media_mpx\Form
  */
-class ImportVideoItemByMpxId extends ImportUpdateVideoItem {
+class ImportVideoItemByMpxId extends FormBase {
+  use ImportUpdateVideoItemTrait;
+
+  /**
+   * The Update Video Item service.
+   *
+   * @var \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
+   */
+  private $updateVideoItem;
+
+  /**
+   * The media type repository.
+   *
+   * @var \Drupal\media_mpx\Repository\MpxMediaType
+   */
+  private $mpxTypeRepository;
+
+  /**
+   * The custom media mpx logger.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $logger;
+
+  /**
+   * UpdateMediaItemForAccount constructor.
+   */
+  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger) {
+    $this->updateVideoItem = $updateVideoItem;
+    $this->mpxTypeRepository = $mpxTypeRepository;
+    $this->logger = $logger;
+  }
 
   /**
    * {@inheritdoc}
@@ -31,7 +66,7 @@ class ImportVideoItemByMpxId extends ImportUpdateVideoItem {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildForm($form, $form_state);
+    $form = $this->buildBaseForm($form);
 
     $form['mpx_id'] = [
       '#type' => 'textfield',
