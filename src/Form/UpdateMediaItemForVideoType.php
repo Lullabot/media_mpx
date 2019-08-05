@@ -4,6 +4,7 @@ declare(strict_types = 1);
 
 namespace Drupal\media_mpx\Form;
 
+use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\DataObjectFactoryCreator;
@@ -23,7 +24,30 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @package Drupal\media_mpx\Form
  */
-class UpdateMediaItemForVideoType extends ImportUpdateVideoItem {
+class UpdateMediaItemForVideoType extends FormBase {
+
+  use ImportUpdateVideoItemTrait;
+
+  /**
+   * The Update Video Item service.
+   *
+   * @var \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
+   */
+  private $updateVideoItemService;
+
+  /**
+   * The media type repository.
+   *
+   * @var \Drupal\media_mpx\Repository\MpxMediaType
+   */
+  private $mpxTypeRepository;
+
+  /**
+   * The custom media mpx logger.
+   *
+   * @var \Drupal\media_mpx\MpxLogger
+   */
+  private $logger;
 
   /**
    * The Data Object Factory Creator.
@@ -35,7 +59,7 @@ class UpdateMediaItemForVideoType extends ImportUpdateVideoItem {
   /**
    * UpdateMediaItemForAccount constructor.
    *
-   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItem
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItemService
    *   The update video service.
    * @param \Drupal\media_mpx\Repository\MpxMediaType $mpxTypeRepository
    *   The mpx Media Types repository.
@@ -44,8 +68,10 @@ class UpdateMediaItemForVideoType extends ImportUpdateVideoItem {
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The factory used to load a complete mpx object.
    */
-  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
-    parent::__construct($updateVideoItem, $mpxTypeRepository, $logger);
+  public function __construct(UpdateVideoItem $updateVideoItemService, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
+    $this->updateVideoItemService = $updateVideoItemService;
+    $this->mpxTypeRepository = $mpxTypeRepository;
+    $this->logger = $logger;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
   }
 
@@ -65,7 +91,7 @@ class UpdateMediaItemForVideoType extends ImportUpdateVideoItem {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $form = parent::buildForm($form, $form_state);
+    $form = $this->buildBaseForm($form, $form_state);
     $form['guid'] = [
       '#type' => 'textfield',
       '#title' => $this->t('GUID'),
