@@ -26,15 +26,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class UpdateMediaItemForVideoType extends FormBase {
 
+  use ImportUpdateVideoItemTrait;
+
   /**
-   * The update video service.
+   * The Update Video Item service.
    *
    * @var \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
    */
   private $updateVideoItemService;
 
   /**
-   * The mpx Media Type Repository.
+   * The media type repository.
    *
    * @var \Drupal\media_mpx\Repository\MpxMediaType
    */
@@ -57,7 +59,7 @@ class UpdateMediaItemForVideoType extends FormBase {
   /**
    * UpdateMediaItemForAccount constructor.
    *
-   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItem
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItemService
    *   The update video service.
    * @param \Drupal\media_mpx\Repository\MpxMediaType $mpxTypeRepository
    *   The mpx Media Types repository.
@@ -66,8 +68,8 @@ class UpdateMediaItemForVideoType extends FormBase {
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The factory used to load a complete mpx object.
    */
-  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
-    $this->updateVideoItemService = $updateVideoItem;
+  public function __construct(UpdateVideoItem $updateVideoItemService, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
+    $this->updateVideoItemService = $updateVideoItemService;
     $this->mpxTypeRepository = $mpxTypeRepository;
     $this->logger = $logger;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
@@ -89,29 +91,12 @@ class UpdateMediaItemForVideoType extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    if (!$video_opts = $this->loadVideoTypeOptions()) {
-      $this->messenger()->addError($this->t('There has been an unexpected problem loading the form. Reload the page.'));
-      return [];
-    }
-
-    $form['video_type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Video type'),
-      '#description' => $this->t('Choose the video type to import the video into.'),
-      '#options' => $video_opts,
-      '#required' => TRUE,
-    ];
+    $form = $this->buildBaseForm($form, $form_state);
     $form['guid'] = [
       '#type' => 'textfield',
       '#title' => $this->t('GUID'),
       '#placeholder' => 'Type the GUID of the mpx video you want to import.',
       '#required' => TRUE,
-    ];
-    $form['actions']['#type'] = 'actions';
-    $form['actions']['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Import video'),
-      '#button_type' => 'primary',
     ];
 
     return $form;
@@ -246,30 +231,6 @@ class UpdateMediaItemForVideoType extends FormBase {
 
     $results = $factory->select($query);
     return ($results->valid() ? $results->current() : NULL);
-  }
-
-  /**
-   * Returns the mpx Video Type options of the dropdown (prepared for form api).
-   *
-   * @return array
-   *   An array with options to show in the dropdown. The keys are the video
-   *   types, and the values are the video type label.
-   */
-  private function loadVideoTypeOptions(): array {
-    $video_opts = [];
-
-    try {
-      $video_types = $this->mpxTypeRepository->findAllTypes();
-
-      foreach ($video_types as $type) {
-        $video_opts[$type->id()] = $type->label();
-      }
-    }
-    catch (\Exception $e) {
-      $this->logger->watchdogException($e, 'Could not load mpx video type options.');
-    }
-
-    return $video_opts;
   }
 
 }
