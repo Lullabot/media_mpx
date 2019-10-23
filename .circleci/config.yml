@@ -183,6 +183,7 @@ code_coverage: &code_coverage
     - run:
         working_directory: /var/www/html
         command: |
+          chown -R www-data artifacts
           ./code-coverage-stats.sh $CIRCLE_PROJECT_REPONAME
     - store_artifacts:
         path: /var/www/html/artifacts
