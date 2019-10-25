@@ -39,6 +39,20 @@ media_mpx.media_mpx_user.*:
 media.source.media_mpx_media:
   type: media_mpx.account_aware
   label: '"Media" media source configuration'
+  mapping:
+    media_image_bundle:
+      type: string
+      label: 'Media image bundle'
+    media_image_field:
+      type: string
+      label: 'Media image field'
+    media_image_entity_reference_field:
+      type: string
+      label: 'Media image entity reference field'
+
+media.source.media_mpx_feedconfig:
+  type: media_mpx.account_aware
+  label: '"FeedConfig" media source configuration'
 
 media_mpx.account_aware:
   type: mapping
@@ -49,15 +63,6 @@ media_mpx.account_aware:
     account:
       type: string
       label: 'mpx Account entity ID'
-    media_image_bundle:
-      type: string
-      label: 'Media image bundle'
-    media_image_field:
-      type: string
-      label: 'Media image field'
-    media_image_entity_reference_field:
-      type: string
-      label: 'Media image entity reference field'
 
 field.formatter.settings.media_mpx_video:
   type: mapping
