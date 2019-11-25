@@ -69,7 +69,7 @@ class UpdateVideoItem {
 
     $media_source = $this->importer->loadMediaSource($media_type);
     $factory = $this->objectFactoryCreator->fromMediaSource($media_source);
-    $results = $factory->loadByNumericId($mpx_id);
+    $results = $factory->loadByNumericId($mpx_id, FALSE, ['headers' => ['Cache-Control' => 'no-cache']]);
     $mpx_media = $results->wait();
     $saved = $this->importer->importItem($mpx_media, $media_type);
 
