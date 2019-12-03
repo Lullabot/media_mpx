@@ -16,7 +16,7 @@ use Drupal\media_mpx\Plugin\media\Source\Media as MpxMediaSource;
  * @FieldFormatter(
  *   id = "media_mpx_console_link",
  *   label = @Translation("mpx Console Link"),
- *   description = @Translation("Suitable for use on fields storing the mpx guid value, the mpx console link formatter will create a link to the media in the mpx console.")
+ *   description = @Translation("Suitable for use on fields storing the mpx guid value, the mpx console link formatter will create a link to the media in the mpx console."),
  *   field_types = {
  *     "string"
  *   }
