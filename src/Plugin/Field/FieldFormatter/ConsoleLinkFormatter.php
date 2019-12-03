@@ -2,8 +2,6 @@
 
 namespace Drupal\media_mpx\Plugin\Field\FieldFormatter;
 
-use Drupal\Core\Annotation\Translation;
-use Drupal\Core\Field\Annotation\FieldFormatter;
 use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
@@ -56,7 +54,7 @@ class ConsoleLinkFormatter extends FormatterBase {
    * @param \Drupal\Core\Field\FieldItemListInterface $items
    *   The field values to be rendered.
    *
-   * @return boolean
+   * @return bool
    *   TRUE if this field formatter applies, otherwise FALSE.
    */
   protected function appliesTo(FieldItemListInterface $items) {
