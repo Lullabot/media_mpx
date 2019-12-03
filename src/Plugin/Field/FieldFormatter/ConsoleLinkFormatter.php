@@ -4,10 +4,12 @@ namespace Drupal\media_mpx\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Field\Annotation\FieldFormatter;
+use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\FormatterBase;
 use Drupal\Core\Url;
 use Drupal\media\Entity\Media;
+use Drupal\media_mpx\Entity\Account;
 use Drupal\media_mpx\Plugin\media\Source\Media as MpxMediaSource;
 
 /**
@@ -30,16 +32,58 @@ class ConsoleLinkFormatter extends FormatterBase {
   public function viewElements(FieldItemListInterface $items, $langcode) {
     $element = [];
 
-    if (!($entity = $items->getEntity()) || !$entity instanceof Media) {
+    if (!$this->appliesTo($items)) {
       return $element;
+    }
+
+    /** @var \Drupal\media_mpx\Entity\Account $account */
+    $account = $items->getEntity()->getSource()->getAccount();
+
+    foreach ($items as $delta => $item) {
+      $element[$delta] = [
+        '#type' => 'link',
+        '#title' => $item->getString(),
+        '#url' => $this->getUrl($item, $account),
+      ];
+    }
+
+    return $element;
+  }
+
+  /**
+   * Does this field formatter apply to the given field items.
+   *
+   * @param \Drupal\Core\Field\FieldItemListInterface $items
+   *   The field values to be rendered.
+   *
+   * @return boolean
+   *   TRUE if this field formatter applies, otherwise FALSE.
+   */
+  protected function appliesTo(FieldItemListInterface $items) {
+    if (!($entity = $items->getEntity()) || !$entity instanceof Media) {
+      return FALSE;
     }
 
     $source_plugin = $entity->getSource();
     if (!$source_plugin instanceof MpxMediaSource) {
-      return $element;
+      return FALSE;
     }
 
-    $account = $source_plugin->getAccount();
+    return TRUE;
+  }
+
+  /**
+   * Creates a link to the mpx console for the given field item.
+   *
+   * @param \Drupal\Core\Field\FieldItemInterface $item
+   *   An individual field item to be rendered. Assumed to contain the mpx guid.
+   * @param \Drupal\media_mpx\Entity\Account $account
+   *   Mpx account assigned to the media bundle for this field.
+   *
+   * @return \Drupal\Core\Url
+   *   Url to the mpx console for this field item.
+   */
+  protected function getUrl(FieldItemInterface $item, Account $account) {
     $path_parts = explode('/', $account->getMpxId()->getPath());
     $account_id = end($path_parts);
     $options = [
@@ -48,20 +92,10 @@ class ConsoleLinkFormatter extends FormatterBase {
         'rel' => 'nofollow',
       ],
     ];
-
-    foreach ($items as $delta => $item) {
-      $url = Url::fromUri(
-        sprintf('https://console.theplatform.com/%s/media/%s/metadata#information', $account_id, $item->getString()),
-        $options
-      );
-      $element[$delta] = [
-        '#type' => 'link',
-        '#title' => $item->getString(),
-        '#url' => $url,
-      ];
-    }
-
-    return $element;
+    return Url::fromUri(
+      sprintf('https://console.theplatform.com/%s/media/%s/metadata#information', $account_id, $item->getString()),
+      $options
+    );
   }
 
 }
