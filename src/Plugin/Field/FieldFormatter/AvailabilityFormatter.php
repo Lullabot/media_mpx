@@ -13,6 +13,7 @@ use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drupal\media_mpx\StubMediaObjectTrait;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
 use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
+use Lullabot\Mpx\DataService\DateTime\NullDateTime;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -97,14 +98,22 @@ class AvailabilityFormatter extends TimestampFormatter {
       $mpx_object = $this->getStubMediaObject($media);
       $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
       $calculator = new AvailabilityCalculator();
+      $available_date = $mpx_object->getAvailableDate();
+      $expired_date = $mpx_object->getExpirationDate();
       if ($calculator->isAvailable($mpx_object, $now)) {
-        $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        $elements[0]['#markup'] = $this->t('Available');
+        if (!$available_date instanceof NullDateTime) {
+          $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        }
       }
       elseif ($calculator->isExpired($mpx_object, $now)) {
-        $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        $elements[0]['#markup'] = $this->t('Expired');
+        if (!$expired_date instanceof NullDateTime) {
+          $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        }
       }
       else {
-        $elements[0]['#markup'] = $this->t('Coming @date', ['@date' => $this->formatDate($mpx_object->getAvailableDate())]);
+        $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($mpx_object->getAvailableDate())]);
       }
     }
 
