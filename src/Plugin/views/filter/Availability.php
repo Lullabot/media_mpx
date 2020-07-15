@@ -24,14 +24,18 @@ class Availability extends FilterPluginBase {
   const EXPIRED = 'expired';
 
   /**
-   * @var bool
    * Disable the possibility to use operators.
+   *
+   * @var bool
    */
+  // phpcs:disable
   public $no_operator = TRUE;
+  // phpcs:enable
 
   /**
-   * @var bool
    * Disable the possibility to force a single value.
+   *
+   * @var bool
    */
   protected $alwaysMultiple = TRUE;
 
@@ -186,7 +190,13 @@ class Availability extends FilterPluginBase {
   }
 
   /**
+   * Get the available and expired field aliases.
+   *
    * @return array
+   *   Array with the available field alias in the first position and the
+   *   expired field alias in the second position. Depending on the view
+   *   configuration, for example if a relationship is being used, the alias
+   *   views uses can be very different.
    *
    * @throws \RuntimeException
    *   Thrown when the available date and/or expiration date is not mapped.
