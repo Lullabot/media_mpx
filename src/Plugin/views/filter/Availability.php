@@ -106,7 +106,6 @@ class Availability extends FilterPluginBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   public function query() {
-    $this->ensureMyTable();
     $media_storage = $this->entityTypeManager->getStorage('media');
     // This will be limited to SQL storage backends, b/c it's highly SQL
     // centric.
@@ -115,7 +114,6 @@ class Availability extends FilterPluginBase {
     }
 
     try {
-      $this->ensureAvailabilityTables();
       $this->addConditionOnBundle();
       $this->addConditionOnAvailability();
     }
@@ -150,6 +148,10 @@ class Availability extends FilterPluginBase {
   /**
    * Ensure that we are joined with the availability tables.
    *
+   * @return array
+   *   Array with available table alias in the first position and expired in the
+   *   second position.
+   *
    * @throws \RuntimeException
    *   Thrown when the available date and/or expiration date is not mapped.
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
@@ -157,15 +159,13 @@ class Availability extends FilterPluginBase {
    */
   protected function ensureAvailabilityTables() {
     [$available_table_name, $expired_table_name] = $this->getAvailableExpiredTableNames();
-    $this->query->ensureTable($available_table_name, $this->relationship);
-    $this->query->ensureTable($expired_table_name, $this->relationship);
+    $available_table_alias = $this->query->ensureTable($available_table_name, $this->relationship);
+    $expired_table_alias = $this->query->ensureTable($expired_table_name, $this->relationship);
+    return [$available_table_alias, $expired_table_alias];
   }
 
   /**
    * Get the available and expired table names, optionally with the column.
-   *
-   * @param bool $include_column
-   *   Include the column name for the value.
    *
    * @return array
    *   An array with the available table name in the first entry and the expired
@@ -176,22 +176,53 @@ class Availability extends FilterPluginBase {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
-  protected function getAvailableExpiredTableNames($include_column = FALSE) {
+  protected function getAvailableExpiredTableNames() {
+    [$available_field_storage, $expired_field_storage] = $this->getAvailableExpiredFieldStorage();
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $table_mapping = $media_storage->getTableMapping();
+    $available_table_name = $table_mapping->getDedicatedDataTableName($available_field_storage);
+    $expired_table_name = $table_mapping->getDedicatedDataTableName($expired_field_storage);
+    return [$available_table_name, $expired_table_name];
+  }
+
+  /**
+   * @return array
+   *
+   * @throws \RuntimeException
+   *   Thrown when the available date and/or expiration date is not mapped.
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function getAvailableExpiredFieldAliases() {
+    [$available_table_alias, $expired_table_alias] = $this->ensureAvailabilityTables();
+    [$available_field_storage, $expired_field_storage] = $this->getAvailableExpiredFieldStorage();
+    $media_storage = $this->entityTypeManager->getStorage('media');
+    $table_mapping = $media_storage->getTableMapping();
+    $available_field_alias = sprintf('%s.%s', $available_table_alias, $table_mapping->getFieldColumnName($available_field_storage, 'value'));
+    $expired_field_alias = sprintf('%s.%s', $expired_table_alias, $table_mapping->getFieldColumnName($expired_field_storage, 'value'));
+    return [$available_field_alias, $expired_field_alias];
+  }
+
+  /**
+   * Get the available and expired field storage.
+   *
+   * @return \Drupal\Core\Field\FieldStorageDefinitionInterface[]
+   *   An array with the available field storage in the first position and the
+   *   expired field storage in the second position.
+   *
+   * @throws \RuntimeException
+   *   Thrown when the available date and/or expiration date is not mapped.
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   */
+  protected function getAvailableExpiredFieldStorage() {
     [$available_field_name, $expired_field_name] = $this->getAvailableExpiredFieldNames();
     $field_storage = $this->entityTypeManager->getStorage('field_storage_config');
     /** @var \Drupal\Core\Field\FieldStorageDefinitionInterface $available_field_storage */
     $available_field_storage = $field_storage->load('media.' . $available_field_name);
     /** @var \Drupal\Core\Field\FieldStorageDefinitionInterface $expired_field_storage */
     $expired_field_storage = $field_storage->load('media.' . $expired_field_name);
-    $media_storage = $this->entityTypeManager->getStorage('media');
-    $table_mapping = $media_storage->getTableMapping();
-    $available_table_name = $table_mapping->getDedicatedDataTableName($available_field_storage);
-    $expired_table_name = $table_mapping->getDedicatedDataTableName($expired_field_storage);
-    if ($include_column) {
-      $available_table_name = sprintf('%s.%s', $available_table_name, $table_mapping->getFieldColumnName($available_field_storage, 'value'));
-      $expired_table_name = sprintf('%s.%s', $expired_table_name, $table_mapping->getFieldColumnName($expired_field_storage, 'value'));
-    }
-    return [$available_table_name, $expired_table_name];
+    return [$available_field_storage, $expired_field_storage];
   }
 
   /**
@@ -235,7 +266,7 @@ class Availability extends FilterPluginBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function addConditionOnAvailableOrUpcoming() {
-    [, $expired_field] = $this->getAvailableExpiredTableNames(TRUE);
+    [, $expired_field] = $this->getAvailableExpiredFieldAliases();
     $condition = (new Condition('OR'))
       ->condition($expired_field, 0)
       ->condition($expired_field, NULL, 'IS NULL')
@@ -252,7 +283,7 @@ class Availability extends FilterPluginBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function addConditionOnAvailable() {
-    [$available_field, $expired_field] = $this->getAvailableExpiredTableNames(TRUE);
+    [$available_field, $expired_field] = $this->getAvailableExpiredFieldAliases();
     $available_condition = (new Condition('OR'))
       ->condition($available_field, 0)
       ->condition($available_field, NULL, 'IS NULL')
@@ -274,7 +305,7 @@ class Availability extends FilterPluginBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function addConditionOnExpired() {
-    [, $expired_field] = $this->getAvailableExpiredTableNames(TRUE);
+    [, $expired_field] = $this->getAvailableExpiredFieldAliases();
     $condition = (new Condition('AND'))
       ->condition($expired_field, 0, '<>')
       ->condition($expired_field, NULL, 'IS NOT NULL')
