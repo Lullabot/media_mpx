@@ -157,8 +157,8 @@ class Availability extends FilterPluginBase {
    */
   protected function ensureAvailabilityTables() {
     [$available_table_name, $expired_table_name] = $this->getAvailableExpiredTableNames();
-    $this->query->ensureTable($available_table_name);
-    $this->query->ensureTable($expired_table_name);
+    $this->query->ensureTable($available_table_name, $this->relationship);
+    $this->query->ensureTable($expired_table_name, $this->relationship);
   }
 
   /**
@@ -198,13 +198,12 @@ class Availability extends FilterPluginBase {
    * Add a condition to the query on the bundle this filter id for.
    *
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
-   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    */
   protected function addConditionOnBundle() {
-    $media_storage = $this->entityTypeManager->getStorage('media');
     // Add a condition on the bundle that this filter is defined for.
     $media_definition = $this->entityTypeManager->getDefinition('media');
-    $this->query->addWhere($this->options['group'], sprintf('%s.%s', $media_storage->getDataTable(), $media_definition->getKey('bundle')), $this->definition['media_type']);
+    $this->ensureMyTable();
+    $this->query->addWhere($this->options['group'], sprintf('%s.%s', $this->tableAlias, $media_definition->getKey('bundle')), $this->definition['media_type']);
   }
 
   /**
