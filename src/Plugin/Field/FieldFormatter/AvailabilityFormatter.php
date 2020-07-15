@@ -102,18 +102,20 @@ class AvailabilityFormatter extends TimestampFormatter {
       $expired_date = $mpx_object->getExpirationDate();
       if ($calculator->isAvailable($mpx_object, $now)) {
         $elements[0]['#markup'] = $this->t('Available');
-        if (!$available_date instanceof NullDateTime) {
-          $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
+          $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
         }
       }
       elseif ($calculator->isExpired($mpx_object, $now)) {
         $elements[0]['#markup'] = $this->t('Expired');
-        if (!$expired_date instanceof NullDateTime) {
-          $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($mpx_object->getExpirationDate())]);
+        if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
+          $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
         }
       }
       else {
-        $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($mpx_object->getAvailableDate())]);
+        if (!empty($available_date) && !$available_date instanceof NullDateTime) {
+          $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
+        }
       }
     }
 
