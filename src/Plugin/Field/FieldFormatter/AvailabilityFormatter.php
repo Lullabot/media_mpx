@@ -9,11 +9,12 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\TimestampFormatter;
 use Drupal\media\MediaInterface;
-use Drupal\media_mpx\Plugin\media\Source\Media;
+use Drupal\media_mpx\Plugin\media\Source\Media as MediaSource;
 use Drupal\media_mpx\StubMediaObjectTrait;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
 use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
 use Lullabot\Mpx\DataService\DateTime\NullDateTime;
+use Lullabot\Mpx\DataService\Media\Media;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -91,38 +92,52 @@ class AvailabilityFormatter extends TimestampFormatter {
     $elements = [];
 
     $media = $items->getEntity();
-    if (!$media instanceof MediaInterface || !$media->getSource() instanceof Media) {
+    if (!$media instanceof MediaInterface || !$media->getSource() instanceof MediaSource) {
       $elements[0]['#markup'] = $this->t('Not applicable');
     }
     else {
       $mpx_object = $this->getStubMediaObject($media);
-      $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
-      $calculator = new AvailabilityCalculator();
-      $available_date = $mpx_object->getAvailableDate();
-      $expired_date = $mpx_object->getExpirationDate();
-      // Video is available.
-      if ($calculator->isAvailable($mpx_object, $now)) {
-        $elements[0]['#markup'] = $this->t('Available');
-        if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
-          $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
-        }
-      }
-      // Video is upcoming.
-      // Note that the upstream library defines isExpired as !isAvailable, which
-      // lumps in videos that are upcoming. We need this workaround to
-      // specifically identify upcoming.
-      elseif (!empty($available_date) && !$available_date instanceof NullDateTime && $now < $available_date->getDateTime()) {
-        $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
-      }
-      else {
-        $elements[0]['#markup'] = $this->t('Expired');
-        if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
-          $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
-        }
-      }
+      $elements[0]['#markup'] = $this->getAvailabilitySummary($mpx_object);
     }
 
     return $elements;
+  }
+
+  /**
+   * Get the availability summary for the given mpx object.
+   *
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_object
+   *   Mpx object.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   Availability summary.
+   */
+  protected function getAvailabilitySummary(Media $mpx_object) {
+    $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
+    $calculator = new AvailabilityCalculator();
+    $available_date = $mpx_object->getAvailableDate();
+    $expired_date = $mpx_object->getExpirationDate();
+
+    // Video is available.
+    if ($calculator->isAvailable($mpx_object, $now)) {
+      if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
+        return $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
+      }
+      return $this->t('Available');
+    }
+    // Video is upcoming.
+    // Note that the upstream library defines isExpired as !isAvailable, which
+    // lumps in videos that are upcoming. We need this workaround to
+    // specifically identify upcoming.
+    elseif (!empty($available_date) && !$available_date instanceof NullDateTime && $now < $available_date->getDateTime()) {
+      return $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
+    }
+
+    // Video is neither available nor upcoming, therefore it's expired.
+    if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
+      return $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
+    }
+    return $this->t('Expired');
   }
 
   /**
