@@ -100,21 +100,24 @@ class AvailabilityFormatter extends TimestampFormatter {
       $calculator = new AvailabilityCalculator();
       $available_date = $mpx_object->getAvailableDate();
       $expired_date = $mpx_object->getExpirationDate();
+      // Video is available.
       if ($calculator->isAvailable($mpx_object, $now)) {
         $elements[0]['#markup'] = $this->t('Available');
         if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
           $elements[0]['#markup'] = $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
         }
       }
-      elseif ($calculator->isExpired($mpx_object, $now)) {
+      // Video is upcoming.
+      // Note that the upstream library defines isExpired as !isAvailable, which
+      // lumps in videos that are upcoming. We need this workaround to
+      // specifically identify upcoming.
+      elseif (!empty($available_date) && !$available_date instanceof NullDateTime && $now < $available_date->getDateTime()) {
+        $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
+      }
+      else {
         $elements[0]['#markup'] = $this->t('Expired');
         if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
           $elements[0]['#markup'] = $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
-        }
-      }
-      else {
-        if (!empty($available_date) && !$available_date instanceof NullDateTime) {
-          $elements[0]['#markup'] = $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
         }
       }
     }
