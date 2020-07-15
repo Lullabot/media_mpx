@@ -120,10 +120,7 @@ class AvailabilityFormatter extends TimestampFormatter {
 
     // Video is available.
     if ($calculator->isAvailable($mpx_object, $now)) {
-      if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
-        return $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
-      }
-      return $this->t('Available');
+      return $this->getAvailableSummary($expired_date);
     }
     // Video is upcoming.
     // Note that the upstream library defines isExpired as !isAvailable, which
@@ -134,6 +131,35 @@ class AvailabilityFormatter extends TimestampFormatter {
     }
 
     // Video is neither available nor upcoming, therefore it's expired.
+    return $this->getExpiredSummary($expired_date);
+  }
+
+  /**
+   * Get a summary for when a video is available.
+   *
+   * @param mixed $expired_date
+   *   Expiration date of a video.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   Summary text.
+   */
+  protected function getAvailableSummary($expired_date = NULL) {
+    if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
+      return $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
+    }
+    return $this->t('Available');
+  }
+
+  /**
+   * Get a summary for when the video is expired.
+   *
+   * @param mixed $expired_date
+   *   Expiration date of a video.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   Summary text.
+   */
+  protected function getExpiredSummary($expired_date = NULL) {
     if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
       return $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
     }
