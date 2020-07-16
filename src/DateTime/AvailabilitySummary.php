@@ -180,7 +180,7 @@ class AvailabilitySummary {
    *   Summary text.
    */
   public function getUpcomingSummary($available_date, bool $include_date = TRUE): TranslatableMarkup {
-    if ($include_date) {
+    if ($include_date && !empty($available_date) && !$available_date instanceof NullDateTime) {
       return $this->t('Upcoming @date', [
         '@date' => $this->formatDate($available_date),
       ]);
