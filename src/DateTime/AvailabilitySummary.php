@@ -72,6 +72,48 @@ class AvailabilitySummary {
   }
 
   /**
+   * Set the Drupal date format to use for formatting dates.
+   *
+   * @param string $date_format
+   *   Drupal date format.
+   *
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
+   *   Fluent API return.
+   */
+  public function setDateFormat(string $date_format): AvailabilitySummary {
+    $this->dateFormat = $date_format;
+    return $this;
+  }
+
+  /**
+   * Set a custom date format string.
+   *
+   * @param string $custom_date_format
+   *   Custom date format string.
+   *
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
+   *   Fluent API return.
+   */
+  public function setCustomDateFormat(string $custom_date_format): AvailabilitySummary {
+    $this->customDateFormat = $custom_date_format;
+    return $this;
+  }
+
+  /**
+   * Set the timezone to use when formatting dates.
+   *
+   * @param string $timezone
+   *   A timezone.
+   *
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
+   *   Fluent API return.
+   */
+  public function setTimezone(string $timezone): AvailabilitySummary {
+    $this->timezone = !empty($timezone) ? $timezone : NULL;
+    return $this;
+  }
+
+  /**
    * Get the availability summary for the given media.
    *
    * If a date format is given, the date will be included in the summary when
@@ -185,48 +227,6 @@ class AvailabilitySummary {
     }
 
     return $this->dateFormatter->format($date->format('U'), $this->dateFormat, $this->customDateFormat, $this->timezone, $langcode);
-  }
-
-  /**
-   * Set the Drupal date format to use for formatting dates.
-   *
-   * @param string $date_format
-   *   Drupal date format.
-   *
-   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
-   *   Fluent API return.
-   */
-  public function setDateFormat(string $date_format): AvailabilitySummary {
-    $this->dateFormat = $date_format;
-    return $this;
-  }
-
-  /**
-   * Set a custom date format string.
-   *
-   * @param string $custom_date_format
-   *   Custom date format string.
-   *
-   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
-   *   Fluent API return.
-   */
-  public function setCustomDateFormat(string $custom_date_format): AvailabilitySummary {
-    $this->customDateFormat = $custom_date_format;
-    return $this;
-  }
-
-  /**
-   * Set the timezone to use when formatting dates.
-   *
-   * @param string $timezone
-   *   A timezone.
-   *
-   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
-   *   Fluent API return.
-   */
-  public function setTimezone(string $timezone): AvailabilitySummary {
-    $this->timezone = !empty($timezone) ? $timezone : NULL;
-    return $this;
   }
 
 }
