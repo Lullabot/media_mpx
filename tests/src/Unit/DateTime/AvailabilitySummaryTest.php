@@ -4,7 +4,6 @@ namespace Drupal\Tests\media_mpx\Unit\DateTime;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
-use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\media_mpx\DateTime\AvailabilitySummary;
 use Drupal\Tests\UnitTestCase;
 use Lullabot\Mpx\DataService\DateTime\ConcreteDateTime;
