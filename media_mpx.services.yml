@@ -172,5 +172,5 @@ services:
       - '@media_mpx.data_object_factory_creator'
 
   media_mpx.availability_summary:
-    class: Drupal\media_mpx\AvailabilitySummary
+    class: Drupal\media_mpx\DateTime\AvailabilitySummary
     arguments: ['@datetime.time', '@date.formatter']

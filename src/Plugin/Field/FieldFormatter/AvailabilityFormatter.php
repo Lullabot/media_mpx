@@ -8,7 +8,7 @@ use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\TimestampFormatter;
 use Drupal\media\MediaInterface;
-use Drupal\media_mpx\AvailabilitySummary;
+use Drupal\media_mpx\DateTime\AvailabilitySummary;
 use Drupal\media_mpx\Plugin\media\Source\Media as MediaSource;
 use Drupal\media_mpx\StubMediaObjectTrait;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -28,7 +28,7 @@ class AvailabilityFormatter extends TimestampFormatter {
   use StubMediaObjectTrait;
 
   /**
-   * @var \Drupal\media_mpx\AvailabilitySummary
+   * @var \Drupal\media_mpx\DateTime\AvailabilitySummary
    */
   protected $availabilitySummary;
 
@@ -53,7 +53,7 @@ class AvailabilityFormatter extends TimestampFormatter {
    *   The date formatter service.
    * @param \Drupal\Core\Entity\EntityStorageInterface $date_format_storage
    *   The date format storage.
-   * @param \Drupal\media_mpx\AvailabilitySummary $availability_summary
+   * @param \Drupal\media_mpx\DateTime\AvailabilitySummary $availability_summary
    *   Utility class to help with the availability summary.
    */
   public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, DateFormatterInterface $date_formatter, EntityStorageInterface $date_format_storage, AvailabilitySummary $availability_summary) {

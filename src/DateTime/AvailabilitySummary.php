@@ -1,18 +1,16 @@
 <?php
 
-namespace Drupal\media_mpx;
+namespace Drupal\media_mpx\DateTime;
 
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\media\MediaInterface;
-use Drupal\media_mpx\Plugin\media\Source\Media as MediaSource;
+use Drupal\media_mpx\StubMediaObjectTrait;
 use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
 use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
 use Lullabot\Mpx\DataService\DateTime\NullDateTime;
 use Lullabot\Mpx\DataService\Media\Media;
-use Psy\Exception\RuntimeException;
 
 /**
  * Summarize a videos availability.
@@ -195,7 +193,7 @@ class AvailabilitySummary {
    * @param string $date_format
    *   Drupal date format.
    *
-   * @return AvailabilitySummary
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
    *   Fluent API return.
    */
   public function setDateFormat(string $date_format): AvailabilitySummary {
@@ -209,7 +207,7 @@ class AvailabilitySummary {
    * @param string $custom_date_format
    *   Custom date format string.
    *
-   * @return AvailabilitySummary
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
    *   Fluent API return.
    */
   public function setCustomDateFormat(string $custom_date_format): AvailabilitySummary {
@@ -223,7 +221,7 @@ class AvailabilitySummary {
    * @param string $timezone
    *   A timezone.
    *
-   * @return AvailabilitySummary
+   * @return \Drupal\media_mpx\DateTime\AvailabilitySummary
    *   Fluent API return.
    */
   public function setTimezone(string $timezone): AvailabilitySummary {
