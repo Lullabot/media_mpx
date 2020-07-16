@@ -2,19 +2,15 @@
 
 namespace Drupal\media_mpx\Plugin\Field\FieldFormatter;
 
-use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldFormatter\TimestampFormatter;
 use Drupal\media\MediaInterface;
+use Drupal\media_mpx\AvailabilitySummary;
 use Drupal\media_mpx\Plugin\media\Source\Media as MediaSource;
 use Drupal\media_mpx\StubMediaObjectTrait;
-use Lullabot\Mpx\DataService\DateTime\AvailabilityCalculator;
-use Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface;
-use Lullabot\Mpx\DataService\DateTime\NullDateTime;
-use Lullabot\Mpx\DataService\Media\Media;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -32,11 +28,9 @@ class AvailabilityFormatter extends TimestampFormatter {
   use StubMediaObjectTrait;
 
   /**
-   * Time service.
-   *
-   * @var \Drupal\Component\Datetime\TimeInterface
+   * @var \Drupal\media_mpx\AvailabilitySummary
    */
-  protected $time;
+  protected $availabilitySummary;
 
   /**
    * Constructs a new TimestampFormatter.
@@ -59,12 +53,12 @@ class AvailabilityFormatter extends TimestampFormatter {
    *   The date formatter service.
    * @param \Drupal\Core\Entity\EntityStorageInterface $date_format_storage
    *   The date format storage.
-   * @param \Drupal\Component\Datetime\TimeInterface $time
-   *   Time service.
+   * @param \Drupal\media_mpx\AvailabilitySummary $availability_summary
+   *   Utility class to help with the availability summary.
    */
-  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, DateFormatterInterface $date_formatter, EntityStorageInterface $date_format_storage, TimeInterface $time) {
+  public function __construct($plugin_id, $plugin_definition, FieldDefinitionInterface $field_definition, array $settings, $label, $view_mode, array $third_party_settings, DateFormatterInterface $date_formatter, EntityStorageInterface $date_format_storage, AvailabilitySummary $availability_summary) {
     parent::__construct($plugin_id, $plugin_definition, $field_definition, $settings, $label, $view_mode, $third_party_settings, $date_formatter, $date_format_storage);
-    $this->time = $time;
+    $this->availabilitySummary = $availability_summary;
   }
 
   /**
@@ -81,7 +75,7 @@ class AvailabilityFormatter extends TimestampFormatter {
       $configuration['third_party_settings'],
       $container->get('date.formatter'),
       $container->get('entity_type.manager')->getStorage('date_format'),
-      $container->get('datetime.time')
+      $container->get('media_mpx.availability_summary')
     );
   }
 
@@ -89,105 +83,19 @@ class AvailabilityFormatter extends TimestampFormatter {
    * {@inheritdoc}
    */
   public function viewElements(FieldItemListInterface $items, $langcode) {
-    $elements = [];
-
     $media = $items->getEntity();
     if (!$media instanceof MediaInterface || !$media->getSource() instanceof MediaSource) {
       $elements[0]['#markup'] = $this->t('Not applicable');
-    }
-    else {
-      $mpx_object = $this->getStubMediaObject($media);
-      $elements[0]['#markup'] = $this->getAvailabilitySummary($mpx_object);
+      return $elements;
     }
 
+    $mpx_object = $this->getStubMediaObject($media);
+    $elements[0]['#markup'] = $this->availabilitySummary
+      ->setDateFormat($this->getSetting('date_format'))
+      ->setCustomDateFormat($this->getSetting('custom_date_format'))
+      ->setTimezone($this->getSetting('timezone'))
+      ->getAvailabilitySummary($mpx_object);
     return $elements;
-  }
-
-  /**
-   * Get the availability summary for the given mpx object.
-   *
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_object
-   *   Mpx object.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   Availability summary.
-   */
-  protected function getAvailabilitySummary(Media $mpx_object) {
-    $now = \DateTime::createFromFormat('U', $this->time->getCurrentTime());
-    $calculator = new AvailabilityCalculator();
-    $available_date = $mpx_object->getAvailableDate();
-    $expired_date = $mpx_object->getExpirationDate();
-
-    // Video is available.
-    if ($calculator->isAvailable($mpx_object, $now)) {
-      return $this->getAvailableSummary($expired_date);
-    }
-    // Video is upcoming.
-    // Note that the upstream library defines isExpired as !isAvailable, which
-    // lumps in videos that are upcoming. We need this workaround to
-    // specifically identify upcoming.
-    elseif (!empty($available_date) && !$available_date instanceof NullDateTime && $now < $available_date->getDateTime()) {
-      return $this->t('Upcoming @date', ['@date' => $this->formatDate($available_date)]);
-    }
-
-    // Video is neither available nor upcoming, therefore it's expired.
-    return $this->getExpiredSummary($expired_date);
-  }
-
-  /**
-   * Get a summary for when a video is available.
-   *
-   * @param mixed $expired_date
-   *   Expiration date of a video.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   Summary text.
-   */
-  protected function getAvailableSummary($expired_date = NULL) {
-    if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
-      return $this->t('Available until @date', ['@date' => $this->formatDate($expired_date)]);
-    }
-    return $this->t('Available');
-  }
-
-  /**
-   * Get a summary for when the video is expired.
-   *
-   * @param mixed $expired_date
-   *   Expiration date of a video.
-   *
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   *   Summary text.
-   */
-  protected function getExpiredSummary($expired_date = NULL) {
-    if (!empty($expired_date) && !$expired_date instanceof NullDateTime) {
-      return $this->t('Expired on @date', ['@date' => $this->formatDate($expired_date)]);
-    }
-    return $this->t('Expired');
-  }
-
-  /**
-   * Format the given mpx date according to the field formatter settings.
-   *
-   * @param \Lullabot\Mpx\DataService\DateTime\DateTimeFormatInterface $date
-   *   An mpx date object.
-   *
-   * @return string
-   *   Formatted date according to this field formatters settings.
-   */
-  protected function formatDate(DateTimeFormatInterface $date) {
-    $date_format = $this->getSetting('date_format');
-    $custom_date_format = '';
-    $timezone = $this->getSetting('timezone') ?: NULL;
-    $langcode = NULL;
-
-    // If an RFC2822 date format is requested, then the month and day have to
-    // be in English. @see http://www.faqs.org/rfcs/rfc2822.html
-    if ($date_format === 'custom' && ($custom_date_format = $this->getSetting('custom_date_format')) === 'r') {
-      $langcode = 'en';
-    }
-
-    return $this->dateFormatter->format($date->format('U'), $date_format, $custom_date_format, $timezone, $langcode);
   }
 
 }
