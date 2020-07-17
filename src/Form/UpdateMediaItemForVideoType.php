@@ -26,15 +26,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class UpdateMediaItemForVideoType extends FormBase {
 
+  use ImportUpdateVideoItemTrait;
+
   /**
-   * The update video service.
+   * The Update Video Item service.
    *
    * @var \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem
    */
   private $updateVideoItemService;
 
   /**
-   * The mpx Media Type Repository.
+   * The media type repository.
    *
    * @var \Drupal\media_mpx\Repository\MpxMediaType
    */
@@ -57,7 +59,7 @@ class UpdateMediaItemForVideoType extends FormBase {
   /**
    * UpdateMediaItemForAccount constructor.
    *
-   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItem
+   * @param \Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem $updateVideoItemService
    *   The update video service.
    * @param \Drupal\media_mpx\Repository\MpxMediaType $mpxTypeRepository
    *   The mpx Media Types repository.
@@ -66,8 +68,8 @@ class UpdateMediaItemForVideoType extends FormBase {
    * @param \Drupal\media_mpx\DataObjectFactoryCreator $dataObjectFactoryCreator
    *   The factory used to load a complete mpx object.
    */
-  public function __construct(UpdateVideoItem $updateVideoItem, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
-    $this->updateVideoItemService = $updateVideoItem;
+  public function __construct(UpdateVideoItem $updateVideoItemService, MpxMediaType $mpxTypeRepository, MpxLogger $logger, DataObjectFactoryCreator $dataObjectFactoryCreator) {
+    $this->updateVideoItemService = $updateVideoItemService;
     $this->mpxTypeRepository = $mpxTypeRepository;
     $this->logger = $logger;
     $this->dataObjectFactoryCreator = $dataObjectFactoryCreator;
@@ -89,28 +91,12 @@ class UpdateMediaItemForVideoType extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    if (!$video_opts = $this->loadVideoTypeOptions()) {
-      $this->messenger()->addError($this->t('There has been an unexpected problem loading the form. Reload the page.'));
-      return [];
-    }
-
-    $form['video_type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Video Type'),
-      '#description' => $this->t('Choose the video type to import the video into.'),
-      '#options' => $video_opts,
-      '#required' => TRUE,
-    ];
+    $form = $this->buildBaseForm($form, $form_state);
     $form['guid'] = [
       '#type' => 'textfield',
-      '#title' => $this->t('guid'),
-      '#placeholder' => 'Type the GUID of the mpx item you want to import.',
+      '#title' => $this->t('GUID'),
+      '#placeholder' => 'Type the GUID of the mpx video you want to import.',
       '#required' => TRUE,
-    ];
-
-    $form['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Update item'),
     ];
 
     return $form;
@@ -131,8 +117,8 @@ class UpdateMediaItemForVideoType extends FormBase {
       $this->submitFormProcessRequest($request, $guid, $success_text, $error_text);
       return;
     }
-    $guid_not_found_exception = new \Exception("Given GUID doesn't exist, please check and try again.");
-    $error_text = (string) $this->t("Given GUID doesn't exist, please check and try again.");
+    $guid_not_found_exception = new \RuntimeException(sprintf("Given guid (%s) doesn't exist, please check and try again.", $guid));
+    $error_text = (string) $this->t("Given guid (@guid) doesn't exist, please check and try again.", ['@guid' => $guid]);
     $this->submitFormReportError($guid, $guid_not_found_exception, $error_text);
   }
 
@@ -153,9 +139,8 @@ class UpdateMediaItemForVideoType extends FormBase {
       $this->submitFormExecuteRequest($request, $success_text);
     }
     catch (\Exception $e) {
-      // Up until here, all necessary checks have been made. No custom
-      // exception handling needed other than for the db possibly
-      // exploding at this point.
+      // Up until here, all necessary checks have been made. No custom exception
+      // handling needed other than for the db possibly exploding at this point.
       $this->submitFormReportError($guid, $e, $error_text);
     }
   }
@@ -169,8 +154,17 @@ class UpdateMediaItemForVideoType extends FormBase {
    *   Success text to be used on the notification.
    */
   private function submitFormExecuteRequest(UpdateVideoItemRequest $request, string $success_text) {
-    $this->updateVideoItemService->execute($request);
-    $this->messenger()->addMessage($success_text);
+    $response = $this->updateVideoItemService->execute($request);
+    if (empty($response->getUpdatedEntities())) {
+      $mpx_media = $response->getMpxItem();
+      $this->messenger()->addWarning($this->t("The selected video: @video_title (@guid) did not import. There may be one or more custom business rules in place which filtered it out. Consult the site administrator, adjust the video metadata in mpx to ensure it's available to be imported, and try again.", [
+        '@video_title' => $mpx_media->getTitle(),
+        '@guid' => $mpx_media->getGuid(),
+      ]));
+    }
+    else {
+      $this->messenger()->addMessage($success_text);
+    }
   }
 
   /**
@@ -236,35 +230,7 @@ class UpdateMediaItemForVideoType extends FormBase {
     $factory = $this->dataObjectFactoryCreator->fromMediaSource($media_source);
 
     $results = $factory->select($query);
-    $queues = [];
-    foreach ($results as $index => $mpx_media) {
-      $queues[] = $mpx_media;
-    }
-    return reset($queues) ?: NULL;
-  }
-
-  /**
-   * Returns the mpx Video Type options of the dropdown (prepared for form api).
-   *
-   * @return array
-   *   An array with options to show in the dropdown. The keys are the video
-   *   types, and the values are the video type label.
-   */
-  private function loadVideoTypeOptions(): array {
-    $video_opts = [];
-
-    try {
-      $video_types = $this->mpxTypeRepository->findAllTypes();
-
-      foreach ($video_types as $type) {
-        $video_opts[$type->id()] = $type->label();
-      }
-    }
-    catch (\Exception $e) {
-      $this->logger->watchdogException($e, 'Could not load mpx video type options.');
-    }
-
-    return $video_opts;
+    return ($results->valid() ? $results->current() : NULL);
   }
 
 }

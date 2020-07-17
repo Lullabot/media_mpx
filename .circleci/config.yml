@@ -16,11 +16,11 @@
 defaults: &defaults
   docker:
     # specify the version you desire here (avoid latest except for testing)
-    - image: andrewberry/drupal_tests:0.4.0
+    - image: quay.io/deviantintegral/drupal_tests:0.5.0-drupal87
 
-    - image: selenium/standalone-chrome-debug:3.14.0-beryllium
+    - image: selenium/standalone-chrome-debug:3.141.59-neon
 
-    - image: mariadb:10.3
+    - image: mariadb:10.4
       environment:
         MYSQL_ALLOW_EMPTY_PASSWORD: 1
 
@@ -85,6 +85,7 @@ unit_kernel_tests: &unit_kernel_tests
     - run:
         working_directory: /var/www/html
         command: |
+          chown -R www-data artifacts
           ./test.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -105,6 +106,7 @@ functional_tests: &functional_tests
     - run:
         working_directory: /var/www/html
         command: |
+          chown -R www-data artifacts
           ./test-functional.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -125,6 +127,7 @@ functional_js_tests: &functional_js_tests
     - run:
         working_directory: /var/www/html
         command: |
+          chown -R www-data artifacts
           ./test-functional-js.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -180,6 +183,7 @@ code_coverage: &code_coverage
     - run:
         working_directory: /var/www/html
         command: |
+          chown -R www-data artifacts
           ./code-coverage-stats.sh $CIRCLE_PROJECT_REPONAME
     - store_artifacts:
         path: /var/www/html/artifacts

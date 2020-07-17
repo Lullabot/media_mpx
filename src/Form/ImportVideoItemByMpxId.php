@@ -6,11 +6,12 @@ namespace Drupal\media_mpx\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\media_mpx\MpxLogger;
-use Drupal\media_mpx\Repository\MpxMediaType;
-use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
+use Drupal\media_mpx\Plugin\media\Source\Media;
 use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItemRequest;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\media_mpx\Service\UpdateVideoItem\UpdateVideoItem;
+use Drupal\media_mpx\Repository\MpxMediaType;
+use Drupal\media_mpx\MpxLogger;
 
 /**
  * Form class to import a single mpx item based on its id.
@@ -18,6 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @package Drupal\media_mpx\Form
  */
 class ImportVideoItemByMpxId extends FormBase {
+  use ImportUpdateVideoItemTrait;
 
   /**
    * The Update Video Item service.
@@ -64,28 +66,14 @@ class ImportVideoItemByMpxId extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    if (!$video_opts = $this->loadVideoTypeOptions()) {
-      $this->messenger()->addError($this->t('There has been an unexpected problem loading the form. Reload the page.'));
-      return [];
-    }
+    $form = $this->buildBaseForm($form);
 
-    $form['video_type'] = [
-      '#type' => 'select',
-      '#title' => $this->t('Video Type'),
-      '#description' => $this->t('Choose the video type to import the video into.'),
-      '#options' => $video_opts,
-      '#required' => TRUE,
-    ];
     $form['mpx_id'] = [
       '#type' => 'textfield',
-      '#title' => t('mpx item ID'),
+      '#title' => $this->t('ID'),
+      '#placeholder' => $this->t('Type the ID of the mpx video you want to import.'),
       '#required' => FALSE,
     ];
-    $form['submit'] = [
-      '#type' => 'submit',
-      '#value' => $this->t('Import Item'),
-    ];
-
     return $form;
   }
 
@@ -98,39 +86,24 @@ class ImportVideoItemByMpxId extends FormBase {
 
     $request = new UpdateVideoItemRequest($mpx_id, $video_type);
     try {
-      $this->updateVideoItem->execute($request);
-      $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      $response = $this->updateVideoItem->execute($request);
+      if (empty($response->getUpdatedEntities())) {
+        $mpx_media = $response->getMpxItem();
+        $this->messenger()->addWarning($this->t("The selected video: @video_title (@id) did not import. There may be one or more custom business rules in place which filtered it out. Consult the site administrator, adjust the video metadata in mpx to ensure it's available to be imported, and try again.", [
+          '@video_title' => $mpx_media->getTitle(),
+          '@id' => Media::getMpxObjectIdFromUri((string) $mpx_media->getId()),
+        ]));
+      }
+      else {
+        $this->messenger()->addMessage($this->t('The selected video has been imported.'));
+      }
     }
     catch (\Exception $e) {
       // Up until here, all necessary checks have been made. No custom exception
       // handling needed other than for the db possibly exploding at this point.
-      $this->messenger()->addError($this->t('There has been an unexpected problem updating the video. Check the logs for details.'));
+      $this->messenger()->addError($this->t('There has been an unexpected problem importing the video. Check the logs for details.'));
       $this->logger->watchdogException($e);
     }
-  }
-
-  /**
-   * Returns the mpx Video Type options of the dropdown (prepared for form api).
-   *
-   * @return array
-   *   An array with options to show in the dropdown. The keys are the video
-   *   types, and the values are the video type label.
-   */
-  private function loadVideoTypeOptions(): array {
-    $video_opts = [];
-
-    try {
-      $video_types = $this->mpxTypeRepository->findAllTypes();
-
-      foreach ($video_types as $type) {
-        $video_opts[$type->id()] = $type->label();
-      }
-    }
-    catch (\Exception $e) {
-      $this->logger->watchdogException($e, 'Could not load mpx video type options.');
-    }
-
-    return $video_opts;
   }
 
   /**

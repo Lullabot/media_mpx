@@ -34,6 +34,14 @@ use Psr\Http\Message\UriInterface as PsrUriInterface;
  *     "id" = "id",
  *     "label" = "label",
  *     "uuid" = "uuid"
+ *   },
+ *   config_export={
+ *     "id",
+ *     "label",
+ *     "status",
+ *     "user",
+ *     "account",
+ *     "public_id",
  *   }
  * )
  */
