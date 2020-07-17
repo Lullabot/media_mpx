@@ -77,3 +77,7 @@ field.formatter.settings.media_mpx_video:
     play_all:
       type: boolean
       label: 'Play all'
+
+field.formatter.settings.media_mpx_availability:
+  type: field.formatter.settings.timestamp
+  label: 'mpx Availability formatter settings'
