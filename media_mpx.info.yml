@@ -6,4 +6,5 @@ core: 8.x
 dependencies:
   - drupal:media (>=8.5.0)
   - drupal:guzzle_cache
+  - drupal:datetime
 configure: entity.media_mpx_account.collection
