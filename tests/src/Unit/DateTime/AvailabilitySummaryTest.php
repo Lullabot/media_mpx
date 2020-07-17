@@ -20,6 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  */
 class AvailabilitySummaryTest extends UnitTestCase {
 
+  /**
+   * Short date format.
+   */
   const SHORT_DATE_FORMAT = 'm/d/Y - H:i';
 
   /**
@@ -81,13 +84,16 @@ class AvailabilitySummaryTest extends UnitTestCase {
   /**
    * Test for correct output of the getAvailabilitySummary method.
    *
+   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_object
+   *   Mpx media object.
+   * @param bool $include_date
+   *   Indicate whether to include the date.
+   * @param string $expected_result
+   *   The expected summary string.
+   *
    * @covers ::getAvailabilitySummary
    *
    * @dataProvider getAvailabilitySummaryProvider
-   *
-   * @param \Lullabot\Mpx\DataService\Media\Media $mpx_object
-   * @param bool $include_date
-   * @param string $expected_result
    */
   public function testAvailabilitySummary(Media $mpx_object, bool $include_date, string $expected_result) {
     $summary = $this->availabilitySummary->getAvailabilitySummary($mpx_object, $include_date);
@@ -97,13 +103,16 @@ class AvailabilitySummaryTest extends UnitTestCase {
   /**
    * Test for correct output of the getAvailableSummary method.
    *
+   * @param mixed $expired_date
+   *   Expired date.
+   * @param bool $include_date
+   *   Indicate whether to include the date.
+   * @param string $expected_result
+   *   The expected summary.
+   *
    * @covers ::getAvailableSummary
    *
    * @dataProvider getAvailableSummaryProvider
-   *
-   * @param mixed $expired_date
-   * @param bool $include_date
-   * @param string $expected_result
    */
   public function testGetAvailableSummary($expired_date, bool $include_date, string $expected_result) {
     $summary = $this->availabilitySummary->getAvailableSummary($expired_date, $include_date);
@@ -113,13 +122,16 @@ class AvailabilitySummaryTest extends UnitTestCase {
   /**
    * Test for correct output of the getUpcomingSummary method.
    *
+   * @param mixed $available_date
+   *   Available date.
+   * @param bool $include_date
+   *   Indicate whether to include the date.
+   * @param string $expected_result
+   *   The expected summary.
+   *
    * @covers ::getUpcomingSummary
    *
    * @dataProvider getUpcomingSummaryProvider
-   *
-   * @param mixed $available_date
-   * @param bool $include_date
-   * @param string $expected_result
    */
   public function testGetUpcomingSummary($available_date, bool $include_date, string $expected_result) {
     $summary = $this->availabilitySummary->getUpcomingSummary($available_date, $include_date);
@@ -129,13 +141,16 @@ class AvailabilitySummaryTest extends UnitTestCase {
   /**
    * Test for correct output of the getExpiredSummary method.
    *
+   * @param mixed $expired_date
+   *   Expired date.
+   * @param bool $include_date
+   *   Indicate whether to include the date.
+   * @param string $expected_result
+   *   The expected summary.
+   *
    * @covers ::getExpiredSummary
    *
    * @dataProvider getExpiredSummaryProvider
-   *
-   * @param mixed $expired_date
-   * @param bool $include_date
-   * @param string $expected_result
    */
   public function testGetExpiredSummary($expired_date, bool $include_date, string $expected_result) {
     $summary = $this->availabilitySummary->getExpiredSummary($expired_date, $include_date);
@@ -169,11 +184,23 @@ class AvailabilitySummaryTest extends UnitTestCase {
     $available_no_expiration->setAvailableDate(new ConcreteDateTime($past_date));
 
     return [
-      [$upcoming_media, TRUE, sprintf('Upcoming %s', $future_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        $upcoming_media,
+        TRUE,
+        sprintf('Upcoming %s', $future_date->format(self::SHORT_DATE_FORMAT)),
+      ],
       [$upcoming_media, FALSE, 'Upcoming'],
-      [$available_media, TRUE, sprintf('Available until %s', $future_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        $available_media,
+        TRUE,
+        sprintf('Available until %s', $future_date->format(self::SHORT_DATE_FORMAT)),
+      ],
       [$available_media, FALSE, 'Available'],
-      [$expired_media, TRUE, sprintf('Expired on %s', $past_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        $expired_media,
+        TRUE,
+        sprintf('Expired on %s', $past_date->format(self::SHORT_DATE_FORMAT)),
+      ],
       [$expired_media, FALSE, 'Expired'],
       [$empty_media, TRUE, 'Available'],
       [$empty_media, FALSE, 'Available'],
@@ -196,7 +223,11 @@ class AvailabilitySummaryTest extends UnitTestCase {
       ['', FALSE, 'Available'],
       [new NullDateTime(), TRUE, 'Available'],
       [new ConcreteDateTime($future_date), FALSE, 'Available'],
-      [new ConcreteDateTime($future_date), TRUE, sprintf('Available until %s', $future_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        new ConcreteDateTime($future_date),
+        TRUE,
+        sprintf('Available until %s', $future_date->format(self::SHORT_DATE_FORMAT)),
+      ],
     ];
   }
 
@@ -214,7 +245,11 @@ class AvailabilitySummaryTest extends UnitTestCase {
       ['', FALSE, 'Upcoming'],
       [new NullDateTime(), TRUE, 'Upcoming'],
       [new ConcreteDateTime($future_date), FALSE, 'Upcoming'],
-      [new ConcreteDateTime($future_date), TRUE, sprintf('Upcoming %s', $future_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        new ConcreteDateTime($future_date),
+        TRUE,
+        sprintf('Upcoming %s', $future_date->format(self::SHORT_DATE_FORMAT)),
+      ],
     ];
   }
 
@@ -232,7 +267,11 @@ class AvailabilitySummaryTest extends UnitTestCase {
       ['', FALSE, 'Expired'],
       [new NullDateTime(), TRUE, 'Expired'],
       [new ConcreteDateTime($past_date), FALSE, 'Expired'],
-      [new ConcreteDateTime($past_date), TRUE, sprintf('Expired on %s', $past_date->format(self::SHORT_DATE_FORMAT))],
+      [
+        new ConcreteDateTime($past_date),
+        TRUE,
+        sprintf('Expired on %s', $past_date->format(self::SHORT_DATE_FORMAT)),
+      ],
     ];
   }
 

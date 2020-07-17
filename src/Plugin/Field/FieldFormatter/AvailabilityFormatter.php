@@ -28,6 +28,8 @@ class AvailabilityFormatter extends TimestampFormatter {
   use StubMediaObjectTrait;
 
   /**
+   * Availability summary service.
+   *
    * @var \Drupal\media_mpx\DateTime\AvailabilitySummary
    */
   protected $availabilitySummary;
