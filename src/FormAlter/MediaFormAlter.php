@@ -72,7 +72,7 @@ class MediaFormAlter {
    * Callback for the 'Update mpx data' button.
    */
   public function reimportCallback(array $form, FormStateInterface $formState) {
-    /* @var \Drupal\Core\Entity\ContentEntityForm $form_object */
+    /** @var \Drupal\Core\Entity\ContentEntityForm $form_object */
     $form_object = $formState->getFormObject();
 
     try {

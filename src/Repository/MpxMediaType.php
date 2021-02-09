@@ -49,7 +49,7 @@ class MpxMediaType {
 
     $mpx_types = [];
     foreach ($media_types as $type) {
-      /* @var \Drupal\media\Entity\MediaType $type */
+      /** @var \Drupal\media\Entity\MediaType $type */
       if ($type->getSource() instanceof Media) {
         $mpx_types[] = $type;
       }
@@ -79,7 +79,7 @@ class MpxMediaType {
       throw new MediaTypeDoesNotExistException(sprintf('The media type %s does not exist.', $id));
     }
 
-    /* @var \Drupal\media\Entity\MediaType $media_type */
+    /** @var \Drupal\media\Entity\MediaType $media_type */
     if (!$media_type->getSource() instanceof Media) {
       throw new MediaTypeNotAssociatedWithMpxException(sprintf('The media type %s source is not associated with mpx.', $id));
     }

@@ -167,7 +167,7 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
     $finder = MockFileFinder::create($fileinfo->getPathName());
     $parser = new StaticReflectionParser($class, $finder, TRUE);
 
-    /* @var $annotation \Lullabot\Mpx\DataService\Annotation\CustomField */
+    /** @var \Lullabot\Mpx\DataService\Annotation\CustomField $annotation */
     if (!$annotation = $reader->getClassAnnotation($parser->getReflectionClass(), CustomField::class)) {
       // Store a NULL object, so the file is not reparsed again.
       $this->fileCache->set($fileinfo->getPathName(), [NULL]);

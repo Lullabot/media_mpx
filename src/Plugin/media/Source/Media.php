@@ -134,7 +134,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     $service_info = $this->getPluginDefinition()['media_mpx'];
     $fields = $this->customFieldManager->getCustomFields();
-    /* @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
+    /** @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
     $service_name = $service_info['service_name'];
     $object_type = $service_info['object_type'];
     if (isset($fields[$service_name]) && isset($fields[$service_name][$object_type]) && $var = $fields[$service_name][$object_type]) {
@@ -323,7 +323,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
 
     // First, we extract all possible custom fields that may be defined.
     foreach ($fields[$service_name][$object_type] as $discoveredCustomField) {
-      /* @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
+      /** @var \Lullabot\Mpx\DataService\DiscoveredCustomField $discoveredCustomField */
       $class = $discoveredCustomField->getClass();
       $namespace = $discoveredCustomField->getAnnotation()->namespace;
       $properties[$namespace] = $this->propertyExtractor()
