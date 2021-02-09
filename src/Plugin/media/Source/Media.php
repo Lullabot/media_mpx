@@ -216,26 +216,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       return $this->getMpxMetadata($media, $attribute_name);
     }
     catch (ClientException $e) {
-      // Unfortunately, the media API has no way for us to set a form validation
-      // error when fetching metadata during a save operation. Instead, it
-      // expects a NULL return for a given attribute. There are a variety of
-      // user-caused conditions that can cause mpx videos to fail to load (such
-      // as a typo'ed mpx URL), and using the Messenger service gives us a
-      // method to tell the user something went wrong, even if their entity does
-      // get saved.
-      $this->mpxLogger->logException($e);
-      if ($e->getCode() == 404) {
-        $this->messenger()->addError($this->t('The video was not found in mpx. Check the mpx URL and try again.'));
-      }
-      elseif ($e->getCode() == 401 || $e->getCode() == 403) {
-        $this->messenger()->addError($this->t('Access was denied loading the video from mpx. Check the mpx URL and account credentials and try again.'));
-      }
-      else {
-        $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', [
-          '@code' => $e->getCode(),
-          '@message' => $e->getMessage(),
-        ]));
-      }
+      $this->handleGetMetadataClientException($e);
     }
     catch (TransferException $e) {
       $this->mpxLogger->logException($e);
@@ -245,6 +226,36 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
       ]));
     }
     return parent::getMetadata($media, $attribute_name);
+  }
+
+  /**
+   * Handle a ClientException that occurs during a metadata get.
+   *
+   * Unfortunately, the media API has no way for us to set a form validation
+   * error when fetching metadata during a save operation. Instead, it
+   * expects a NULL return for a given attribute. There are a variety of
+   * user-caused conditions that can cause mpx videos to fail to load (such
+   * as a typo'ed mpx URL), and using the Messenger service gives us a
+   * method to tell the user something went wrong, even if their entity does
+   * get saved.
+   *
+   * @param \GuzzleHttp\Exception\ClientException $e
+   *   The client exception that occurred during getMetadata.
+   */
+  private function handleGetMetadataClientException(ClientException $e) {
+    $this->mpxLogger->logException($e);
+    if ($e->getCode() == 404) {
+      $this->messenger()->addError($this->t('The video was not found in mpx. Check the mpx URL and try again.'));
+    }
+    elseif ($e->getCode() == 401 || $e->getCode() == 403) {
+      $this->messenger()->addError($this->t('Access was denied loading the video from mpx. Check the mpx URL and account credentials and try again.'));
+    }
+    else {
+      $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', [
+        '@code' => $e->getCode(),
+        '@message' => $e->getMessage(),
+      ]));
+    }
   }
 
   /**
@@ -336,7 +347,7 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
         ->getProperties($class);
     }
 
-    list($attribute_namespace, $field) = $this->extractNamespaceField($attribute_name);
+    [$attribute_namespace, $field] = $this->extractNamespaceField($attribute_name);
 
     if (in_array($attribute_namespace, array_keys($properties))) {
       $mpx_media = $this->getMpxObject($media);
