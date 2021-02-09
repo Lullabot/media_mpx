@@ -151,7 +151,10 @@ class MpxImporter extends DrushCommands {
         // a single request for the item was made.
         $this->dataObjectImporter->cacheItem($item, $service_info);
         $this->io()->progressAdvance();
-        $this->logger()->info(dt('Fetched @type @uri.', ['@type' => $media_type->id(), '@uri' => $item->getId()]));
+        $this->logger()->info(dt('Fetched @type @uri.', [
+          '@type' => $media_type->id(),
+          '@uri' => $item->getId(),
+        ]));
       }
 
     })->wait();

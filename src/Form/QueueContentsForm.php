@@ -11,7 +11,7 @@ use Drupal\media_mpx\Service\QueueVideoImportsResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class QueueContentsForm.
+ * Allows a site administrator to queue videos for import.
  */
 class QueueContentsForm extends FormBase {
 

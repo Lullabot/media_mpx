@@ -81,7 +81,10 @@ class NotificationQueuer extends DrushCommands {
    * @command media_mpx:listen
    * @aliases mpxl
    */
-  public function listen($media_type_id, array $options = ['once' => FALSE, 'reset' => FALSE]) {
+  public function listen($media_type_id, array $options = [
+    'once' => FALSE,
+    'reset' => FALSE,
+  ]) {
     if ($options['reset']) {
       $this->listener->resetNotificationId($media_type_id);
     }

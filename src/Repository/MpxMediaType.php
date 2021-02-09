@@ -11,7 +11,7 @@ use Drupal\media_mpx\Exception\MediaTypeNotAssociatedWithMpxException;
 use Drupal\media_mpx\Plugin\media\Source\Media;
 
 /**
- * Class MpxMediaType.
+ * Repository class for mpx media types.
  *
  * @package Drupal\media_mpx\Repository
  */

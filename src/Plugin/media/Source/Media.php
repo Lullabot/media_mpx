@@ -231,12 +231,18 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
         $this->messenger()->addError($this->t('Access was denied loading the video from mpx. Check the mpx URL and account credentials and try again.'));
       }
       else {
-        $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', ['@code' => $e->getCode(), '@message' => $e->getMessage()]));
+        $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', [
+          '@code' => $e->getCode(),
+          '@message' => $e->getMessage(),
+        ]));
       }
     }
     catch (TransferException $e) {
       $this->mpxLogger->logException($e);
-      $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', ['@code' => $e->getCode(), '@message' => $e->getMessage()]));
+      $this->messenger()->addError($this->t('There was an error loading the video from mpx. The error from mpx was: @message', [
+        '@code' => $e->getCode(),
+        '@message' => $e->getMessage(),
+      ]));
     }
     return parent::getMetadata($media, $attribute_name);
   }
@@ -517,7 +523,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     // @see https://www.drupal.org/project/drupal/issues/2798261
     $complete_form_state = $form_state->getCompleteFormState();
     if ($complete_form_state->isProcessingInput()) {
-      $media_image_bundle = $complete_form_state->getValue(['source_configuration', 'media_image_bundle']);
+      $media_image_bundle = $complete_form_state->getValue([
+        'source_configuration',
+        'media_image_bundle',
+      ]);
     }
     else {
       $media_image_bundle = $this->getConfiguration()['media_image_bundle'];
