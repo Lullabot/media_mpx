@@ -108,7 +108,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
    * {@inheritdoc}
    */
   public function processItem($data) {
-    /* @var $data \Drupal\media_mpx\Notification[] */
+    /** @var \Drupal\media_mpx\Notification[] $data */
 
     // All notifications in the same queue item have the same media type.
     // @see \Drupal\media_mpx\Commands\NotificationQueuer::queueNotifications.

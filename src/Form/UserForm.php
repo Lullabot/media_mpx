@@ -11,7 +11,9 @@ use Lullabot\Mpx\Exception\ClientException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class UserForm.
+ * Form for the mpx User entity type.
+ *
+ * @see \Drupal\media_mpx\Entity\User
  */
 class UserForm extends EntityForm {
 

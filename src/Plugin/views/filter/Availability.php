@@ -144,7 +144,10 @@ class Availability extends FilterPluginBase {
     $media_type = $this->entityTypeManager->getStorage('media_type')->load($this->definition['media_type']);
     $field_map = $media_type->getFieldMap();
     if (isset($field_map['Media:availableDate']) && isset($field_map['Media:expirationDate'])) {
-      return [$field_map['Media:availableDate'], $field_map['Media:expirationDate']];
+      return [
+        $field_map['Media:availableDate'],
+        $field_map['Media:expirationDate'],
+      ];
     }
     throw new \RuntimeException(sprintf('mpx available date and/or mpx expiration date are not mapped for the %s media bundle.', $this->definition['media_type']));
   }

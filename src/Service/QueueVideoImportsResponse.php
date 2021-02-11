@@ -5,7 +5,7 @@ namespace Drupal\media_mpx\Service;
 use Lullabot\Mpx\DataService\ObjectListIterator;
 
 /**
- * Class QueueVideoImportsResponse.
+ * A response object with data about the queued videos.
  *
  * @package Drupal\media_mpx\Service
  */

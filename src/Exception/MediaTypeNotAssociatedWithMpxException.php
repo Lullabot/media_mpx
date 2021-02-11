@@ -3,7 +3,7 @@
 namespace Drupal\media_mpx\Exception;
 
 /**
- * Class MediaTypeNotAssociatedWithMpxException.
+ * Thrown when an mpx specific operation is attempted on a no-mpx media type.
  *
  * @package Drupal\media_mpx\Exception
  */
