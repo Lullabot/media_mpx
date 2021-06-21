@@ -293,25 +293,25 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     $value = $this->getThumbnailMetadata($media, $attribute_name);
 
     // Check if the attribute is a core thePlatform-defined field.
-    if (!$value) {
+    if (is_null($value)) {
       $value = $this->getMediaValue($media, $attribute_name);
     }
 
     // Check if the attribute is on the first video file.
-    if (!$value) {
+    if (is_null($value)) {
       $value = $this->getMediaFileValue($media, $attribute_name);
     }
 
     // Finally, check if a custom field own this attribute.
-    if (!$value) {
+    if (is_null($value)) {
       $value = $this->getCustomFieldsValue($media, $attribute_name);
     }
 
-    if (!is_null($value)) {
-      return $value;
+    if (is_null($value)) {
+      return parent::getMetadata($media, $attribute_name);
     }
 
-    return parent::getMetadata($media, $attribute_name);
+    return $value;
   }
 
   /**
