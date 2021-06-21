@@ -39,6 +39,20 @@ media_mpx.media_mpx_user.*:
 media.source.media_mpx_media:
   type: media_mpx.account_aware
   label: '"Media" media source configuration'
+  mapping:
+    media_image_bundle:
+      type: string
+      label: 'Media image bundle'
+    media_image_field:
+      type: string
+      label: 'Media image field'
+    media_image_entity_reference_field:
+      type: string
+      label: 'Media image entity reference field'
+
+media.source.media_mpx_feedconfig:
+  type: media_mpx.account_aware
+  label: '"FeedConfig" media source configuration'
 
 media_mpx.account_aware:
   type: mapping
@@ -63,3 +77,7 @@ field.formatter.settings.media_mpx_video:
     play_all:
       type: boolean
       label: 'Play all'
+
+field.formatter.settings.media_mpx_availability:
+  type: field.formatter.settings.timestamp
+  label: 'mpx Availability formatter settings'

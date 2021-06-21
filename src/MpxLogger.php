@@ -84,7 +84,7 @@ class MpxLogger {
    *
    * @see \Drupal\Core\Utility\Error::decodeException()
    */
-  private function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
+  public function watchdogException(\Exception $exception, $message = NULL, array $variables = [], $severity = RfcLogLevel::ERROR, $link = NULL) {
     // Use a default value if $message is not set.
     if (empty($message)) {
       $message = '%type: @message in %function (line %line of %file).';

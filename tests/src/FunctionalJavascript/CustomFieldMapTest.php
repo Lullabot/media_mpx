@@ -16,8 +16,14 @@ use Drupal\media_mpx_test\JsonResponse;
  */
 class CustomFieldMapTest extends WebDriverTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = [
     'media_mpx',
     'media_mpx_test',
@@ -33,6 +39,12 @@ class CustomFieldMapTest extends WebDriverTestBase {
    *   - Validates saving an mpx media entity and that the field is visible.
    */
   public function testMapCustomField() {
+    $this->container->get('config.factory')
+      ->getEditable('media.settings')
+      ->set('standalone_url', TRUE)
+      ->save(TRUE);
+    $this->container->get('router.builder')->rebuild();
+
     /** @var \Drupal\media_mpx_test\MockClientFactory $factory */
     $factory = $this->container->get('media_mpx.client_factory');
     $factory->getMockHandler()->append([

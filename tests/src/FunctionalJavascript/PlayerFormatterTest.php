@@ -16,8 +16,14 @@ use Drupal\media_mpx_test\JsonResponse;
  */
 class PlayerFormatterTest extends WebDriverTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = [
     'media_mpx',
     'media_mpx_test',
@@ -31,6 +37,12 @@ class PlayerFormatterTest extends WebDriverTestBase {
    * that an iframe is properly rendered.
    */
   public function testViewPlayerFormatter() {
+    $this->container->get('config.factory')
+      ->getEditable('media.settings')
+      ->set('standalone_url', TRUE)
+      ->save(TRUE);
+    $this->container->get('router.builder')->rebuild();
+
     /** @var \Drupal\media_mpx_test\MockClientFactory $factory */
     $factory = $this->container->get('media_mpx.client_factory');
     $factory->getMockHandler()->append([
@@ -114,7 +126,7 @@ class PlayerFormatterTest extends WebDriverTestBase {
     $this->getSession()->getPage()->fillField('mpx Media', 'http://data.media.theplatform.com/media/data/Media/2602559');
     $this->click('#edit-submit');
     $this->drupalGet('/media/1');
-    $this->assertSession()->responseContains('<iframe class="mpx-player mpx-player-account--' . $account->id() . '" src="https://player.theplatform.com/p/public-id/DemoPlayer/select/media/Zy1n9JQPy6hw"></iframe>');
+    $this->assertSession()->responseContains('<iframe class="mpx-player mpx-player-account--' . $account->id() . '" src="https://player.theplatform.com/p/public-id/DemoPlayer/select/media/Zy1n9JQPy6hw?autoPlay=false&amp;playAll=false"></iframe>');
   }
 
   /**

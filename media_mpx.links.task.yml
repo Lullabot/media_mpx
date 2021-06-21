@@ -1,0 +1,15 @@
+# MPX Asset management.
+media_mpx.asset_sync.queue_videos:
+  route_name: media_mpx.asset_sync.queue_videos
+  title: 'Import all mpx videos'
+  parent_id: entity.media.collection
+
+media_mpx.asset_sync.single_for_video_type:
+  route_name: media_mpx.asset_sync.single_for_video_type
+  title: 'Import mpx video by GUID'
+  parent_id: entity.media.collection
+
+media_mpx.asset_sync.single_by_mpx_id:
+  route_name: media_mpx.asset_sync.single_by_mpx_id
+  title: 'Import mpx video by Full ID'
+  parent_id: entity.media.collection
