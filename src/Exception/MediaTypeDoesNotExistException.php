@@ -3,7 +3,7 @@
 namespace Drupal\media_mpx\Exception;
 
 /**
- * Class MediaTypeDoesNotExistException.
+ * Thrown when the expected media type does not exist.
  *
  * @package Drupal\media_mpx\Exception
  */

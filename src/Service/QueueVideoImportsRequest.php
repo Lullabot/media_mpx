@@ -3,7 +3,7 @@
 namespace Drupal\media_mpx\Service;
 
 /**
- * Class QueueVideoImportsRequest.
+ * A request object containing the media type and query filters.
  *
  * @package Drupal\media_mpx\Service
  */

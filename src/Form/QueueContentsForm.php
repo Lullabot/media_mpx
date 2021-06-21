@@ -11,7 +11,7 @@ use Drupal\media_mpx\Service\QueueVideoImportsResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Class QueueContentsForm.
+ * Allows a site administrator to queue videos for import.
  */
 class QueueContentsForm extends FormBase {
 
@@ -96,7 +96,7 @@ class QueueContentsForm extends FormBase {
    * @throws \Drupal\media_mpx\Exception\MediaTypeNotAssociatedWithMpxException
    */
   public function batchedQueueItemsForMediaType(string $media_type_id, array &$context) {
-    /* @var \Drupal\media_mpx\Service\QueueVideoImports $queue_service */
+    /** @var \Drupal\media_mpx\Service\QueueVideoImports $queue_service */
     $queue_service = \Drupal::getContainer()->get('media_mpx.service.queue_video_imports');
 
     // Mpx responses might be a bit heavy, so limit batches size to 200. Don't
@@ -178,7 +178,7 @@ class QueueContentsForm extends FormBase {
         'The following @count mpx items could not be queued for updates. Check logs for details.');
       $this->messenger()->addError($errors_message);
 
-      /* @var \Lullabot\Mpx\DataService\Media\Media $mpx_item */
+      /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_item */
       foreach ($results['errors'] as $mpx_item) {
         $this->messenger()->addError($mpx_item->getId());
       }

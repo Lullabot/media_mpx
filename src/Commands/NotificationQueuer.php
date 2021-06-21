@@ -81,7 +81,10 @@ class NotificationQueuer extends DrushCommands {
    * @command media_mpx:listen
    * @aliases mpxl
    */
-  public function listen($media_type_id, array $options = ['once' => FALSE, 'reset' => FALSE]) {
+  public function listen($media_type_id, array $options = [
+    'once' => FALSE,
+    'reset' => FALSE,
+  ]) {
     if ($options['reset']) {
       $this->listener->resetNotificationId($media_type_id);
     }
@@ -197,7 +200,7 @@ class NotificationQueuer extends DrushCommands {
    */
   private function loadMediaType(string $media_type_id): MediaTypeInterface {
     $bundle_type = $this->entityTypeManager->getDefinition('media')->getBundleEntityType();
-    /* @var $media_type \Drupal\media\MediaTypeInterface */
+    /** @var \Drupal\media\MediaTypeInterface $media_type */
     if (!$media_type = $this->entityTypeManager->getStorage($bundle_type)
       ->load($media_type_id)) {
       // Normally you wouldn't translate exception text, but Drush does it in
