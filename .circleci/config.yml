@@ -199,6 +199,7 @@ deprecated_code_check: &deprecated_code_check
     - run:
         working_directory: /var/www/html
         command: |
+          echo "memory_limit = 512M" >> /usr/local/etc/php/php.ini
           vendor/bin/drupal-check -d modules/media_mpx
 
 # Declare all of the jobs we should run.
