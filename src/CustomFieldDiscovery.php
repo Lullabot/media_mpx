@@ -61,6 +61,9 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
 
     // Clear the annotation loaders of any previous annotation classes.
     AnnotationRegistry::reset();
+    // Register the namespaces of classes that can be used for annotations.
+    /** @phpstan-ignore-next-line */
+    AnnotationRegistry::registerLoader('class_exists');
 
     // Search for classes within all PSR-0 namespace locations.
     foreach ($this->getPluginNamespaces() as $namespace => $dirs) {
