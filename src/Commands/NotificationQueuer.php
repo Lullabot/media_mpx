@@ -262,9 +262,8 @@ class NotificationQueuer extends DrushCommands {
    *   (optional) Run once instead of until all notifications are processed.
    */
   private function doListen($media_type_id, bool $once = FALSE): void {
-    $more_to_consume = TRUE;
 
-    while ($more_to_consume) {
+    do {
       // First, we find the last notification ID.
       $media_type = $this->loadMediaType($media_type_id);
       $media_source = DataObjectImporter::loadMediaSource($media_type);
@@ -276,25 +275,48 @@ class NotificationQueuer extends DrushCommands {
       $this->io()
         ->note(dt('Waiting for a notification from mpx after notification ID @id...', ['@id' => $notification_id]));
       $notifications = $this->listener->listen($media_source, $notification_id);
+    } while ($this->processNotifications($notifications, $media_type, $once));
+  }
 
-      // We need a reference to the last notification so we can set the last
-      // notification ID even if all notifications are filtered out.
-      $last_notification = end($notifications);
-
-      // Check to see if there were no notifications and we got a sync response.
-      // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
-      if ($last_notification->isSyncResponse()) {
-        $this->logger()->info(dt('All notifications have been processed.'));
-        $more_to_consume = FALSE;
-      }
-      else {
-        $this->filterAndQueue($media_type, $notifications);
-        $more_to_consume = !$once;
-      }
-
-      // Let the next listen call start from where we left off.
-      $this->listener->setNotificationId($media_type_id, $last_notification);
+  /**
+   * Process received notifications.
+   *
+   * @param \Lullabot\Mpx\DataService\Notification[] $notifications
+   *   Array of notifications.
+   * @param \Drupal\media\MediaTypeInterface $media_type
+   *   Media type for which notifications are being processed.
+   * @param bool $once
+   *   (optional) Run once instead of until all notifications are processed.
+   *
+   * @return bool
+   *   TRUE if there are more notifications to consume, otherwise FALSE.
+   */
+  private function processNotifications(array $notifications, MediaTypeInterface $media_type, bool $once = FALSE): bool {
+    // We did not receive any notifications, connection may have timed out.
+    if (empty($notifications)) {
+      $this->io()->note(dt('Connection to mpx has timed out.'));
+      return FALSE;
     }
+
+    // We need a reference to the last notification so we can set the last
+    // notification ID even if all notifications are filtered out.
+    $last_notification = end($notifications);
+
+    // Check to see if there were no notifications and we got a sync response.
+    // @see https://docs.theplatform.com/help/wsf-subscribing-to-change-notifications#tp-toc10
+    if ($last_notification->isSyncResponse()) {
+      $this->io()->note(dt('All notifications have been processed.'));
+      $more_to_consume = FALSE;
+    }
+    else {
+      $this->filterAndQueue($media_type, $notifications);
+      $more_to_consume = !$once;
+    }
+
+    // Let the next listen call start from where we left off.
+    $this->listener->setNotificationId($media_type->id(), $last_notification);
+
+    return $more_to_consume;
   }
 
   /**
