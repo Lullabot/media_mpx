@@ -2,8 +2,7 @@
 
 namespace Drupal\media_mpx;
 
-use function GuzzleHttp\Psr7\build_query;
-use function GuzzleHttp\Psr7\parse_query;
+use GuzzleHttp\Psr7\Query;
 use Kevinrob\GuzzleCache\KeyValueHttpHeader;
 use Kevinrob\GuzzleCache\Strategy\GreedyCacheStrategy;
 use Psr\Http\Message\RequestInterface;
@@ -22,7 +21,7 @@ class MpxCacheStrategy extends GreedyCacheStrategy {
    */
   protected function getCacheKey(RequestInterface $request, KeyValueHttpHeader $varyHeaders = NULL) {
     $uri = $request->getUri();
-    $query = parse_query($uri->getQuery());
+    $query = Query::parse($uri->getQuery());
 
     // Mpx tokens are only allowed in the URL and not as a header. Since tokens
     // will vary over time, we need to remove that from the cache key.
@@ -31,7 +30,7 @@ class MpxCacheStrategy extends GreedyCacheStrategy {
     // Normalize the cache key by sorting.
     ksort($query);
 
-    $withoutToken = $request->withUri($uri->withQuery(build_query($query)));
+    $withoutToken = $request->withUri($uri->withQuery(Query::build($query)));
     return parent::getCacheKey($withoutToken, $varyHeaders);
   }
 

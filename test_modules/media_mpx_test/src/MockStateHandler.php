@@ -2,12 +2,12 @@
 
 namespace Drupal\media_mpx_test;
 
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Message;
 use Psr\Http\Message\StreamInterface;
 use Drupal\Core\State\StateInterface;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\PromiseInterface;
-use function GuzzleHttp\Psr7\parse_response;
-use function GuzzleHttp\Psr7\str;
 use GuzzleHttp\TransferStats;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -93,7 +93,7 @@ class MockStateHandler implements \Countable {
 
     $this->lastRequest = $request;
     $this->lastOptions = $options;
-    $response = parse_response(array_shift($queue));
+    $response = Message::parseResponse(array_shift($queue));
     $this->state->set('media_mpx_test_queue', $queue);
 
     if (isset($options['on_headers'])) {
@@ -114,8 +114,8 @@ class MockStateHandler implements \Countable {
     }
 
     $response = $response instanceof \Exception
-      ? \GuzzleHttp\Promise\rejection_for($response)
-      : \GuzzleHttp\Promise\promise_for($response);
+      ? Create::rejectionFor($response)
+      : Create::promiseFor($response);
 
     return $response->then(
       function ($value) use ($request, $options) {
@@ -145,7 +145,7 @@ class MockStateHandler implements \Countable {
         if ($this->onRejected) {
           call_user_func($this->onRejected, $reason);
         }
-        return \GuzzleHttp\Promise\rejection_for($reason);
+        return Create::rejectionFor($reason);
       }
     );
   }
@@ -167,7 +167,7 @@ class MockStateHandler implements \Countable {
         || $value instanceof PromiseInterface
         || is_callable($value)
       ) {
-        $queue[] = str($value);
+        $queue[] = Message::toString($value);
       }
       else {
         throw new \InvalidArgumentException('Expected a response or '

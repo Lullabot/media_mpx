@@ -8,7 +8,7 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
-use function GuzzleHttp\Promise\each_limit;
+use GuzzleHttp\Promise\Each;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -117,7 +117,7 @@ class NotificationQueueWorker extends QueueWorkerBase implements ContainerFactor
     // Process each request concurrently.
     // @todo Handle individual request rejections by requeuing them to the
     // bottom of the queue.
-    each_limit($this->yieldLoads($data), 10, function ($mpx_media) use ($media_type) {
+    Each::ofLimit($this->yieldLoads($data), 10, function ($mpx_media) use ($media_type) {
       $this->importer->importItem($mpx_media, $media_type);
     }, function ($reason) {
       if ($reason instanceof TransferException) {

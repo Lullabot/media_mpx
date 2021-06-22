@@ -108,7 +108,7 @@ class NotificationQueuer extends DrushCommands {
      * maybe there is a better place to publicly store this functionality. */
 
     /** @var \Drupal\Media\MediaStorage $media_storage */
-    $media_storage = \Drupal::entityManager()->getStorage('media');
+    $media_storage = $this->entityTypeManager->getStorage('media');
     /** @var \Drupal\Media\Entity\MediaType $media_type */
     $media_type = MediaType::load($media_type_id);
     $source_field = $media_type->getSource()
