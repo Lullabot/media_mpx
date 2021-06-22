@@ -199,7 +199,7 @@ deprecated_code_check: &deprecated_code_check
     - run:
         working_directory: /var/www/html
         command: |
-          vendor/bin/drupal-check -d -e modules/media_mpx
+          vendor/bin/drupal-check -d modules/media_mpx
 
 # Declare all of the jobs we should run.
 version: 2
