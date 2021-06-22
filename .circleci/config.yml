@@ -188,6 +188,19 @@ code_coverage: &code_coverage
     - store_artifacts:
         path: /var/www/html/artifacts
 
+deprecated_code_check: &deprecated_code_check
+  <<: *defaults
+  steps:
+    - attach_workspace:
+        at: /var/www/html
+
+    - checkout
+
+    - run:
+        working_directory: /var/www/html
+        command: |
+          vendor/bin/drupal-check -d -e modules/media_mpx
+
 # Declare all of the jobs we should run.
 version: 2
 jobs:
@@ -205,6 +218,8 @@ jobs:
      <<: *code_sniffer
   run-code-coverage:
      <<: *code_coverage
+  run-deprecated-code-check:
+     <<: *deprecated_code_check
 
 workflows:
   version: 2
@@ -232,6 +247,9 @@ workflows:
           requires:
             - update-dependencies
             - run-unit-kernel-tests
+      - run-deprecated-code-check:
+          requires:
+            - update-dependencies
 
   weekly:
     jobs:
@@ -255,6 +273,9 @@ workflows:
           requires:
             - update-dependencies
             - run-unit-kernel-tests
+      - run-deprecated-code-check:
+          requires:
+            - update-dependencies
 
     triggers:
       - schedule:

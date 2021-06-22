@@ -30,7 +30,8 @@
     "drupal/drupal-extension": "master-dev",
     "bex/behat-screenshot": "^1.2",
     "phpmd/phpmd": "^2.6",
-    "phpmetrics/phpmetrics": "^2.4"
+    "phpmetrics/phpmetrics": "^2.4",
+    "mglaman/drupal-check": "^1.1"
   },
   "extra": {
     "drush": {
