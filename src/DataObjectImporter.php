@@ -2,7 +2,6 @@
 
 namespace Drupal\media_mpx;
 
-use GuzzleHttp\Psr7\Query;
 use GuzzleHttp\Psr7\Uri;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -17,6 +16,7 @@ use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use function GuzzleHttp\Psr7\build_query;
 
 /**
  * Import an mpx item into a media entity.
@@ -477,7 +477,8 @@ class DataObjectImporter {
     ];
     $encoded = \GuzzleHttp\json_encode($item->getJson());
 
-    $uri = $item->getId()->withScheme('https')->withQuery(Query::build($query));
+    // @phpstan-ignore-next-line
+    $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
     $request = new Request('GET', $uri, static::REQUEST_HEADERS);
     $response_headers = $this->getResponseHeaders($encoded);
     $response = new Response(200, $response_headers, $encoded);
