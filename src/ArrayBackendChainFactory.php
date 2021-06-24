@@ -49,7 +49,7 @@ class ArrayBackendChainFactory implements CacheFactoryInterface {
    *   The cache backend object associated with the specified bin.
    */
   public function get($bin) {
-    $chain = new BackendChain($bin);
+    $chain = new BackendChain();
     $chain->appendBackend($this->container->get('cache.backend.memory')->get($bin));
     $chain->appendBackend($this->container->get($this->consistentServiceName)->get($bin));
 
