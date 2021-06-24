@@ -19,6 +19,11 @@ class PlayerFormatterTest extends WebDriverTestBase {
   /**
    * {@inheritdoc}
    */
+  protected $defaultTheme = 'stark';
+
+  /**
+   * {@inheritdoc}
+   */
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
   /**
