@@ -85,7 +85,6 @@ unit_kernel_tests: &unit_kernel_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -106,7 +105,6 @@ functional_tests: &functional_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test-functional.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -127,7 +125,6 @@ functional_js_tests: &functional_js_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test-functional-js.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -183,7 +180,6 @@ code_coverage: &code_coverage
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./code-coverage-stats.sh $CIRCLE_PROJECT_REPONAME
     - store_artifacts:
         path: /var/www/html/artifacts
