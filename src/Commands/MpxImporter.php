@@ -10,9 +10,9 @@ use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\QueueVideoImports;
 use Drupal\media_mpx\Service\QueueVideoImportsRequest;
 use Drush\Commands\DrushCommands;
-use GuzzleHttp\Promise\Each;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListQuery;
+use function GuzzleHttp\Promise\each_limit;
 
 /**
  * Drush commands for mpx.
@@ -145,7 +145,7 @@ class MpxImporter extends DrushCommands {
 
     $service_info = $media_source->getPluginDefinition()['media_mpx'];
 
-    Each::ofLimit($list->yieldLists(), 4, function (ObjectList $list) use ($media_type, $service_info) {
+    each_limit($list->yieldLists(), 4, function (ObjectList $list) use ($media_type, $service_info) {
       foreach ($list as $index => $item) {
         // For each item, we need to inject it into the response cache as if
         // a single request for the item was made.
