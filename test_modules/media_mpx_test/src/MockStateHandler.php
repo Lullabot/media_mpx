@@ -2,7 +2,6 @@
 
 namespace Drupal\media_mpx_test;
 
-use GuzzleHttp\Promise\Create;
 use Psr\Http\Message\StreamInterface;
 use Drupal\Core\State\StateInterface;
 use GuzzleHttp\Exception\RequestException;
@@ -116,8 +115,8 @@ class MockStateHandler implements \Countable {
     }
 
     $response = $response instanceof \Exception
-      ? Create::rejectionFor($response)
-      : Create::promiseFor($response);
+      ? \GuzzleHttp\Promise\rejection_for($response)
+      : \GuzzleHttp\Promise\promise_for($response);
 
     return $response->then(
       function ($value) use ($request, $options) {
@@ -147,7 +146,7 @@ class MockStateHandler implements \Countable {
         if ($this->onRejected) {
           call_user_func($this->onRejected, $reason);
         }
-        return Create::rejectionFor($reason);
+        return \GuzzleHttp\Promise\rejection_for($reason);
       }
     );
   }
