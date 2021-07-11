@@ -101,7 +101,7 @@ class FieldMapTest extends WebDriverTestBase {
       $display->save();
     }
     if ($source_field->isDisplayConfigurable('view')) {
-      $display = $this->container->get('entity_display.repository')->getFormDisplay('media', $media_type->id(), 'default');
+      $display = $this->container->get('entity_display.repository')->getViewDisplay('media', $media_type->id(), 'default');
       $media_type->getSource()->prepareViewDisplay($media_type, $display);
       $display->save();
     }
