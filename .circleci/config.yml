@@ -127,6 +127,10 @@ functional_js_tests: &functional_js_tests
         command: |
           ./test-functional-js.sh $CIRCLE_PROJECT_REPONAME
 
+    - run:
+        command: |
+          [ -d /var/www/html/sites/simpletest/browser_output ] && echo 'Copying functional test browser output to artifacts directory...' && cp -R /var/www/html/sites/simpletest/browser_output /var/www/html/artifacts
+
     - store_test_results:
         path: /var/www/html/artifacts/phpunit
     - store_artifacts:
