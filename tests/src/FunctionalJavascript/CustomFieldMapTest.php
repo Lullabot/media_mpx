@@ -124,7 +124,7 @@ class CustomFieldMapTest extends WebDriverTestBase {
       ]);
     $series->save();
 
-    $display = $this->container->get('entity_display.repository')->getFormDisplay('media', $media_type->id(), 'default');
+    $display = $this->container->get('entity_display.repository')->getViewDisplay('media', $media_type->id(), 'default');
     $display->setComponent('field_series');
     $display->save();
 
