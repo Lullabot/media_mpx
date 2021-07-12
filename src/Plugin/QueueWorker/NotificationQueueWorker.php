@@ -8,9 +8,9 @@ use Drupal\media_mpx\DataObjectFactoryCreator;
 use Drupal\media_mpx\DataObjectImporter;
 use Drupal\media_mpx\MpxLogger;
 use GuzzleHttp\Exception\TransferException;
-use function GuzzleHttp\Promise\each_limit;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use function GuzzleHttp\Promise\each_limit;
 
 /**
  * Process mpx notifications.

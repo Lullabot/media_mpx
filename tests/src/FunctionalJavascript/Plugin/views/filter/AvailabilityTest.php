@@ -16,6 +16,11 @@ use Drupal\media_mpx_test\JsonResponse;
  */
 class AvailabilityTest extends WebDriverTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
+
   const SHORT_DATE_FORMAT = 'm/d/Y - H:i';
 
   /**

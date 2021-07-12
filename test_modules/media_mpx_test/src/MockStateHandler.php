@@ -6,11 +6,11 @@ use Psr\Http\Message\StreamInterface;
 use Drupal\Core\State\StateInterface;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Promise\PromiseInterface;
-use function GuzzleHttp\Psr7\parse_response;
-use function GuzzleHttp\Psr7\str;
 use GuzzleHttp\TransferStats;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use function GuzzleHttp\Psr7\parse_response;
+use function GuzzleHttp\Psr7\str;
 
 /**
  * Mock HTTP client handler that uses the state system to store requests.
@@ -93,6 +93,7 @@ class MockStateHandler implements \Countable {
 
     $this->lastRequest = $request;
     $this->lastOptions = $options;
+    // @phpstan-ignore-next-line
     $response = parse_response(array_shift($queue));
     $this->state->set('media_mpx_test_queue', $queue);
 
@@ -167,6 +168,7 @@ class MockStateHandler implements \Countable {
         || $value instanceof PromiseInterface
         || is_callable($value)
       ) {
+        // @phpstan-ignore-next-line
         $queue[] = str($value);
       }
       else {

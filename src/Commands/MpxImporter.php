@@ -10,9 +10,9 @@ use Drupal\media_mpx\Repository\MpxMediaType;
 use Drupal\media_mpx\Service\QueueVideoImports;
 use Drupal\media_mpx\Service\QueueVideoImportsRequest;
 use Drush\Commands\DrushCommands;
-use function GuzzleHttp\Promise\each_limit;
 use Lullabot\Mpx\DataService\ObjectList;
 use Lullabot\Mpx\DataService\ObjectListQuery;
+use function GuzzleHttp\Promise\each_limit;
 
 /**
  * Drush commands for mpx.

@@ -297,7 +297,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
     $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
     if (!file_exists($local_uri)) {
       $directory = dirname($local_uri);
-      $this->fileSystem->prepareDirectory($directory, FILE_CREATE_DIRECTORY);
+      $this->fileSystem->prepareDirectory($directory, FileSystemInterface::CREATE_DIRECTORY);
       $thumbnail = $this->httpClient->request('GET', $thumbnailUrl);
       $this->fileSystem->saveData((string) $thumbnail->getBody(), $local_uri);
     }

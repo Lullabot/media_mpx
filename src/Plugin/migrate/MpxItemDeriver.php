@@ -11,7 +11,6 @@ use Drupal\migrate\Plugin\Migration;
 use Drupal\migrate\Plugin\MigrationDeriverTrait;
 use Drupal\migrate\Plugin\MigrationPluginManagerInterface;
 use Drupal\migrate\Row;
-use Drupal\migrate_drupal\Plugin\MigrateCckFieldPluginManagerInterface;
 use Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -38,7 +37,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   /**
    * The CCK plugin manager.
    *
-   * @var \Drupal\migrate_drupal\Plugin\MigrateCckFieldPluginManagerInterface
+   * @var \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface
    */
   protected $cckPluginManager;
 
@@ -68,14 +67,14 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    *
    * @param string $base_plugin_id
    *   The base plugin ID for the plugin ID.
-   * @param \Drupal\migrate_drupal\Plugin\MigrateCckFieldPluginManagerInterface $cck_manager
+   * @param \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface $cck_manager
    *   The CCK plugin manager.
    * @param \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface $field_manager
    *   The field plugin manager.
    * @param \Drupal\migrate\Plugin\MigrationPluginManagerInterface $migration_plugin_manager
    *   Migration plugin manager service.
    */
-  public function __construct($base_plugin_id, MigrateCckFieldPluginManagerInterface $cck_manager, MigrateFieldPluginManagerInterface $field_manager, MigrationPluginManagerInterface $migration_plugin_manager) {
+  public function __construct($base_plugin_id, MigrateFieldPluginManagerInterface $cck_manager, MigrateFieldPluginManagerInterface $field_manager, MigrationPluginManagerInterface $migration_plugin_manager) {
     $this->basePluginId = $base_plugin_id;
     $this->cckPluginManager = $cck_manager;
     $this->fieldPluginManager = $field_manager;
