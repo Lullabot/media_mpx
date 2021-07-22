@@ -8,16 +8,21 @@ use Drupal\Tests\BrowserTestBase;
 /**
  * Simple test to ensure that main page loads with module enabled.
  *
- * @group media_theplatform_mpx
+ * @group media_mpx
  */
 class LoadTest extends BrowserTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
 
   /**
    * Modules to enable.
    *
    * @var array
    */
-  public static $modules = ['media_theplatform_mpx'];
+  public static $modules = ['media_mpx'];
 
   /**
    * A user with permission to administer site configuration.
