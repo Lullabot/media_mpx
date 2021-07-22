@@ -19,6 +19,11 @@ class FieldMapTest extends WebDriverTestBase {
   /**
    * {@inheritdoc}
    */
+  protected $defaultTheme = 'stark';
+
+  /**
+   * {@inheritdoc}
+   */
   protected $minkDefaultDriverClass = DrupalSelenium2Driver::class;
 
   /**
@@ -91,16 +96,12 @@ class FieldMapTest extends WebDriverTestBase {
     // Add the new field to the default form and view displays for this
     // media type.
     if ($source_field->isDisplayConfigurable('form')) {
-      // @todo Replace entity_get_form_display() when #2367933 is done.
-      // https://www.drupal.org/node/2872159.
-      $display = entity_get_form_display('media', $media_type->id(), 'default');
+      $display = $this->container->get('entity_display.repository')->getFormDisplay('media', $media_type->id(), 'default');
       $media_type->getSource()->prepareFormDisplay($media_type, $display);
       $display->save();
     }
     if ($source_field->isDisplayConfigurable('view')) {
-      // @todo Replace entity_get_display() when #2367933 is done.
-      // https://www.drupal.org/node/2872159.
-      $display = entity_get_display('media', $media_type->id(), 'default');
+      $display = $this->container->get('entity_display.repository')->getViewDisplay('media', $media_type->id(), 'default');
       $media_type->getSource()->prepareViewDisplay($media_type, $display);
       $display->save();
     }
@@ -123,7 +124,7 @@ class FieldMapTest extends WebDriverTestBase {
       ]);
     $series->save();
 
-    $display = entity_get_display('media', $media_type->id(), 'default');
+    $display = $this->container->get('entity_display.repository')->getViewDisplay('media', $media_type->id(), 'default');
     $display->setComponent('field_description');
     $display->save();
 

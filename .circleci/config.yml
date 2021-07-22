@@ -16,7 +16,7 @@
 defaults: &defaults
   docker:
     # specify the version you desire here (avoid latest except for testing)
-    - image: quay.io/deviantintegral/drupal_tests:0.5.0-drupal87
+    - image: quay.io/deviantintegral/drupal_tests:0.6.0-drupal89
 
     - image: selenium/standalone-chrome-debug:3.141.59-neon
 
@@ -41,16 +41,16 @@ defaults: &defaults
 # We use the composer.json as a way to determine if we can cache our build.
 restore_cache: &restore_cache
   keys:
-  - v4-dependencies-{{ checksum "composer.json" }}-{{ checksum "../../composer.json" }}
+  - v5-dependencies-{{ checksum "composer.json" }}-{{ checksum "../../composer.json" }}
   # fallback to using the latest cache if no exact match is found
-  - v4-dependencies-
+  - v5-dependencies-
 
 # If composer.json hasn't changed, restore the Composer cache directory. We
 # don't restore the lock file so we ensure we get updated dependencies.
 save_cache: &save_cache
   paths:
     - /root/.composer/cache/files
-  key: v4-dependencies-{{ checksum "composer.json" }}-{{ checksum "../../composer.json" }}
+  key: v5-dependencies-{{ checksum "composer.json" }}-{{ checksum "../../composer.json" }}
 
 # Install composer dependencies into the workspace to share with all jobs.
 update_dependencies: &update_dependencies
@@ -85,7 +85,6 @@ unit_kernel_tests: &unit_kernel_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -106,7 +105,6 @@ functional_tests: &functional_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test-functional.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
@@ -127,13 +125,14 @@ functional_js_tests: &functional_js_tests
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./test-functional-js.sh $CIRCLE_PROJECT_REPONAME
 
     - store_test_results:
         path: /var/www/html/artifacts/phpunit
     - store_artifacts:
         path: /var/www/html/artifacts
+    - store_artifacts:
+        path: /var/www/html/sites/simpletest/browser_output
 
 # Run Behat tests. This command invokes the behat.sh hook.
 behat_tests: &behat_tests
@@ -183,10 +182,23 @@ code_coverage: &code_coverage
     - run:
         working_directory: /var/www/html
         command: |
-          chown -R www-data artifacts
           ./code-coverage-stats.sh $CIRCLE_PROJECT_REPONAME
     - store_artifacts:
         path: /var/www/html/artifacts
+
+deprecated_code_check: &deprecated_code_check
+  <<: *defaults
+  steps:
+    - attach_workspace:
+        at: /var/www/html
+
+    - checkout
+
+    - run:
+        working_directory: /var/www/html
+        command: |
+          echo 'memory_limit = 512M' >> /usr/local/etc/php/php.ini
+          vendor/bin/drupal-check -d modules/media_mpx
 
 # Declare all of the jobs we should run.
 version: 2
@@ -205,6 +217,8 @@ jobs:
      <<: *code_sniffer
   run-code-coverage:
      <<: *code_coverage
+  run-deprecated-code-check:
+     <<: *deprecated_code_check
 
 workflows:
   version: 2
@@ -232,6 +246,9 @@ workflows:
           requires:
             - update-dependencies
             - run-unit-kernel-tests
+      - run-deprecated-code-check:
+          requires:
+            - update-dependencies
 
   weekly:
     jobs:
@@ -255,6 +272,9 @@ workflows:
           requires:
             - update-dependencies
             - run-unit-kernel-tests
+      - run-deprecated-code-check:
+          requires:
+            - update-dependencies
 
     triggers:
       - schedule:

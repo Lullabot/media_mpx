@@ -12,11 +12,11 @@ use Drupal\media\MediaInterface;
 use Drupal\media\MediaTypeInterface;
 use Drupal\media_mpx\Event\ImportEvent;
 use Drupal\media_mpx\Plugin\media\Source\MpxMediaSourceInterface;
-use function GuzzleHttp\Psr7\build_query;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use Lullabot\Mpx\DataService\ObjectInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use function GuzzleHttp\Psr7\build_query;
 
 /**
  * Import an mpx item into a media entity.
@@ -153,7 +153,7 @@ class DataObjectImporter {
 
     // Create a new entity owned by the admin user.
     if (empty($results)) {
-      list('source_field' => $source_field, 'media_storage' => $media_storage) = $this->getSourceFieldAndStorage($media_type);
+      ['source_field' => $source_field, 'media_storage' => $media_storage] = $this->getSourceFieldAndStorage($media_type);
       /** @var \Drupal\media\Entity\Media $new_media_entity */
       $new_media_entity = $media_storage->create([
         $this->entityTypeManager->getDefinition('media')
@@ -180,7 +180,7 @@ class DataObjectImporter {
    *   An array of existing media entities or a new media entity.
    */
   private function loadMediaEntitiesById(MediaTypeInterface $media_type, Uri $mpx_object_id): array {
-    list('source_field' => $source_field, 'media_storage' => $media_storage) = $this->getSourceFieldAndStorage($media_type);
+    ['source_field' => $source_field, 'media_storage' => $media_storage] = $this->getSourceFieldAndStorage($media_type);
     $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object_id]);
     return $results;
   }
@@ -477,6 +477,10 @@ class DataObjectImporter {
     ];
     $encoded = \GuzzleHttp\json_encode($item->getJson());
 
+    // @todo Fix the following deprecations for next major release of the module
+    //   for drupal/core:^9.0. It doesn't have a replacement in a version
+    //   compatible with Drupal 8.9.x.
+    // @phpstan-ignore-next-line
     $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
     $request = new Request('GET', $uri, static::REQUEST_HEADERS);
     $response_headers = $this->getResponseHeaders($encoded);

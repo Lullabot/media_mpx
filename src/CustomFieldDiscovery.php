@@ -62,6 +62,10 @@ class CustomFieldDiscovery implements CustomFieldDiscoveryInterface {
     // Clear the annotation loaders of any previous annotation classes.
     AnnotationRegistry::reset();
     // Register the namespaces of classes that can be used for annotations.
+    // @todo Fix the following deprecation once we can update to
+    //   doctrine/annotations:^2.0. This method has no replacement in the
+    //   version required by drupal 8.9.x.
+    // @phpstan-ignore-next-line
     AnnotationRegistry::registerLoader('class_exists');
 
     // Search for classes within all PSR-0 namespace locations.
