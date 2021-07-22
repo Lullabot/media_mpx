@@ -477,6 +477,9 @@ class DataObjectImporter {
     ];
     $encoded = \GuzzleHttp\json_encode($item->getJson());
 
+    // @todo Fix the following deprecations for next major release of the module
+    //   for drupal/core:^9.0. It doesn't have a replacement in a version
+    //   compatible with Drupal 8.9.x.
     // @phpstan-ignore-next-line
     $uri = $item->getId()->withScheme('https')->withQuery(build_query($query));
     $request = new Request('GET', $uri, static::REQUEST_HEADERS);

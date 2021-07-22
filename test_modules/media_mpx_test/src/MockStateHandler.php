@@ -93,6 +93,9 @@ class MockStateHandler implements \Countable {
 
     $this->lastRequest = $request;
     $this->lastOptions = $options;
+    // @todo Fix the following deprecations for next major release of the module
+    //   for drupal/core:^9.0. It doesn't have a replacement in a version
+    //   compatible with Drupal 8.9.x.
     // @phpstan-ignore-next-line
     $response = parse_response(array_shift($queue));
     $this->state->set('media_mpx_test_queue', $queue);
@@ -168,6 +171,9 @@ class MockStateHandler implements \Countable {
         || $value instanceof PromiseInterface
         || is_callable($value)
       ) {
+        // @todo Fix the following deprecations for next major release of the
+        //   module for drupal/core:^9.0. It doesn't have a replacement in a
+        //   version compatible with Drupal 8.9.x.
         // @phpstan-ignore-next-line
         $queue[] = str($value);
       }

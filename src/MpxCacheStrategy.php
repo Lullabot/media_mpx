@@ -22,6 +22,9 @@ class MpxCacheStrategy extends GreedyCacheStrategy {
    */
   protected function getCacheKey(RequestInterface $request, KeyValueHttpHeader $varyHeaders = NULL) {
     $uri = $request->getUri();
+    // @todo Fix the following deprecations for next major release of the module
+    //   for drupal/core:^9.0. It doesn't have a replacement in a version
+    //   compatible with Drupal 8.9.x.
     // @phpstan-ignore-next-line
     $query = parse_query($uri->getQuery());
 
@@ -32,6 +35,9 @@ class MpxCacheStrategy extends GreedyCacheStrategy {
     // Normalize the cache key by sorting.
     ksort($query);
 
+    // @todo Fix the following deprecations for next major release of the module
+    //   for drupal/core:^9.0. It doesn't have a replacement in a version
+    //   compatible with Drupal 8.9.x.
     // @phpstan-ignore-next-line
     $withoutToken = $request->withUri($uri->withQuery(build_query($query)));
     return parent::getCacheKey($withoutToken, $varyHeaders);
