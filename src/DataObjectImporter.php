@@ -46,7 +46,7 @@ class DataObjectImporter {
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  private $entityTypeManager;
+  protected $entityTypeManager;
 
   /**
    * The mpx cache strategy for injecting cache items.
@@ -147,7 +147,7 @@ class DataObjectImporter {
    * @return \Drupal\media\Entity\Media[]
    *   An array of existing media entities or a new media entity.
    */
-  private function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
+  protected function loadMediaEntities(MediaTypeInterface $media_type, ObjectInterface $mpx_object): array {
     // Find any existing media items.
     $results = $this->loadMediaEntitiesById($media_type, $mpx_object->getId());
 
@@ -179,7 +179,7 @@ class DataObjectImporter {
    * @return \Drupal\media\Entity\Media[]
    *   An array of existing media entities or a new media entity.
    */
-  private function loadMediaEntitiesById(MediaTypeInterface $media_type, Uri $mpx_object_id): array {
+  protected function loadMediaEntitiesById(MediaTypeInterface $media_type, Uri $mpx_object_id): array {
     ['source_field' => $source_field, 'media_storage' => $media_storage] = $this->getSourceFieldAndStorage($media_type);
     $results = $media_storage->loadByProperties([$source_field->getName() => (string) $mpx_object_id]);
     return $results;
@@ -194,7 +194,7 @@ class DataObjectImporter {
    * @return \Drupal\media\Entity\Media[]
    *   An array of existing media entities or a new media entity.
    */
-  private function getSourceFieldAndStorage(MediaTypeInterface $media_type): array {
+  protected function getSourceFieldAndStorage(MediaTypeInterface $media_type): array {
     $media_source = $this->loadMediaSource($media_type);
     $source_field = $media_source->getSourceFieldDefinition($media_type);
     $media_storage = $this->entityTypeManager->getStorage('media');
