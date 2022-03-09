@@ -293,7 +293,7 @@ abstract class MediaSourceBase extends DrupalMediaSourceBase implements MpxMedia
    *   The existing thumbnail, or the newly downloaded thumbnail.
    */
   protected function downloadThumbnail(Media $mpx_media): string {
-    $thumbnailUrl = $mpx_media->getDefaultThumbnailUrl();
+    $thumbnailUrl = $mpx_media->getNormalizedDefaultThumbnailUrl();
     $local_uri = $this->thumbnailsDirectory . $thumbnailUrl->getHost() . $thumbnailUrl->getPath();
     if (!file_exists($local_uri)) {
       $directory = dirname($local_uri);
