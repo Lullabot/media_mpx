@@ -449,7 +449,10 @@ class Media extends MediaSourceBase implements MediaSourceInterface {
     /** @var \Lullabot\Mpx\DataService\Media\Media $mpx_object */
     $mpx_object = $this->getMpxObject($media);
     foreach ($mpx_object->getContent() as $media_file) {
-      if ($media_file->getContentType() == 'video') {
+      if (
+        $media_file->getContentType() == 'video' &&
+        $media_file->getDuration() > 0
+      ) {
         return $this->getReflectedProperty($media, $attribute_name, $media_file);
       }
     }
