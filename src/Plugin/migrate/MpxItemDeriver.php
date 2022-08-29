@@ -3,7 +3,6 @@
 namespace Drupal\media_mpx\Plugin\migrate;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
-use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\Database\DatabaseExceptionWrapper;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Drupal\migrate\Exception\RequirementsException;
@@ -26,20 +25,6 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    * @var string
    */
   protected $basePluginId;
-
-  /**
-   * Already-instantiated cckfield plugins, keyed by ID.
-   *
-   * @var \Drupal\migrate_drupal\Plugin\MigrateCckFieldInterface[]
-   */
-  protected $cckPluginCache;
-
-  /**
-   * The CCK plugin manager.
-   *
-   * @var \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface
-   */
-  protected $cckPluginManager;
 
   /**
    * Already-instantiated field plugins, keyed by ID.
@@ -67,16 +52,13 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    *
    * @param string $base_plugin_id
    *   The base plugin ID for the plugin ID.
-   * @param \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface $cck_manager
-   *   The CCK plugin manager.
    * @param \Drupal\migrate_drupal\Plugin\MigrateFieldPluginManagerInterface $field_manager
    *   The field plugin manager.
    * @param \Drupal\migrate\Plugin\MigrationPluginManagerInterface $migration_plugin_manager
    *   Migration plugin manager service.
    */
-  public function __construct($base_plugin_id, MigrateFieldPluginManagerInterface $cck_manager, MigrateFieldPluginManagerInterface $field_manager, MigrationPluginManagerInterface $migration_plugin_manager) {
+  public function __construct($base_plugin_id, MigrateFieldPluginManagerInterface $field_manager, MigrationPluginManagerInterface $migration_plugin_manager) {
     $this->basePluginId = $base_plugin_id;
-    $this->cckPluginManager = $cck_manager;
     $this->fieldPluginManager = $field_manager;
     $this->migrationPluginManager = $migration_plugin_manager;
   }
@@ -87,7 +69,6 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
   public static function create(ContainerInterface $container, $base_plugin_id) {
     return new static(
       $base_plugin_id,
-      $container->get('plugin.manager.migrate.cckfield'),
       $container->get('plugin.manager.migrate.field'),
       $container->get('plugin.manager.migration')
     );
@@ -190,12 +171,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
    */
   protected function processFieldsByBundle(Migration $migration, array $bundle_fields) {
     foreach ($bundle_fields as $field_name => $info) {
-      try {
-        $this->createFieldPluginFromFieldPluginManager($field_name, $info, $migration);
-      }
-      catch (PluginNotFoundException $ex) {
-        $this->createFieldPluginFromCckPluginManager($field_name, $info, $migration);
-      }
+      $this->createFieldPluginFromFieldPluginManager($field_name, $info, $migration);
     }
   }
 
@@ -221,36 +197,7 @@ class MpxItemDeriver extends DeriverBase implements ContainerDeriverInterface {
       $this->fieldPluginCache[$field_type] = $this->fieldPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
     }
     $this->fieldPluginCache[$field_type]
-      ->processFieldValues($migration, $field_name, $info);
-  }
-
-  /**
-   * Create field plugins from the field info for the given migration.
-   *
-   * Attempt to use the CCK plugin manager.
-   *
-   * @param string $field_name
-   *   Field name of the source field to process.
-   * @param array $info
-   *   Field configuration for the field to process.
-   * @param \Drupal\migrate\Plugin\Migration $migration
-   *   Migration plugin.
-   *
-   * @throws \Drupal\Component\Plugin\Exception\PluginException
-   */
-  protected function createFieldPluginFromCckPluginManager(string $field_name, array $info, Migration $migration) {
-    $field_type = $info['type'];
-    try {
-      $plugin_id = $this->cckPluginManager->getPluginIdFromFieldType($field_type, ['core' => 7], $migration);
-      if (!isset($this->cckPluginCache[$field_type])) {
-        $this->cckPluginCache[$field_type] = $this->cckPluginManager->createInstance($plugin_id, ['core' => 7], $migration);
-      }
-      $this->cckPluginCache[$field_type]
-        ->processCckFieldValues($migration, $field_name, $info);
-    }
-    catch (PluginNotFoundException $ex) {
-      $migration->setProcessOfProperty($field_name, $field_name);
-    }
+      ->defineValueProcessPipeline($migration, $field_name, $info);
   }
 
 }
