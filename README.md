@@ -1,3 +1,5 @@
+# This project is now archived and continues on at https://www.drupal.org/project/media_mpx
+
 # Media mpx for Drupal 8
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
